@@ -255,6 +255,44 @@ class AdminFacadeReplayTest(
 	}
 
     @Test
+    fun `rebuilds an account and the anchor its initial balance created`() {
+        val id = commandFacade.processCommand(
+            CreateAccountCommand(workspace, "cash", "EUR", icon = null, initialBalance = BigDecimal("1500.0000"))
+        ).id
+        val accountsBefore = accounts(workspace)
+        val anchorsBefore = anchors(workspace)
+
+        jdbc.sql("DELETE FROM t_accounts").update()
+        jdbc.sql("DELETE FROM t_balance_anchors").update()
+        adminFacade.replayWorkspace(workspace)
+
+        // One command, two events, two aggregate types — the first of its kind, and the case the
+        // replay loop has to get right or an account comes back without the balance it opened with.
+        assertEquals(accountsBefore, accounts(workspace))
+        assertEquals(anchorsBefore, anchors(workspace))
+        assertEquals(id, anchors(workspace).single().second)
+    }
+
+    @Test
+    fun `does not invent an anchor for an account created without an initial balance`() {
+        commandFacade.processCommand(CreateAccountCommand(workspace, "cash", "EUR", icon = null))
+
+        jdbc.sql("DELETE FROM t_accounts").update()
+        adminFacade.replayWorkspace(workspace)
+
+        assertEquals(1, accounts(workspace).size)
+        assertEquals(0, anchors(workspace).size, "no anchor event, no anchor row")
+    }
+
+    private fun anchors(workspaceId: UUID): List<Pair<UUID, UUID>> = jdbc
+        .sql("SELECT id, account_id FROM t_balance_anchors WHERE workspace_id = :ws ORDER BY id")
+        .param("ws", workspaceId)
+        .query { rs, _ ->
+            rs.getObject("id", UUID::class.java) to rs.getObject("account_id", UUID::class.java)
+        }
+        .list()
+
+    @Test
     fun `rebuilds all three aggregates at once`() {
         // A seeded workspace, so the four system categories are part of what has to come back.
         val seeded = TestWorkspaces.createWithCategories(transactions, workspaceService, usersDAO, name = "seeded")

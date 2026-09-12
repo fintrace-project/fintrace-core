@@ -49,6 +49,7 @@ class AccountsRestController(
                 name = request.name,
                 currency = request.currency,
                 icon = request.icon,
+                initialBalance = request.initialBalance,
             )
         )
 

@@ -208,19 +208,76 @@ class AccountsRestControllerTest(
         assertEquals(1, count(), "nothing may be written for an unauthenticated caller")
     }
 
+    // ------------------------------------------------------------------ initial balance (1.9)
+
+    @Test
+    fun `an initial balance in the request becomes the account's first anchor`() {
+        val id = createdId(body = body(initialBalance = "1500.0000"))
+
+        // The anchor is reachable where a client would look for it — under the account.
+        mvc.perform(get("$accountsPath/$id/balance-anchors").with(user(USER)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].accountId").value(id.toString()))
+            .andExpect(jsonPath("$[0].value").value(1500.0000))
+    }
+
+    @Test
+    fun `an account created without an initial balance has no anchor`() {
+        val id = createdId()
+
+        // Omitted is not zero, so the field being absent from the body must write nothing.
+        mvc.perform(get("$accountsPath/$id/balance-anchors").with(user(USER)))
+            .andExpect(jsonPath("$.length()").value(0))
+    }
+
+    @Test
+    fun `an explicit zero initial balance is an anchor`() {
+        val id = createdId(body = body(initialBalance = "0"))
+
+        mvc.perform(get("$accountsPath/$id/balance-anchors").with(user(USER)))
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].value").value(0))
+    }
+
+    @Test
+    fun `a rejected account leaves no anchor behind`() {
+        mvc.perform(createRequest(body(currency = "ZZZ", initialBalance = "100.0000")))
+            .andExpect(status().isBadRequest)
+
+        assertEquals(0, count())
+        assertEquals(0, anchorCount())
+    }
+
+    private fun anchorCount() =
+        jdbc.sql("SELECT count(*) FROM t_balance_anchors").query(Int::class.java).single()
+
     private fun createRequest(body: String = body()) = post(accountsPath)
         .with(user(USER))
         .with(csrf())
         .contentType(MediaType.APPLICATION_JSON)
         .content(body)
 
-    private fun body(name: String = "account", currency: String = "EUR", icon: String? = null) =
-        if (icon == null) """{"name":"$name","currency":"$currency"}"""
-        else """{"name":"$name","currency":"$currency","icon":"$icon"}"""
+    private fun body(
+        name: String = "account",
+        currency: String = "EUR",
+        icon: String? = null,
+        initialBalance: String? = null,
+    ): String {
+        val fields = mutableListOf(""""name":"$name""" + '"', """"currency":"$currency""" + '"')
+        if (icon != null) fields += """"icon":"$icon""" + '"'
+        if (initialBalance != null) fields += """"initialBalance":$initialBalance"""
+        return fields.joinToString(",", "{", "}")
+    }
 
-    private fun createdId(name: String = "account", currency: String = "EUR", icon: String? = null): UUID =
+    private fun createdId(
+        name: String = "account",
+        currency: String = "EUR",
+        icon: String? = null,
+        body: String = body(name, currency, icon),
+    ): UUID =
         idOf(
-            mvc.perform(createRequest(body(name, currency, icon)))
+            mvc.perform(createRequest(body))
                 .andExpect(status().isCreated).andReturn().response.contentAsString
         )
 

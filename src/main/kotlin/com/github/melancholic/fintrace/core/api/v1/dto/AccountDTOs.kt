@@ -7,6 +7,7 @@ import com.github.melancholic.fintrace.core.validation.ValidationConstants.MAX_N
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import org.hibernate.validator.constraints.Length
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.*
 
@@ -19,7 +20,8 @@ data class CreateAccountRequest(
     @Pattern(regexp = CURRENCY_PATTERN)
     val currency: String,
     @Length(max = MAX_ICON_LENGTH)
-    val icon: String?
+    val icon: String?,
+    val initialBalance: BigDecimal?
 )
 
 data class UpdateAccountRequest(

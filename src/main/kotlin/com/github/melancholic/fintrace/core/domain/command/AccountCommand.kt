@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.domain.command
 
 import com.github.melancholic.fintrace.core.domain.projection.AccountProjection
+import java.math.BigDecimal
 import java.util.*
 
 sealed interface AccountCommand<R> : Command<R>
@@ -14,6 +15,7 @@ data class CreateAccountCommand(
     val name: String,
     val currency: String,
     val icon: String?,
+    val initialBalance: BigDecimal? = null,
 ) : AccountCommand<AccountProjection>, CreateCommand<AccountProjection>
 
 data class ReviseAccountCommand(

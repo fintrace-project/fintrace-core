@@ -20,6 +20,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.security.test.context.support.WithMockUser
 import tools.jackson.databind.ObjectMapper
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.*
 import kotlin.test.assertEquals
@@ -226,12 +227,79 @@ class AccountCommandIntegrationTest(
         assertEquals(1, countIn(other))
     }
 
+    // ------------------------------------------------------------------ initial balance (1.9)
+
+    @Test
+    fun `an initial balance becomes the account's first anchor`() {
+        val id = create(initialBalance = BigDecimal("1500.0000"))
+
+        // §4.6: an initial balance is an observation, not a column on the account.
+        assertEquals(1, count("t_balance_anchors"))
+        val anchor = anchorRow()
+        assertEquals(id, anchor.first, "the anchor belongs to the account just created")
+        assertEquals(BigDecimal("1500.0000"), anchor.second)
+    }
+
+    @Test
+    fun `creating an account with an initial balance writes two events of different types`() {
+        create(initialBalance = BigDecimal("100.0000"))
+
+        // The first command in the system to produce two aggregate types at once.
+        val types = events().map { it.entityType to it.eventType }
+        assertEquals(listOf("ACCOUNT" to "CREATED", "BALANCE_ANCHOR" to "CREATED"), types)
+    }
+
+    @Test
+    fun `an account created without an initial balance has no anchor`() {
+        create()
+
+        // Omitted is not zero: "I haven't counted" and "I counted, it's empty" differ, and the
+        // second would suppress every earlier operation's effect on the balance.
+        assertEquals(0, count("t_balance_anchors"))
+        assertEquals(1, count("t_events"))
+    }
+
+    @Test
+    fun `an explicit zero initial balance is an anchor`() {
+        create(initialBalance = BigDecimal.ZERO)
+
+        assertEquals(1, count("t_balance_anchors"))
+        assertEquals(0, anchorRow().second.signum())
+    }
+
+    @Test
+    fun `a negative initial balance is accepted`() {
+        create(initialBalance = BigDecimal("-42.0000"))
+
+        assertEquals(BigDecimal("-42.0000"), anchorRow().second)
+    }
+
+    @Test
+    fun `the initial balance anchor is rejected with the account when the command fails`() {
+        assertFailsWith<ValidationError> {
+            facade.processCommand(CreateAccountCommand(workspaceId, "cash", "ZZZ", null, BigDecimal.TEN))
+        }
+
+        // One transaction: an invalid account must not leave an anchor behind.
+        assertEquals(0, count("t_events"))
+        assertEquals(0, count("t_balance_anchors"))
+        assertEquals(0, count("t_accounts"))
+    }
+
+    private fun anchorRow(): Pair<UUID, BigDecimal> = jdbc
+        .sql("SELECT account_id, value FROM t_balance_anchors")
+        .query { rs, _ ->
+            rs.getObject("account_id", UUID::class.java) to rs.getBigDecimal("value")
+        }
+        .single()
+
     private fun create(
         workspaceId: UUID = this.workspaceId,
         name: String = "account",
         currency: String = "EUR",
         icon: String? = null,
-    ): UUID = facade.processCommand(CreateAccountCommand(workspaceId, name, currency, icon)).id
+        initialBalance: BigDecimal? = null,
+    ): UUID = facade.processCommand(CreateAccountCommand(workspaceId, name, currency, icon, initialBalance)).id
 
     private fun count(table: String) =
         jdbc.sql("SELECT count(*) FROM $table").query(Int::class.java).single()

@@ -7,9 +7,11 @@ import com.github.melancholic.fintrace.core.domain.event.payload.EventPayload
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
 import com.github.melancholic.fintrace.core.service.command.handler.CommandHandler
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.ObjectProvider
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.*
+import java.util.stream.Stream
 import kotlin.reflect.KClass
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -33,7 +35,7 @@ class CommandDispatcherTest {
 	fun `routes a command to the handler declaring its type`() {
 		val expected = projection()
 		val handler = RecordingHandler(expected)
-		val dispatcher = CommandDispatcherImpl(listOf(handler))
+		val dispatcher = dispatcherOf(handler)
 		val command = createOperation()
 
 		val result = dispatcher.dispatch(command)
@@ -44,7 +46,7 @@ class CommandDispatcherTest {
 
 	@Test
 	fun `fails when no handler is registered for the command`() {
-		val dispatcher = CommandDispatcherImpl(listOf(RecordingHandler(projection())))
+		val dispatcher = dispatcherOf(RecordingHandler(projection()))
 
 		val failure = assertFailsWith<IllegalArgumentException> {
 			dispatcher.dispatch(
@@ -60,10 +62,24 @@ class CommandDispatcherTest {
 
 	@Test
 	fun `fails when no handlers are registered at all`() {
-		val dispatcher = CommandDispatcherImpl(emptyList())
+		val dispatcher = dispatcherOf()
 
 		assertFailsWith<IllegalArgumentException> { dispatcher.dispatch(createOperation()) }
 	}
+
+	/**
+	 * The dispatcher takes an `ObjectProvider` rather than a `List` so a handler may itself
+	 * dispatch without closing a bean cycle; only `getObject` and `stream` need standing in for.
+	 */
+	private fun providerOf(vararg handlers: CommandHandler<*, *, *>) =
+		object : ObjectProvider<CommandHandler<*, *, *>> {
+			override fun getObject(): CommandHandler<*, *, *> = handlers.single()
+			override fun stream(): Stream<CommandHandler<*, *, *>> = handlers.toList().stream()
+		}
+
+	/** The container calls this once every singleton exists; a hand-built dispatcher must too. */
+	private fun dispatcherOf(vararg handlers: CommandHandler<*, *, *>) =
+		CommandDispatcherImpl(providerOf(*handlers)).apply { afterSingletonsInstantiated() }
 
 	private fun projection() = OperationProjection(
 		id = UUID.randomUUID(),

@@ -2,9 +2,11 @@ package com.github.melancholic.fintrace.core.service.command.handler.account
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
 import com.github.melancholic.fintrace.core.domain.command.CreateAccountCommand
+import com.github.melancholic.fintrace.core.domain.command.CreateBalanceAnchorCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.AccountCreated
 import com.github.melancholic.fintrace.core.domain.event.payload.AccountCreatedV1
 import com.github.melancholic.fintrace.core.domain.projection.AccountProjection
+import com.github.melancholic.fintrace.core.service.command.CommandDispatcher
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
 import com.github.melancholic.fintrace.core.util.TimestampProvider
 import com.github.melancholic.fintrace.core.util.UUIDGenerator
@@ -18,15 +20,28 @@ class CreateAccountCommandHandler(
     private val uuidGenerator: UUIDGenerator,
     private val projectionApplier: ProjectionApplier,
     private val validationService: AccountValidationService,
+    private val commandDispatcher: CommandDispatcher,
     eventsDAO: EventsDAO,
 ) : AbstractAccountCommandHandler<CreateAccountCommand, AccountProjection, AccountCreated>(eventsDAO) {
     override val commandType: KClass<out CreateAccountCommand> = CreateAccountCommand::class
 
     override fun handle(command: CreateAccountCommand): AccountProjection {
         validationService.validate(command)
-        val event = registerEvent(command, buildEventPayload(command))
+
+        val payload = buildEventPayload(command)
+        val event = registerEvent(command, payload)
+
         projectionApplier.apply(event.payload.projectionChange())
-        return (event.payload as AccountCreated).projection()
+        if (command.initialBalance != null) {
+            commandDispatcher.dispatch(
+                CreateBalanceAnchorCommand(
+                    workspaceId = command.workspaceId,
+                    accountId = payload.id,
+                    value = command.initialBalance
+                )
+            )
+        }
+        return payload.projection()
     }
 
     private fun buildEventPayload(command: CreateAccountCommand): AccountCreated {
