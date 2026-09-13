@@ -12,9 +12,11 @@ import java.util.*
 interface BalanceDAO {
     fun getBalanceOf(workspaceId: UUID, accountId: UUID, asOf: LocalDate): BigDecimal
     fun getBalanceOf(workspaceId: UUID, accountId: UUID, asOf: LocalDateTime): BigDecimal
-    fun getUnexplainedDifference(workspaceId: UUID, anchorId: UUID): BigDecimal
     fun getAllBalancesOf(workspaceId: UUID, asOf: LocalDate, includeArchived: Boolean): List<AccountBalance>
     fun getAllBalancesOf(workspaceId: UUID, asOf: LocalDateTime, includeArchived: Boolean): List<AccountBalance>
+
+    fun getUnexplainedDifference(workspaceId: UUID, anchorId: UUID): BigDecimal
+    fun getUnexplainedDifference(workspaceId: UUID, anchorIds: Set<UUID>): Map<UUID, BigDecimal>
 }
 
 @Repository
@@ -40,12 +42,21 @@ class BalanceDAOImpl(
         .single()
 
     override fun getUnexplainedDifference(workspaceId: UUID, anchorId: UUID): BigDecimal =
-        jdbc.sql(CALL_UNEXPLAINED_DIFF_FUNC)
+        getUnexplainedDifference(workspaceId, setOf(anchorId))[anchorId]
+            ?: throw NotFoundEntityException("Could not find correspondent balance anchor (workspaceId=$workspaceId, anchorId=$anchorId)")
+
+    override fun getUnexplainedDifference(
+        workspaceId: UUID,
+        anchorIds: Set<UUID>
+    ): Map<UUID, BigDecimal> {
+        if (anchorIds.isEmpty()) return emptyMap()
+        return jdbc.sql(CALL_UNEXPLAINED_DIFF_FUNC)
             .param("workspaceId", workspaceId)
-            .param("anchorId", anchorId)
-            .query(BigDecimal::class.java)
-            .optional()
-            .orElseThrow { NotFoundEntityException("Could not find correspondent balance anchor (workspaceId=$workspaceId, anchorId=$anchorId)") }
+            .param("anchorIds", anchorIds)
+            .query { rs, _ -> rs.getObject("anchor_id", UUID::class.java) to rs.getBigDecimal("difference") }
+            .list()
+            .toMap()
+    }
 
     override fun getAllBalancesOf(
         workspaceId: UUID,
@@ -78,7 +89,10 @@ class BalanceDAOImpl(
         """
 
         const val CALL_UNEXPLAINED_DIFF_FUNC = """
-            SELECT fn_unexplained_difference_of(:workspaceId, :anchorId)
+            SELECT a.id AS anchor_id, fn_unexplained_difference_of(a.workspace_id, a.id) AS difference
+            FROM t_balance_anchors a
+            WHERE a.workspace_id = :workspaceId
+              AND a.id IN (:anchorIds)
         """
     }
 }

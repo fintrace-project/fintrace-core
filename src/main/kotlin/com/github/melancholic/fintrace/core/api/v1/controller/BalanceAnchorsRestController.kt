@@ -6,7 +6,7 @@ import com.github.melancholic.fintrace.core.api.v1.mapper.BalanceAnchorMapper
 import com.github.melancholic.fintrace.core.config.ACCOUNT_BALANCE_ANCHORS_AREA_API_PATH
 import com.github.melancholic.fintrace.core.domain.command.CancelBalanceAnchorCommand
 import com.github.melancholic.fintrace.core.domain.command.CreateBalanceAnchorCommand
-import com.github.melancholic.fintrace.core.domain.projection.BalanceAnchorProjection
+import com.github.melancholic.fintrace.core.domain.entity.BalanceAnchorContainer
 import com.github.melancholic.fintrace.core.facade.CommandFacade
 import com.github.melancholic.fintrace.core.facade.ProjectionFacade
 import io.swagger.v3.oas.annotations.Operation
@@ -42,7 +42,7 @@ class BalanceAnchorsRestController(
         @PathVariable("accountId") accountId: UUID,
         @Valid @RequestBody request: CreateBalanceAnchorRequest
     ): ResponseEntity<BalanceAnchorResponse> {
-        val projection: BalanceAnchorProjection = commandFacade.processCommand(
+        val (projection, difference) = commandFacade.processCommand(
             CreateBalanceAnchorCommand(
                 workspaceId = workspaceId,
                 accountId = accountId,
@@ -58,7 +58,7 @@ class BalanceAnchorsRestController(
 
         return ResponseEntity
             .created(location)
-            .body(mapper.toResponse(projection))
+            .body(mapper.toResponse(projection, difference))
     }
 
     @Operation(summary = "List an account's balance anchors")
@@ -72,10 +72,10 @@ class BalanceAnchorsRestController(
         @PathVariable("workspaceId") workspaceId: UUID,
         @PathVariable("accountId") accountId: UUID
     ): ResponseEntity<List<BalanceAnchorResponse>> {
-        val projectionList: List<BalanceAnchorProjection> =
+        val containers: List<BalanceAnchorContainer> =
             projectionFacade.getAllBalanceAnchors(workspaceId, accountId)
         return ResponseEntity
-            .ok(mapper.toResponseList(projectionList))
+            .ok(mapper.toResponseList(containers))
     }
 
     @Operation(summary = "Fetch a balance anchor")
@@ -90,9 +90,9 @@ class BalanceAnchorsRestController(
         @PathVariable("accountId") accountId: UUID,
         @PathVariable("anchorId") anchorId: UUID
     ): ResponseEntity<BalanceAnchorResponse> {
-        val projection: BalanceAnchorProjection = projectionFacade.getBalanceAnchor(workspaceId, accountId, anchorId)
+        val container: BalanceAnchorContainer = projectionFacade.getBalanceAnchor(workspaceId, accountId, anchorId)
         return ResponseEntity
-            .ok(mapper.toResponse(projection))
+            .ok(mapper.toResponse(container.projection, container.difference))
     }
 
 

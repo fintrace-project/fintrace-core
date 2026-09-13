@@ -1,12 +1,13 @@
 package com.github.melancholic.fintrace.core.facade
 
+import com.github.melancholic.fintrace.core.dao.BalanceDAO
 import com.github.melancholic.fintrace.core.dao.projection.AccountProjectionDAO
 import com.github.melancholic.fintrace.core.dao.projection.BalanceAnchorProjectionDAO
 import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
 import com.github.melancholic.fintrace.core.dao.projection.OperationProjectionDAO
+import com.github.melancholic.fintrace.core.domain.entity.BalanceAnchorContainer
 import com.github.melancholic.fintrace.core.domain.entity.Transfer
 import com.github.melancholic.fintrace.core.domain.projection.AccountProjection
-import com.github.melancholic.fintrace.core.domain.projection.BalanceAnchorProjection
 import com.github.melancholic.fintrace.core.domain.projection.CategoryProjection
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
 import com.github.melancholic.fintrace.core.security.IdentityProvider
@@ -23,12 +24,12 @@ interface ProjectionFacade {
     fun getCategory(workspaceId: UUID, categoryId: UUID): CategoryProjection
     fun getAllCategories(workspaceId: UUID, includeArchived: Boolean): List<CategoryProjection>
     fun getTransfer(workspaceId: UUID, transferId: UUID): Transfer
-    fun getAllBalanceAnchors(workspaceId: UUID, accountId: UUID): List<BalanceAnchorProjection>
-    fun getBalanceAnchor(workspaceId: UUID, accountId: UUID, anchorId: UUID): BalanceAnchorProjection
+    fun getAllBalanceAnchors(workspaceId: UUID, accountId: UUID): List<BalanceAnchorContainer>
+    fun getBalanceAnchor(workspaceId: UUID, accountId: UUID, anchorId: UUID): BalanceAnchorContainer
 }
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 class ProjectionFacadeImpl(
     private val operationDAO: OperationProjectionDAO,
     private val accountDAO: AccountProjectionDAO,
@@ -36,10 +37,10 @@ class ProjectionFacadeImpl(
     private val workspaceService: WorkspaceService,
     private val identityProvider: IdentityProvider,
     private val transferLoader: TransferLoader,
-    private val balanceAnchorDAO: BalanceAnchorProjectionDAO
+    private val balanceAnchorDAO: BalanceAnchorProjectionDAO,
+    private val balanceDAO: BalanceDAO
 ) : ProjectionFacade {
 
-    @Transactional(readOnly = true)
     override fun getOperation(
         workspaceId: UUID,
         operationId: UUID
@@ -48,7 +49,6 @@ class ProjectionFacadeImpl(
         return operationDAO.getById(workspace.id, operationId)
     }
 
-    @Transactional(readOnly = true)
     override fun getAccount(
         workspaceId: UUID,
         accountId: UUID
@@ -57,7 +57,6 @@ class ProjectionFacadeImpl(
         return accountDAO.getById(workspace.id, accountId)
     }
 
-    @Transactional(readOnly = true)
     override fun getAllAccounts(
         workspaceId: UUID,
         includeArchived: Boolean
@@ -66,7 +65,6 @@ class ProjectionFacadeImpl(
         return accountDAO.getAllAccounts(workspace.id, includeArchived)
     }
 
-    @Transactional(readOnly = true)
     override fun getCategory(
         workspaceId: UUID,
         categoryId: UUID
@@ -84,7 +82,6 @@ class ProjectionFacadeImpl(
         return categoryDAO.getAllCategories(workspace.id, includeArchived)
     }
 
-    @Transactional(readOnly = true)
     override fun getTransfer(
         workspaceId: UUID,
         transferId: UUID
@@ -96,18 +93,28 @@ class ProjectionFacadeImpl(
     override fun getAllBalanceAnchors(
         workspaceId: UUID,
         accountId: UUID
-    ): List<BalanceAnchorProjection> {
+    ): List<BalanceAnchorContainer> {
         val workspace = workspaceService.requireReadable(identityProvider.currentUserId(), workspaceId)
-        return balanceAnchorDAO.getAll(workspace.id, accountId)
+        val projections = balanceAnchorDAO.getAll(workspace.id, accountId)
+            .associateBy { it.id }
+        val differences = balanceDAO.getUnexplainedDifference(workspace.id, projections.keys)
+
+        return projections.entries
+            .map { (id, projection) ->
+                BalanceAnchorContainer(projection, differences[id]!!)
+            }
     }
 
     override fun getBalanceAnchor(
         workspaceId: UUID,
         accountId: UUID,
         anchorId: UUID
-    ): BalanceAnchorProjection {
+    ): BalanceAnchorContainer {
         val workspace = workspaceService.requireReadable(identityProvider.currentUserId(), workspaceId)
-        return balanceAnchorDAO.getById(workspace.id, accountId, anchorId)
+        val projection = balanceAnchorDAO.getById(workspace.id, accountId, anchorId)
+        return BalanceAnchorContainer(
+            projection,
+            balanceDAO.getUnexplainedDifference(projection.workspaceId, projection.id)
+        )
     }
-
 }

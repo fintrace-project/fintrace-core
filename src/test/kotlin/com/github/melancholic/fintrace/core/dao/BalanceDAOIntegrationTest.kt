@@ -9,6 +9,7 @@ import com.github.melancholic.fintrace.core.dao.projection.OperationProjectionDA
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.projection.BalanceAnchorProjection
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
+import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -20,6 +21,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 /**
  * The balance formula (1.24, 1.25), which lives in `fn_balance_of` and
@@ -257,6 +259,44 @@ class BalanceDAOIntegrationTest(
             balanceDAO.getBalanceOf(workspaceId, accountId, asOf),
             balanceDAO.getAllBalancesOf(workspaceId, asOf, true).single().balance,
         )
+    }
+
+    @Test
+    fun `computes several differences in one call, keyed by anchor`() {
+        operation(MARCH_01, "-300.0000")
+        val first = anchor(MARCH_10, "1000.0000")
+        operation(MARCH_12, "-100.0000")
+        val second = anchor(MARCH_15, "1500.0000")
+
+        val differences = balanceDAO.getUnexplainedDifference(workspaceId, setOf(first, second))
+
+        // Keyed per anchor, not collapsed: 1000 − (−300), then 1500 − (1000 − 100).
+        assertEquals(
+            mapOf(first to BigDecimal("1300.0000"), second to BigDecimal("600.0000")),
+            differences,
+        )
+    }
+
+    @Test
+    fun `leaves unknown and foreign anchors out of a batch`() {
+        val known = anchor(MARCH_15, "1500.0000")
+        val other = TestWorkspaces.create(workspaceDAO, usersDAO, name = "other-workspace")
+
+        val differences = balanceDAO.getUnexplainedDifference(other, setOf(known, UUID.randomUUID()))
+
+        assertEquals(emptyMap(), differences, "an anchor read through another workspace does not resolve")
+    }
+
+    @Test
+    fun `an empty batch asks the database nothing`() {
+        assertEquals(emptyMap(), balanceDAO.getUnexplainedDifference(workspaceId, emptySet()))
+    }
+
+    @Test
+    fun `an unknown single anchor is reported as missing`() {
+        assertFailsWith<NotFoundEntityException> {
+            balanceDAO.getUnexplainedDifference(workspaceId, UUID.randomUUID())
+        }
     }
 
     private fun balanceOf(asOf: LocalDateTime) = balanceDAO.getBalanceOf(workspaceId, accountId, asOf)

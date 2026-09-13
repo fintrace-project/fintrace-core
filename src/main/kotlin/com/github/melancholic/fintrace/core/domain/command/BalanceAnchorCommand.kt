@@ -1,6 +1,6 @@
 package com.github.melancholic.fintrace.core.domain.command
 
-import com.github.melancholic.fintrace.core.domain.projection.BalanceAnchorProjection
+import com.github.melancholic.fintrace.core.domain.entity.BalanceAnchorContainer
 import java.math.BigDecimal
 import java.util.*
 
@@ -16,7 +16,7 @@ data class CreateBalanceAnchorCommand(
     override val workspaceId: UUID,
     override val accountId: UUID,
     val value: BigDecimal,
-) : BalanceAnchorCommand<BalanceAnchorProjection>, CreateCommand<BalanceAnchorProjection>
+) : BalanceAnchorCommand<BalanceAnchorContainer>, CreateCommand<BalanceAnchorContainer>
 
 data class CancelBalanceAnchorCommand(
     override val workspaceId: UUID,

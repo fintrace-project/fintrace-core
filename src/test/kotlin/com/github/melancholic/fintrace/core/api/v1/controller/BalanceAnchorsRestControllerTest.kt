@@ -5,6 +5,10 @@ import com.github.melancholic.fintrace.core.TestcontainersConfiguration
 import com.github.melancholic.fintrace.core.dao.UsersDAO
 import com.github.melancholic.fintrace.core.dao.WorkspaceDAO
 import com.github.melancholic.fintrace.core.dao.projection.AccountProjectionDAO
+import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
+import com.github.melancholic.fintrace.core.dao.projection.OperationProjectionDAO
+import com.github.melancholic.fintrace.core.domain.entity.OperationKind
+import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -19,7 +23,9 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.math.BigDecimal
 import java.net.URI
+import java.time.LocalDateTime
 import java.util.*
 import kotlin.test.assertEquals
 
@@ -39,11 +45,14 @@ class BalanceAnchorsRestControllerTest(
     @Autowired private val workspaceDAO: WorkspaceDAO,
     @Autowired private val usersDAO: UsersDAO,
     @Autowired private val accountDAO: AccountProjectionDAO,
+    @Autowired private val categoryDAO: CategoryProjectionDAO,
+    @Autowired private val operationDAO: OperationProjectionDAO,
 ) {
 
     private lateinit var workspaceId: UUID
     private lateinit var accountId: UUID
     private lateinit var otherAccountId: UUID
+    private lateinit var categoryId: UUID
 
     private val anchorsPath get() = "/api/v1/workspaces/$workspaceId/accounts/$accountId/balance-anchors"
 
@@ -53,6 +62,7 @@ class BalanceAnchorsRestControllerTest(
         workspaceId = TestWorkspaces.create(workspaceDAO, usersDAO)
         accountId = TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "wallet")
         otherAccountId = TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "savings")
+        categoryId = TestWorkspaces.seedCategory(categoryDAO, workspaceId)
     }
 
     @Test
@@ -163,6 +173,52 @@ class BalanceAnchorsRestControllerTest(
         assertEquals(1, count())
     }
 
+    // ------------------------------------------------------------------ difference (1.25)
+
+    @Test
+    fun `a created anchor carries its difference`() {
+        // Nothing on the account explains any of it, so the whole value is unexplained.
+        mvc.perform(createRequest("1500.0000"))
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.difference").value(1500.0000))
+    }
+
+    @Test
+    fun `each listed anchor is measured against the one before it`() {
+        mvc.perform(createRequest("1500.0000")).andExpect(status().isCreated)
+        mvc.perform(createRequest("1400.0000")).andExpect(status().isCreated)
+
+        // Newest first: 1400 observed against the 1500 anchor before it; 1500 against nothing.
+        mvc.perform(get(anchorsPath).with(user(USER)))
+            .andExpect(jsonPath("$[0].value").value(1400.0000))
+            .andExpect(jsonPath("$[0].difference").value(-100.0000))
+            .andExpect(jsonPath("$[1].value").value(1500.0000))
+            .andExpect(jsonPath("$[1].difference").value(1500.0000))
+    }
+
+    @Test
+    fun `the single read agrees with its row in the list`() {
+        val id = createdId()
+
+        mvc.perform(get("$anchorsPath/$id").with(user(USER)))
+            .andExpect(jsonPath("$.difference").value(100.0000))
+        mvc.perform(get(anchorsPath).with(user(USER)))
+            .andExpect(jsonPath("$[0].difference").value(100.0000))
+    }
+
+    @Test
+    fun `a back-dated operation moves the difference, never the value`() {
+        val id = createdId(value = "1500.0000")
+
+        operation(LocalDateTime.now().minusDays(1), "-200.0000")
+
+        // §4.6: remembering a forgotten expense explains part of the gap — the observation itself
+        // stands, and only what it is measured against changes.
+        mvc.perform(get("$anchorsPath/$id").with(user(USER)))
+            .andExpect(jsonPath("$.value").value(1500.0000))
+            .andExpect(jsonPath("$.difference").value(1700.0000))
+    }
+
     @Test
     fun `rejects a malformed body`() {
         mvc.perform(
@@ -190,8 +246,25 @@ class BalanceAnchorsRestControllerTest(
         .contentType(MediaType.APPLICATION_JSON)
         .content(body(value))
 
-    private fun createdId(): UUID = UUID.fromString(
-        idOf(mvc.perform(createRequest()).andExpect(status().isCreated).andReturn().response.contentAsString)
+    private fun createdId(value: String = "100.0000"): UUID = UUID.fromString(
+        idOf(mvc.perform(createRequest(value)).andExpect(status().isCreated).andReturn().response.contentAsString)
+    )
+
+    private fun operation(occurredAt: LocalDateTime, amount: String) = operationDAO.createOrUpdate(
+        OperationProjection(
+            id = UUID.randomUUID(),
+            workspaceId = workspaceId,
+            amount = BigDecimal(amount),
+            kind = OperationKind.EXPENSE,
+            accountId = accountId,
+            categoryId = categoryId,
+            transferId = null,
+            counterpartId = null,
+            comment = null,
+            externalRef = null,
+            occurredAt = occurredAt,
+            recordedAt = occurredAt,
+        )
     )
 
     private fun body(value: String = "100.0000") = """{"value":"$value"}"""

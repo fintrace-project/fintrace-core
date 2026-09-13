@@ -60,7 +60,7 @@ class BalanceAnchorCommandIntegrationTest(
 
         assertEquals(1, count("t_events"))
         assertEquals(1, count("t_balance_anchors"))
-        assertEquals(BigDecimal("1500.0000"), storedValue(anchor.id))
+        assertEquals(BigDecimal("1500.0000"), storedValue(anchor.projection.id))
     }
 
     @Test
@@ -70,7 +70,7 @@ class BalanceAnchorCommandIntegrationTest(
         val event = events().single()
         assertEquals("BALANCE_ANCHOR", event.entityType)
         assertEquals("CREATED", event.eventType)
-        assertEquals(anchor.id, event.entityId)
+        assertEquals(anchor.projection.id, event.entityId)
     }
 
     @Test
@@ -79,7 +79,7 @@ class BalanceAnchorCommandIntegrationTest(
 
         // §4.6: a count happens now, so the two timestamps coincide by construction — and the
         // balance query orders by occurred_at, so it has to be populated.
-        val (occurredAt, recordedAt) = timestamps(anchor.id)
+        val (occurredAt, recordedAt) = timestamps(anchor.projection.id)
         assertEquals(occurredAt, recordedAt)
     }
 
@@ -88,14 +88,14 @@ class BalanceAnchorCommandIntegrationTest(
         // A balance is an observation, not a magnitude: an overdraft is a real reading.
         val anchor = facade.processCommand(create(BigDecimal("-250.0000")))
 
-        assertEquals(BigDecimal("-250.0000"), storedValue(anchor.id))
+        assertEquals(BigDecimal("-250.0000"), storedValue(anchor.projection.id))
     }
 
     @Test
     fun `accepts zero, which is how a closed account is reconciled`() {
         val anchor = facade.processCommand(create(BigDecimal.ZERO))
 
-        assertEquals(0, storedValue(anchor.id).signum())
+        assertEquals(0, storedValue(anchor.projection.id).signum())
     }
 
     @Test
@@ -120,7 +120,7 @@ class BalanceAnchorCommandIntegrationTest(
     fun `deleting removes the row and keeps the log`() {
         val anchor = facade.processCommand(create())
 
-        facade.processCommand(cancel(anchor.id))
+        facade.processCommand(cancel(anchor.projection.id))
 
         // §10.4: the sole physical deletion in the system — the row goes, the event stays.
         assertEquals(0, count("t_balance_anchors"))
@@ -131,13 +131,13 @@ class BalanceAnchorCommandIntegrationTest(
     fun `classifies the deletion as a cancellation`() {
         val anchor = facade.processCommand(create())
 
-        facade.processCommand(cancel(anchor.id))
+        facade.processCommand(cancel(anchor.projection.id))
 
         // Decision 5: delete-anchor maps to CANCELLED. Three event types exist and this is one.
         val deletion = events().last()
         assertEquals("CANCELLED", deletion.eventType)
         assertEquals("BALANCE_ANCHOR", deletion.entityType)
-        assertEquals(anchor.id, deletion.entityId)
+        assertEquals(anchor.projection.id, deletion.entityId)
     }
 
     @Test
@@ -145,10 +145,10 @@ class BalanceAnchorCommandIntegrationTest(
         val kept = facade.processCommand(create(BigDecimal("10.0000")))
         val doomed = facade.processCommand(create(BigDecimal("20.0000")))
 
-        facade.processCommand(cancel(doomed.id))
+        facade.processCommand(cancel(doomed.projection.id))
 
         assertEquals(1, count("t_balance_anchors"))
-        assertEquals(kept.id, singleAnchorId())
+        assertEquals(kept.projection.id, singleAnchorId())
     }
 
     @Test
@@ -157,7 +157,7 @@ class BalanceAnchorCommandIntegrationTest(
         facade.processCommand(create(BigDecimal("20.0000")))
 
         // §10.4: deleting from the middle would shift every balance after it.
-        assertFailsWith<ActionConflictException> { facade.processCommand(cancel(older.id)) }
+        assertFailsWith<ActionConflictException> { facade.processCommand(cancel(older.projection.id)) }
 
         assertEquals(2, count("t_balance_anchors"))
     }
@@ -168,7 +168,7 @@ class BalanceAnchorCommandIntegrationTest(
 
         // The account is in the path; an anchor reached through the wrong one must not resolve.
         assertFailsWith<NotFoundEntityException> {
-            facade.processCommand(cancel(anchor.id, accountId = accountId))
+            facade.processCommand(cancel(anchor.projection.id, accountId = accountId))
         }
 
         assertEquals(1, count("t_balance_anchors"))
@@ -196,7 +196,7 @@ class BalanceAnchorCommandIntegrationTest(
     @Test
     fun `a deleted anchor does not come back on replay`() {
         val anchor = facade.processCommand(create())
-        facade.processCommand(cancel(anchor.id))
+        facade.processCommand(cancel(anchor.projection.id))
 
         adminFacade.replayWorkspace(workspaceId)
 

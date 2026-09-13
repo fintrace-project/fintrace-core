@@ -13,6 +13,7 @@ data class BalanceAnchorResponse(
     val workspaceId: UUID,
     val accountId: UUID,
     val value: BigDecimal,
+    val difference: BigDecimal,
     val occurredAt: LocalDateTime,
     val recordedAt: LocalDateTime
 )

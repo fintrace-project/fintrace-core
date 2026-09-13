@@ -129,6 +129,8 @@ class OpenApiDocumentTest(@Autowired private val mvc: MockMvc) {
 			// Deleting anything but the newest anchor is refused (§10.4), and a generated client
 			// has to expect that or it looks like a server fault.
 			.andExpect(jsonPath("$.paths['$anchors/{anchorId}'].delete.responses.409").exists())
+            // The unexplained difference (1.25) is part of the contract a generated client builds from.
+            .andExpect(jsonPath("$.components.schemas.BalanceAnchorResponse.properties.difference").exists())
 	}
 
     @Test
