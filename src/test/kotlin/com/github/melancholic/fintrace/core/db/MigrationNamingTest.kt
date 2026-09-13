@@ -10,9 +10,14 @@ import kotlin.test.assertTrue
  */
 class MigrationNamingTest {
 
-	private val migrations = PathMatchingResourcePatternResolver()
-		.getResources("classpath*:db/migration/*.sql")
+	private val all = PathMatchingResourcePatternResolver()
+		.getResources("classpath*:db/migration/**/*.sql")
 		.mapNotNull { it.filename }
+
+	/** Versioned migrations only; repeatable ones carry no version and are checked separately. */
+	private val migrations = all.filterNot { it.startsWith("R__") }
+
+	private val repeatable = all.filter { it.startsWith("R__") }
 
 	@Test
 	fun `every migration uses a four-digit version`() {
@@ -25,6 +30,14 @@ class MigrationNamingTest {
 	}
 
 	@Test
+	fun `repeatable migrations are named for what they define`() {
+		// Views and functions live in R__ files: they are replaced in place whenever the file
+		// changes, so a schema read can be edited without burning a version number.
+		val malformed = repeatable.filterNot { it.matches(REPEATABLE_NAMING) }
+		assertEquals(emptyList(), malformed, "repeatable migrations not matching R__name.sql")
+	}
+
+	@Test
 	fun `versions are unique`() {
 		val versions = migrations.map { it.substring(1, 5) }
 		val duplicated = versions.groupBy { it }.filterValues { it.size > 1 }.keys
@@ -34,5 +47,6 @@ class MigrationNamingTest {
 
 	private companion object {
 		val NAMING = Regex("""V\d{4}__[a-z0-9_]+\.sql""")
+		val REPEATABLE_NAMING = Regex("""R__[a-z0-9_]+\.sql""")
 	}
 }

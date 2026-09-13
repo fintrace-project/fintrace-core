@@ -10,6 +10,7 @@ const val TRANSFERS_AREA_API_PATH = WORKSPACE_AREA_API_PATH + "/transfers"
 const val ACCOUNTS_AREA_API_PATH = WORKSPACE_AREA_API_PATH + "/accounts"
 const val ACCOUNT_BALANCE_ANCHORS_AREA_API_PATH = ACCOUNTS_AREA_API_PATH + "/{accountId}/balance-anchors"
 const val CATEGORIES_AREA_API_PATH = WORKSPACE_AREA_API_PATH + "/categories"
+const val STATISTICS_AREA_API_PATH = "$WORKSPACE_AREA_API_PATH/statistics"
 
 const val ADMIN_API_V1_BASE_PATH = "admin/api/v1"
 

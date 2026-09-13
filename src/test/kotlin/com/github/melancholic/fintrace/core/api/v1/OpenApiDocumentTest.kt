@@ -142,6 +142,14 @@ class OpenApiDocumentTest(@Autowired private val mvc: MockMvc) {
     }
 
 	@Test
+	fun `documents the balances report`() {
+		mvc.perform(get("/v3/api-docs"))
+			.andExpect(jsonPath("$.paths['/api/v1/workspaces/{workspaceId}/statistics/balances/accounts'].get.summary").exists())
+			.andExpect(jsonPath("$.paths['/api/v1/workspaces/{workspaceId}/statistics/balances/accounts'].get.responses.400").exists())
+			.andExpect(jsonPath("$.paths['/api/v1/workspaces/{workspaceId}/statistics/balances/accounts'].get.responses.404").exists())
+	}
+
+	@Test
 	fun `serves the Swagger UI anonymously`() {
 		mvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk)
 	}
