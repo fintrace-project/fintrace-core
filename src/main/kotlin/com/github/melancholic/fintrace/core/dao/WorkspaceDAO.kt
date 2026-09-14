@@ -41,6 +41,8 @@ interface WorkspaceDAO {
         newStatus: WorkspaceStatus,
         version: Long?
     ): Boolean
+
+    fun isEmpty(workspaceId: UUID): Boolean
 }
 
 @Repository
@@ -145,6 +147,11 @@ class WorkspaceDAOImpl(
         }
         return updated == 1
     }
+
+    override fun isEmpty(workspaceId: UUID): Boolean = jdbc.sql("SELECT fn_is_workspace_empty(:workspaceId)")
+        .param("workspaceId", workspaceId)
+        .query(Boolean::class.java)
+        .single()
 
     private fun updateSql(request: EditWorkspaceRequest): String = buildString {
         append("UPDATE t_workspaces SET")
