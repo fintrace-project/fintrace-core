@@ -18,3 +18,8 @@ const val ADMIN_API_V1_BASE_PATH = "admin/api/v1"
 const val ROOT_INCOME_CAT_NAME = "Income"
 const val ROOT_EXPENSE_CAT_NAME = "Expense"
 const val ROOT_OTHERS_CAT_NAME = "Others"
+
+object MDCConstants {
+    const val MDC_USER_ID = "userId"
+    const val MDC_WORKSPACE_ID = "workspaceId"
+}

@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.util.*
 
-interface StatisticFacade {
+sealed interface StatisticFacade: RestFacade {
     fun getAllBalancesOf(workspaceId: UUID, asOf: LocalDate, includeArchived: Boolean): List<AccountBalance>
 }
 

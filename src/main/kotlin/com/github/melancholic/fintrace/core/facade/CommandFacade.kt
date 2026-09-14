@@ -8,7 +8,7 @@ import com.github.melancholic.fintrace.core.service.command.CommandDispatcher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-interface CommandFacade {
+sealed interface CommandFacade: RestFacade {
     fun <R> processCommand(command: Command<R>): R
 }
 

@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
-interface CategoryFacade {
+sealed interface CategoryFacade: RestFacade {
     fun create(workspaceId: UUID, request: CreateCategoryRequest): CategoryProjection
     fun reviseCategory(workspaceId: UUID, categoryId: UUID, request: UpdateCategoryRequest): CategoryProjection
 }

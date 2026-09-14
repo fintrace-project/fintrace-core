@@ -1,3 +1,20 @@
 spring:
   application:
     name: fintrace-core
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    metrics:
+      export:
+        enabled: false
+
+logging:
+  pattern:
+    correlation: "%X{traceId:-} [user=%X{userId:-}|workspace=%X{workspaceId:-}] "

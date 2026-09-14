@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
-interface WorkspaceFacade {
+sealed interface WorkspaceFacade: RestFacade {
     fun createWorkspace(request: CreateWorkspaceRequest): Workspace
     fun getWorkspace(workspaceId: UUID): Workspace
     fun getWorkspaces(page: Pageable): List<Workspace>

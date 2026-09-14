@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
-interface ProjectionFacade {
+sealed interface ProjectionFacade: RestFacade {
     fun getOperation(workspaceId: UUID, operationId: UUID): OperationProjection
     fun getAccount(workspaceId: UUID, accountId: UUID): AccountProjection
     fun getAllAccounts(workspaceId: UUID, includeArchived: Boolean): List<AccountProjection>

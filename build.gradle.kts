@@ -32,9 +32,13 @@ dependencies {
 	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0")
 	implementation("org.springframework.boot:spring-boot-starter-cache")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
+	implementation("org.springframework.boot:spring-boot-starter-actuator")
+	implementation("org.springframework.boot:spring-boot-starter-aspectj")
+	implementation("org.springframework.boot:spring-boot-starter-opentelemetry")
 	implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
 	implementation("org.flywaydb:flyway-database-postgresql")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
+	implementation("io.github.oshai:kotlin-logging-jvm:8.0.4")
 	implementation("tools.jackson.module:jackson-module-kotlin")
 	// UUIDv7 — the JDK has no v7 factory, and ids must be generated here rather than by the database so that a full rebuild reproduces them exactly.
 	implementation("com.fasterxml.uuid:java-uuid-generator:5.1.0")

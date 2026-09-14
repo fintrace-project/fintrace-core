@@ -25,6 +25,7 @@ class SecurityConfiguration {
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
+            "/actuator/health"
         )
         const val ADMIN_ROLE = "ADMIN"
 
