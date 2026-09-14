@@ -316,6 +316,73 @@ class AdminFacadeReplayTest(
     }
 
     @Test
+    fun `rebuilds every projection at once, leaving out what was cancelled or deleted`() {
+        val ws = TestWorkspaces.createWithCategories(transactions, workspaceService, usersDAO, name = "everything")
+        val food = createCategory(ws, parent = expenseRoot(ws), name = "Food")
+        val cash = commandFacade.processCommand(
+            CreateAccountCommand(ws, "cash", "EUR", icon = null, initialBalance = BigDecimal("100.0000"))
+        ).id
+        val card = commandFacade.processCommand(CreateAccountCommand(ws, "card", "EUR", icon = null)).id
+        commandFacade.processCommand(ReviseAccountCommand(workspaceId = ws, accountId = card, name = "debit-card", icon = null))
+        val kept = create(workspaceId = ws, accountId = cash, categoryId = food)
+        commandFacade.processCommand(
+            ReviseOperationCommand(
+                workspaceId = ws,
+                operationId = kept,
+                occurredAt = OCCURRED_AT,
+                amount = BigDecimal("42.0000"),
+                accountId = cash,
+                kind = OperationKind.EXPENSE,
+                categoryId = food,
+                comment = "revised",
+            )
+        )
+        val cancelled = create(workspaceId = ws, accountId = cash, categoryId = food)
+        commandFacade.processCommand(CancelOperationCommand(workspaceId = ws, operationId = cancelled))
+        val transfer = commandFacade.processCommand(
+            CreateTransferCommand(
+                workspaceId = ws,
+                occurredAt = OCCURRED_AT,
+                sourceAccountId = cash,
+                sourceAmount = BigDecimal("30.0000"),
+                targetAccountId = card,
+                targetAmount = BigDecimal("30.0000"),
+                comment = "to card",
+            )
+        )
+        commandFacade.processCommand(CreateBalanceAnchorCommand(workspaceId = ws, accountId = card, value = BigDecimal("30.0000")))
+        val deletedAnchor = commandFacade.processCommand(
+            CreateBalanceAnchorCommand(workspaceId = ws, accountId = cash, value = BigDecimal("25.0000"))
+        ).projection.id
+        commandFacade.processCommand(CancelBalanceAnchorCommand(workspaceId = ws, accountId = cash, anchorId = deletedAnchor))
+
+        val categoriesBefore = categories(ws)
+        val accountsBefore = accounts(ws)
+        val operationsBefore = operations(ws)
+        val anchorsBefore = anchorRows(ws)
+
+        jdbc.sql("DELETE FROM t_categories").update()
+        jdbc.sql("DELETE FROM t_accounts").update()
+        jdbc.sql("DELETE FROM t_operations").update()
+        jdbc.sql("DELETE FROM t_balance_anchors").update()
+        adminFacade.replayWorkspace(ws)
+
+        assertEquals(categoriesBefore, categories(ws))
+        assertEquals(accountsBefore, accounts(ws))
+        assertEquals(operationsBefore, operations(ws))
+        assertEquals(anchorsBefore, anchorRows(ws))
+
+        // Equality alone would pass on a history that never cancelled anything; decision 4 is the absence
+        assertTrue(operations(ws).none { it.id == cancelled }, "a cancelled operation stays gone")
+        assertTrue(anchorRows(ws).none { it.id == deletedAnchor }, "a deleted anchor stays gone")
+        assertEquals(3, operationsBefore.size, "sanity: the revised operation plus both legs")
+        assertEquals(2, operationsBefore.count { it.transferId == transfer.id }, "sanity: both legs of the transfer")
+        assertEquals(BigDecimal("-42.0000"), operationsBefore.single { it.id == kept }.amount, "sanity: the revision")
+        assertEquals("debit-card", accountsBefore.single { it.id == card }.name, "sanity: the account revision")
+        assertEquals(2, anchorsBefore.size, "sanity: the initial balance and the card's anchor")
+    }
+
+    @Test
 	fun `rebuilds the tree structure and the system codes`() {
         val seeded = TestWorkspaces.createWithCategories(transactions, workspaceService, usersDAO, name = "seeded")
         val root = expenseRoot(seeded)
@@ -478,8 +545,37 @@ class AdminFacadeReplayTest(
 		}
 		.list()
 
+    private fun anchorRows(workspaceId: UUID): List<AnchorRow> = jdbc
+        .sql(
+            """
+            SELECT id, workspace_id, account_id, value, occurred_at, recorded_at
+            FROM t_balance_anchors WHERE workspace_id = :ws ORDER BY id
+            """
+        )
+        .param("ws", workspaceId)
+        .query { rs, _ ->
+            AnchorRow(
+                id = rs.getObject("id", UUID::class.java),
+                workspaceId = rs.getObject("workspace_id", UUID::class.java),
+                accountId = rs.getObject("account_id", UUID::class.java),
+                value = rs.getBigDecimal("value"),
+                occurredAt = rs.getObject("occurred_at", LocalDateTime::class.java),
+                recordedAt = rs.getObject("recorded_at", LocalDateTime::class.java),
+            )
+        }
+        .list()
+
 	private fun eventIds(): List<Long> =
 		jdbc.sql("SELECT id FROM t_events ORDER BY id").query(Long::class.java).list().filterNotNull()
+
+    private data class AnchorRow(
+        val id: UUID,
+        val workspaceId: UUID,
+        val accountId: UUID,
+        val value: BigDecimal,
+        val occurredAt: LocalDateTime,
+        val recordedAt: LocalDateTime,
+    )
 
 	private data class AccountRow(
 		val id: UUID,
