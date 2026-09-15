@@ -3,6 +3,7 @@ package com.github.melancholic.fintrace.core.facade
 import com.github.melancholic.fintrace.core.api.v1.dto.CreateCategoryRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.UpdateCategoryRequest
 import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.CreateCategoryCommand
 import com.github.melancholic.fintrace.core.domain.command.ReviseCategoryCommand
 import com.github.melancholic.fintrace.core.domain.projection.CategoryProjection
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
-sealed interface CategoryFacade: RestFacade {
+sealed interface CategoryFacade : RestFacade {
     fun create(workspaceId: UUID, request: CreateCategoryRequest): CategoryProjection
     fun reviseCategory(workspaceId: UUID, categoryId: UUID, request: UpdateCategoryRequest): CategoryProjection
 }
@@ -44,6 +45,9 @@ class CategoryFacadeImpl(
                 kind = parent.kind,
                 name = request.name,
                 icon = request.icon
+            ),
+            CommandContext(
+                initiator = userId
             )
         )
     }
@@ -63,6 +67,9 @@ class CategoryFacadeImpl(
                 name = request.name,
                 parentId = request.parentId,
                 icon = request.icon
+            ),
+            CommandContext(
+                initiator = userId
             )
         )
     }

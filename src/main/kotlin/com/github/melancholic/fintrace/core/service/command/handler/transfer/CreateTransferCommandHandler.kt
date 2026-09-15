@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.service.command.handler.transfer
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.CreateTransferCommand
 import com.github.melancholic.fintrace.core.domain.entity.Transfer
 import com.github.melancholic.fintrace.core.domain.event.payload.TransferCreated
@@ -27,7 +28,7 @@ class CreateTransferCommandHandler(
 ) {
     override val commandType: KClass<out CreateTransferCommand> = CreateTransferCommand::class
 
-    override fun handle(command: CreateTransferCommand): Transfer {
+    override fun handle(command: CreateTransferCommand, context: CommandContext): Transfer {
         validationService.validate(command)
         val transferId = uuidGenerator.nextUUID()
         val payload = TransferCreatedV1(
@@ -50,7 +51,7 @@ class CreateTransferCommandHandler(
             )
         )
 
-        val event = registerEvent(command, payload)
+        val event = registerEvent(command, context, payload)
         projectionApplier.apply(event.payload.projectionChange())
 
         return transferLoader.loadTransfer(event.workspaceId, transferId)

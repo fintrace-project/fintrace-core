@@ -2,6 +2,7 @@ package com.github.melancholic.fintrace.core.service.command.handler.balanceanch
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
 import com.github.melancholic.fintrace.core.domain.command.CancelBalanceAnchorCommand
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.event.payload.BalanceAnchorCanceled
 import com.github.melancholic.fintrace.core.domain.event.payload.BalanceAnchorCanceledV1
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
@@ -21,9 +22,9 @@ class CancelBalanceAnchorCommandHandler(
 ) {
     override val commandType: KClass<out CancelBalanceAnchorCommand> = CancelBalanceAnchorCommand::class
 
-    override fun handle(command: CancelBalanceAnchorCommand) {
+    override fun handle(command: CancelBalanceAnchorCommand, context: CommandContext) {
         validationService.validate(command)
-        val event = registerEvent(command, buildEventPayload(command))
+        val event = registerEvent(command, context, buildEventPayload(command))
         projectionApplier.apply(event.payload.projectionChange())
     }
 

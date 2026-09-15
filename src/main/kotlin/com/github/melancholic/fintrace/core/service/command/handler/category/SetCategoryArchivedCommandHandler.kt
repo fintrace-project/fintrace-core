@@ -2,6 +2,7 @@ package com.github.melancholic.fintrace.core.service.command.handler.category
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
 import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.SetCategoryArchivedCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.CategoryEventPayload
 import com.github.melancholic.fintrace.core.domain.event.payload.CategoryRevised
@@ -27,13 +28,13 @@ class SetCategoryArchivedCommandHandler(
 
     override val commandType: KClass<out SetCategoryArchivedCommand> = SetCategoryArchivedCommand::class
 
-    override fun handle(command: SetCategoryArchivedCommand): CategoryProjection {
+    override fun handle(command: SetCategoryArchivedCommand, context: CommandContext): CategoryProjection {
         validationService.validate(command)
 
         if (command.archived) {
             // Archive whole subtree
             val forArchive = categoryDAO.findSubtreeIds(command.workspaceId, command.categoryId)
-                .map { archive(command, it) }
+                .map { archive(command, context, it) }
 
             val category = forArchive.singleOrNull { it.id == command.categoryId }
                 ?: throw ApplicationException("Category '${command.categoryId}' was not part of its own subtree")
@@ -43,32 +44,40 @@ class SetCategoryArchivedCommandHandler(
             return category
         } else {
             // Restore only specific category
-            val category = restore(command, command.categoryId)
+            val category = restore(command, context, command.categoryId)
             projectionApplier.apply(ProjectionChange.Upsert(listOf(category)))
             return category
         }
     }
 
 
-    private fun archive(command: SetCategoryArchivedCommand, categoryId: UUID): CategoryProjection {
+    private fun archive(
+        command: SetCategoryArchivedCommand,
+        context: CommandContext,
+        categoryId: UUID
+    ): CategoryProjection {
         val current = currentState(command.workspaceId, categoryId)
         if (current.archived) {
             // Already archived - just return current state
             return current.projection()
         }
 
-        val event = registerEvent(command, payload(current, command.archived))
+        val event = registerEvent(command, context, buildEventPayload(current, command.archived))
         return (event.payload as CategoryRevised).projection()
     }
 
-    private fun restore(command: SetCategoryArchivedCommand, categoryId: UUID): CategoryProjection {
+    private fun restore(
+        command: SetCategoryArchivedCommand,
+        context: CommandContext,
+        categoryId: UUID
+    ): CategoryProjection {
         val current = currentState(command.workspaceId, categoryId)
         if (!current.archived) {
             // Already not archived - just return current state
             return current.projection()
         }
 
-        val event = registerEvent(command, payload(current, command.archived))
+        val event = registerEvent(command, context, buildEventPayload(current, command.archived))
         return (event.payload as CategoryRevised).projection()
     }
 
@@ -76,7 +85,7 @@ class SetCategoryArchivedCommandHandler(
         currentPayload(workspaceId, categoryId) as? CategoryEventPayload
             ?: throw ApplicationException("Latest event for category '$categoryId' is not a category payload")
 
-    private fun payload(current: CategoryEventPayload, archived: Boolean) = CategoryRevisedV1(
+    private fun buildEventPayload(current: CategoryEventPayload, archived: Boolean) = CategoryRevisedV1(
         id = current.id,
         workspaceId = current.workspaceId,
         parentId = current.parentId,
@@ -87,7 +96,4 @@ class SetCategoryArchivedCommandHandler(
         archived = archived,
         recordedAt = timestampProvider.now()
     )
-
-    private fun buildEventPayload(command: SetCategoryArchivedCommand): CategoryRevised =
-        payload(currentState(command.workspaceId, command.categoryId), command.archived)
 }

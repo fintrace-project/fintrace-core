@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.service.command.handler.transfer
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.ReviseTransferCommand
 import com.github.melancholic.fintrace.core.domain.entity.Transfer
 import com.github.melancholic.fintrace.core.domain.event.payload.TransferLegPayload
@@ -27,7 +28,7 @@ class ReviseTransferCommandHandler(
 ) {
     override val commandType: KClass<out ReviseTransferCommand> = ReviseTransferCommand::class
 
-    override fun handle(command: ReviseTransferCommand): Transfer {
+    override fun handle(command: ReviseTransferCommand, context: CommandContext): Transfer {
         validationService.validate(command)
 
         val current = currentPayload(command.workspaceId, command.transferId) as? TransferStateEventPayload
@@ -52,7 +53,7 @@ class ReviseTransferCommandHandler(
             )
         )
 
-        val event = registerEvent(command, payload)
+        val event = registerEvent(command, context, payload)
         projectionApplier.apply(event.payload.projectionChange())
 
         return transferLoader.loadTransfer(event.workspaceId, command.transferId)

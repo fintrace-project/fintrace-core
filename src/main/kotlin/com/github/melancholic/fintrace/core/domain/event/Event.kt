@@ -13,6 +13,7 @@ data class Event(
 	val payload: EventPayload,
 	val occurredAt: LocalDateTime,
 	val recordedAt: LocalDateTime,
+	val recordedBy: UUID
 )
 
 enum class EntityType {

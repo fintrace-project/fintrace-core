@@ -16,7 +16,8 @@ interface EventsDAO {
         workspaceId: UUID,
         entityType: EntityType,
         eventType: EventType,
-        payload: EventPayload
+        payload: EventPayload,
+        recordedBy: UUID
     ): Event
 
     fun loadAll(workspaceId: UUID): List<Event>
@@ -35,7 +36,8 @@ class EventsDAOImpl(
         workspaceId: UUID,
         entityType: EntityType,
         eventType: EventType,
-        payload: EventPayload
+        payload: EventPayload,
+        recordedBy: UUID
     ): Event {
 
         val id = jdbc.sql(INSERT)
@@ -46,6 +48,7 @@ class EventsDAOImpl(
             .param("payload", mapper.writeValueAsString(payload))
             .param("occurredAt", if (payload is TemporalEventPayload) payload.occurredAt else payload.recordedAt)
             .param("recordedAt", payload.recordedAt)
+            .param("recordedBy", recordedBy)
             .query(Long::class.java)
             .single()
 
@@ -58,6 +61,7 @@ class EventsDAOImpl(
             payload = payload,
             occurredAt = if (payload is TemporalEventPayload) payload.occurredAt else payload.recordedAt,
             recordedAt = payload.recordedAt,
+            recordedBy = recordedBy
         )
     }
 
@@ -78,9 +82,9 @@ class EventsDAOImpl(
     private companion object {
         const val INSERT = """
             INSERT INTO t_events (workspace_id, aggregate_type, aggregate_id, event_type,
-                                payload, occurred_at, recorded_at)
+                                payload, occurred_at, recorded_at, recorded_by)
             VALUES (:workspaceId, :aggregateType, :aggregateId, :eventType,
-                    CAST(:payload AS jsonb), :occurredAt, :recordedAt)
+                    CAST(:payload AS jsonb), :occurredAt, :recordedAt, :recordedBy)
             RETURNING id
         """
 
@@ -93,7 +97,7 @@ class EventsDAOImpl(
 
         const val SELECT_BY_WORKSPACE = """
             SELECT id, workspace_id, aggregate_type, aggregate_id, 
-                   event_type, payload, occurred_at, recorded_at 
+                   event_type, payload, occurred_at, recorded_at, recorded_by
             FROM t_events
             WHERE workspace_id=:workspaceId
             ORDER BY id ASC

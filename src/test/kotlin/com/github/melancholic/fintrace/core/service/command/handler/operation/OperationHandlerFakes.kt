@@ -2,6 +2,7 @@ package com.github.melancholic.fintrace.core.service.command.handler.operation
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
 import com.github.melancholic.fintrace.core.domain.command.CancelOperationCommand
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.CreateOperationCommand
 import com.github.melancholic.fintrace.core.domain.command.ReviseOperationCommand
 import com.github.melancholic.fintrace.core.domain.event.EntityType
@@ -33,6 +34,7 @@ internal class RecordingEventsDAO : EventsDAO {
 		entityType: EntityType,
 		eventType: EventType,
 		payload: EventPayload,
+        recordedBy: UUID,
 	): Event = Event(
 		id = registered.size + 1L,
 		workspaceId = workspaceId,
@@ -43,6 +45,7 @@ internal class RecordingEventsDAO : EventsDAO {
 		// Mirrors EventsDAOImpl: an event with no business date is dated when it was recorded.
 		occurredAt = (payload as? TemporalEventPayload)?.occurredAt ?: payload.recordedAt,
 		recordedAt = payload.recordedAt,
+        recordedBy = recordedBy,
 	).also { registered += it }
 
 	override fun loadAll(workspaceId: UUID): List<Event> = registered
@@ -100,4 +103,6 @@ internal object HandlerFixtures {
 	val RECORDED_AT: LocalDateTime = LocalDateTime.parse("2026-03-16T09:00:00")
 	val ACCOUNT: UUID = UUID.fromString("0199a1c2-3d4e-7f80-8123-00000000aaaa")
 	val CATEGORY: UUID = UUID.fromString("0199a1c2-3d4e-7f80-8123-00000000bbbb")
+    val RECORDER: UUID = UUID.fromString("0199a1c2-3d4e-7f80-8123-00000000eeee")
+    val CONTEXT = CommandContext(initiator = RECORDER)
 }

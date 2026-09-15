@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
 import tools.jackson.databind.json.JsonMapper
 import java.sql.ResultSet
 import java.time.LocalDateTime
-import java.util.UUID
+import java.util.*
 
 @Component
 class EventRowMapper(
@@ -27,5 +27,6 @@ class EventRowMapper(
         payload = mapper.readValue(rs.getString("payload"), EventPayload::class.java),
         occurredAt = rs.getObject("occurred_at", LocalDateTime::class.java),
         recordedAt = rs.getObject("recorded_at", LocalDateTime::class.java),
+        recordedBy = rs.getObject("recorded_by", UUID::class.java)
     )
 }

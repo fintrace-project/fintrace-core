@@ -5,10 +5,12 @@ import com.github.melancholic.fintrace.core.domain.event.EntityType
 import com.github.melancholic.fintrace.core.domain.event.EventType
 import com.github.melancholic.fintrace.core.domain.event.payload.OperationCanceledV1
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
-import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
+import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.CONTEXT
 import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.OPERATION
 import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.RECORDED_AT
+import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.RECORDER
 import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.WORKSPACE
+import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -30,7 +32,7 @@ class CancelOperationCommandHandlerTest {
 
 	@Test
 	fun `appends one event and removes one row`() {
-		handler().handle(command())
+        handler().handle(command(), CONTEXT)
 
 		assertEquals(1, events.registered.size)
 		val removal = projections.removals.single()
@@ -42,7 +44,7 @@ class CancelOperationCommandHandlerTest {
 
 	@Test
 	fun `classifies the event as a cancellation of the operation named by the command`() {
-		handler().handle(command())
+        handler().handle(command(), CONTEXT)
 
 		val event = events.registered.single()
 		assertEquals(EntityType.OPERATION, event.entityType)
@@ -54,7 +56,7 @@ class CancelOperationCommandHandlerTest {
 
 	@Test
 	fun `records the cancellation without restating the operation's state`() {
-		handler().handle(command())
+        handler().handle(command(), CONTEXT)
 
 		val payload = events.registered.single().payload as OperationCanceledV1
 		// The resulting state of a cancellation is "gone", so the payload identifies rather than
@@ -65,9 +67,16 @@ class CancelOperationCommandHandlerTest {
 		assertEquals(1, payload.version)
 	}
 
+    @Test
+    fun `records the caller carried by the context`() {
+        handler().handle(command(), CONTEXT)
+
+        assertEquals(RECORDER, events.registered.single().recordedBy)
+    }
+
 	@Test
 	fun `removes the row the event names`() {
-		handler().handle(command())
+        handler().handle(command(), CONTEXT)
 
 		val event = events.registered.single()
 		val removal = projections.removals.single()
@@ -79,7 +88,7 @@ class CancelOperationCommandHandlerTest {
 	fun `validates before appending anything`() {
 		val rejecting = RecordingValidation(NotFoundEntityException("no such operation"))
 
-		assertFailsWith<NotFoundEntityException> { handler(rejecting).handle(command()) }
+        assertFailsWith<NotFoundEntityException> { handler(rejecting).handle(command(), CONTEXT) }
 
 		// Cancelling twice arrives here: the row is already gone, so validation rejects and the
 		// log gains nothing.

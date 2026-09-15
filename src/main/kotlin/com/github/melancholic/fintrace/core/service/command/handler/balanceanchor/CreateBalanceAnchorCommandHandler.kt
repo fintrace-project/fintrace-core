@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.service.command.handler.balanceanchor
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.CreateBalanceAnchorCommand
 import com.github.melancholic.fintrace.core.domain.entity.BalanceAnchorContainer
 import com.github.melancholic.fintrace.core.domain.event.payload.BalanceAnchorCreated
@@ -26,9 +27,9 @@ class CreateBalanceAnchorCommandHandler(
 ) {
     override val commandType: KClass<out CreateBalanceAnchorCommand> = CreateBalanceAnchorCommand::class
 
-    override fun handle(command: CreateBalanceAnchorCommand): BalanceAnchorContainer {
+    override fun handle(command: CreateBalanceAnchorCommand, context: CommandContext): BalanceAnchorContainer {
         validationService.validate(command)
-        val event = registerEvent(command, buildEventPayload(command))
+        val event = registerEvent(command, context, buildEventPayload(command))
         projectionApplier.apply(event.payload.projectionChange())
         return anchorContainerFactory.buildBalanceAnchorContainer((event.payload as BalanceAnchorCreated).projection())
     }

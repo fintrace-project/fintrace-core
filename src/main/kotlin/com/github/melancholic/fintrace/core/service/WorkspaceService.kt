@@ -9,6 +9,7 @@ import com.github.melancholic.fintrace.core.config.ROOT_EXPENSE_CAT_NAME
 import com.github.melancholic.fintrace.core.config.ROOT_INCOME_CAT_NAME
 import com.github.melancholic.fintrace.core.config.ROOT_OTHERS_CAT_NAME
 import com.github.melancholic.fintrace.core.dao.WorkspaceDAO
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.CreateCategoryCommand
 import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.entity.CategorySystemCode
@@ -45,7 +46,7 @@ interface WorkspaceService {
 class WorkspaceServiceImpl(
     private val workspaceDAO: WorkspaceDAO,
     private val validationService: WorkspaceValidationService,
-    private val commandDispatcher: CommandDispatcher,
+    private val commandDispatcher: CommandDispatcher
 ) : WorkspaceService {
 
     override fun createWorkspace(
@@ -55,7 +56,7 @@ class WorkspaceServiceImpl(
         validationService.validate(request)
         val workspaceId = workspaceDAO.create(userId, request)
         val workspace = getWorkspace(userId, workspaceId)
-        initWorkspace(workspace)
+        initWorkspace(userId, workspace)
         return workspace
     }
 
@@ -162,11 +163,11 @@ class WorkspaceServiceImpl(
         return workspace
     }
 
-    private fun initWorkspace(workspace: Workspace) {
-        initCategories(workspace)
+    private fun initWorkspace(userId: UUID, workspace: Workspace) {
+        initCategories(userId, workspace)
     }
 
-    private fun initCategories(workspace: Workspace) {
+    private fun initCategories(userId: UUID, workspace: Workspace) {
         val rootIncome = commandDispatcher.dispatch(
             CreateCategoryCommand.system(
                 workspaceId = workspace.id,
@@ -175,6 +176,9 @@ class WorkspaceServiceImpl(
                 name = ROOT_INCOME_CAT_NAME,
                 icon = ICON_INCOME,
                 systemCode = CategorySystemCode.INCOME_ROOT
+            ),
+            CommandContext(
+                initiator = userId
             )
         )
         commandDispatcher.dispatch(
@@ -185,6 +189,9 @@ class WorkspaceServiceImpl(
                 name = ROOT_OTHERS_CAT_NAME,
                 icon = ICON_OTHERS,
                 systemCode = CategorySystemCode.INCOME_OTHERS
+            ),
+            CommandContext(
+                initiator = userId
             )
         )
 
@@ -196,6 +203,9 @@ class WorkspaceServiceImpl(
                 name = ROOT_EXPENSE_CAT_NAME,
                 icon = ICON_EXPENSE,
                 systemCode = CategorySystemCode.EXPENSE_ROOT
+            ),
+            CommandContext(
+                initiator = userId
             )
         )
         commandDispatcher.dispatch(
@@ -206,6 +216,9 @@ class WorkspaceServiceImpl(
                 name = ROOT_OTHERS_CAT_NAME,
                 icon = ICON_OTHERS,
                 systemCode = CategorySystemCode.EXPENSE_OTHERS
+            ),
+            CommandContext(
+                initiator = userId
             )
         )
     }

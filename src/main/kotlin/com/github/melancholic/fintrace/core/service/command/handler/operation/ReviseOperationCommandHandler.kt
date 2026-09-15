@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.service.command.handler.operation
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.ReviseOperationCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.BalanceOperationEventPayload
 import com.github.melancholic.fintrace.core.domain.event.payload.OperationRevised
@@ -24,9 +25,9 @@ class ReviseOperationCommandHandler(
 ) {
     override val commandType: KClass<out ReviseOperationCommand> = ReviseOperationCommand::class
 
-    override fun handle(command: ReviseOperationCommand): OperationProjection {
+    override fun handle(command: ReviseOperationCommand, context: CommandContext): OperationProjection {
         validationService.validate(command)
-        val event = registerEvent(command, buildEventPayload(command))
+        val event = registerEvent(command, context, buildEventPayload(command))
         projectionApplier.apply(event.payload.projectionChange())
         return (event.payload as OperationRevised).projection()
     }

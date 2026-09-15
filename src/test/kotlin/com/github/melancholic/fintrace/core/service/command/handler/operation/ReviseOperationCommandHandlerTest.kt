@@ -9,9 +9,11 @@ import com.github.melancholic.fintrace.core.domain.event.payload.OperationRevise
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.ACCOUNT
 import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.CATEGORY
+import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.CONTEXT
 import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.OCCURRED_AT
 import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.OPERATION
 import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.RECORDED_AT
+import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.RECORDER
 import com.github.melancholic.fintrace.core.service.command.handler.operation.HandlerFixtures.WORKSPACE
 import com.github.melancholic.fintrace.core.service.projection.ProjectionChange
 import org.junit.jupiter.api.Test
@@ -40,7 +42,7 @@ class ReviseOperationCommandHandlerTest {
 	fun `appends one event and upserts one row`() {
         seedCreated()
 
-		handler().handle(command())
+        handler().handle(command(), CONTEXT)
 
         assertEquals(2, events.registered.size, "the seeded creation, plus one revision")
 		assertEquals(1, projections.operations.size)
@@ -51,7 +53,7 @@ class ReviseOperationCommandHandlerTest {
 	fun `classifies the event as a revision of the operation named by the command`() {
         seedCreated()
 
-		handler().handle(command())
+        handler().handle(command(), CONTEXT)
 
         val event = events.registered.last()
 		assertEquals(EntityType.OPERATION, event.entityType)
@@ -65,7 +67,7 @@ class ReviseOperationCommandHandlerTest {
 	fun `carries the complete new state, not the changed fields`() {
         seedCreated()
 
-		handler().handle(command(amount = BigDecimal("42.0000")))
+        handler().handle(command(amount = BigDecimal("42.0000")), CONTEXT)
 
         val payload = events.registered.last().payload as OperationRevisedV1
 		assertEquals(OPERATION, payload.id)
@@ -85,7 +87,7 @@ class ReviseOperationCommandHandlerTest {
         val counterpart = UUID.fromString("0199a1c2-3d4e-7f80-8123-00000000dddd")
         seedCreated(externalRef = "mok:4711", transferId = transfer, counterpartId = counterpart)
 
-        handler().handle(command())
+        handler().handle(command(), CONTEXT)
 
         // A payload carries full state, and a REVISED event that dropped these would be a lie
         // about what the operation now is: the row rebuilt from it would lose its link to the
@@ -100,7 +102,7 @@ class ReviseOperationCommandHandlerTest {
     fun `an income keeps its amount positive`() {
         seedCreated()
 
-        handler().handle(command(amount = BigDecimal("42.0000"), kind = OperationKind.INCOME))
+        handler().handle(command(amount = BigDecimal("42.0000"), kind = OperationKind.INCOME), CONTEXT)
 
         val payload = events.registered.last().payload as OperationRevisedV1
         assertEquals(BigDecimal("42.0000"), payload.amount)
@@ -111,7 +113,7 @@ class ReviseOperationCommandHandlerTest {
 		val moved = LocalDateTime.parse("2019-07-04T12:00:00")
         seedCreated()
 
-		handler().handle(command(occurredAt = moved))
+        handler().handle(command(occurredAt = moved), CONTEXT)
 
         val payload = events.registered.last().payload as OperationRevisedV1
 		// A revision may correct the business date; when it entered the system is the server's.
@@ -119,11 +121,20 @@ class ReviseOperationCommandHandlerTest {
 		assertEquals(RECORDED_AT, payload.recordedAt)
 	}
 
+    @Test
+    fun `records the caller carried by the context`() {
+        seedCreated()
+
+        handler().handle(command(), CONTEXT)
+
+        assertEquals(RECORDER, events.registered.last().recordedBy)
+    }
+
 	@Test
 	fun `writes the projection from the payload`() {
         seedCreated()
 
-		handler().handle(command(amount = BigDecimal("42.0000")))
+        handler().handle(command(amount = BigDecimal("42.0000")), CONTEXT)
 
         val payload = events.registered.last().payload as OperationRevisedV1
 		assertEquals(
@@ -136,7 +147,7 @@ class ReviseOperationCommandHandlerTest {
 	fun `validates before appending anything`() {
 		val rejecting = RecordingValidation(NotFoundEntityException("no such operation"))
 
-		assertFailsWith<NotFoundEntityException> { handler(rejecting).handle(command()) }
+        assertFailsWith<NotFoundEntityException> { handler(rejecting).handle(command(), CONTEXT) }
 
 		// §4.10: an event has already happened and cannot be rejected, so an invalid command has
 		// to be stopped before the append — not compensated afterwards.
@@ -183,6 +194,7 @@ class ReviseOperationCommandHandlerTest {
             counterpartId = counterpartId,
             externalRef = externalRef,
             comment = null,
-        )
+        ),
+        RECORDER,
 	)
 }

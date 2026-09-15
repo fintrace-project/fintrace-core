@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.service.command
 
 import com.github.melancholic.fintrace.core.domain.command.CancelOperationCommand
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.CreateOperationCommand
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.event.payload.EventPayload
@@ -24,12 +25,16 @@ class CommandDispatcherTest {
 	) : CommandHandler<CreateOperationCommand, OperationProjection, EventPayload> {
 		override val commandType: KClass<out CreateOperationCommand> = CreateOperationCommand::class
 		var received: CreateOperationCommand? = null
+        var receivedContext: CommandContext? = null
 
-		override fun handle(command: CreateOperationCommand): OperationProjection {
+        override fun handle(command: CreateOperationCommand, context: CommandContext): OperationProjection {
 			received = command
+            receivedContext = context
 			return result
 		}
 	}
+
+    private val context = CommandContext(initiator = UUID.randomUUID())
 
 	@Test
 	fun `routes a command to the handler declaring its type`() {
@@ -38,10 +43,11 @@ class CommandDispatcherTest {
 		val dispatcher = dispatcherOf(handler)
 		val command = createOperation()
 
-		val result = dispatcher.dispatch(command)
+        val result = dispatcher.dispatch(command, context)
 
 		assertEquals(expected, result)
 		assertEquals(command, handler.received, "the handler received the original command")
+        assertEquals(context, handler.receivedContext, "and the context it was dispatched with, unchanged")
 	}
 
 	@Test
@@ -53,7 +59,8 @@ class CommandDispatcherTest {
 				CancelOperationCommand(
 					workspaceId = UUID.randomUUID(),
 					operationId = UUID.randomUUID(),
-				)
+                ),
+                context,
 			)
 		}
 
@@ -64,7 +71,7 @@ class CommandDispatcherTest {
 	fun `fails when no handlers are registered at all`() {
 		val dispatcher = dispatcherOf()
 
-		assertFailsWith<IllegalArgumentException> { dispatcher.dispatch(createOperation()) }
+        assertFailsWith<IllegalArgumentException> { dispatcher.dispatch(createOperation(), context) }
 	}
 
 	/**

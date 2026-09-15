@@ -2,6 +2,7 @@ package com.github.melancholic.fintrace.core.service.command.handler
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
 import com.github.melancholic.fintrace.core.domain.command.Command
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.event.EntityType
 import com.github.melancholic.fintrace.core.domain.event.payload.EventPayload
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
@@ -13,11 +14,12 @@ abstract class AbstractCommandHandler<C : Command<R>, R, P : EventPayload>(
 
     abstract val entityType: EntityType
 
-    protected fun registerEvent(command: C, payload: P) = eventsDAO.registerEvent(
+    protected fun registerEvent(command: C, context: CommandContext, payload: P) = eventsDAO.registerEvent(
         workspaceId = command.workspaceId,
         payload = payload,
         eventType = command.eventType(),
-        entityType = entityType
+        entityType = entityType,
+        recordedBy = context.initiator
     )
 
     protected fun currentPayload(workspaceId: UUID, aggregateId: UUID): EventPayload =

@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.service.command.handler.category
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.CreateCategoryCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.CategoryCreated
 import com.github.melancholic.fintrace.core.domain.event.payload.CategoryCreatedV1
@@ -22,9 +23,9 @@ class CreateCategoryCommandHandler(
 ) : AbstractCategoryCommandHandler<CreateCategoryCommand, CategoryProjection, CategoryCreated>(eventsDAO) {
     override val commandType: KClass<out CreateCategoryCommand> = CreateCategoryCommand::class
 
-    override fun handle(command: CreateCategoryCommand): CategoryProjection {
+    override fun handle(command: CreateCategoryCommand, context: CommandContext): CategoryProjection {
         validationService.validate(command)
-        val event = registerEvent(command, buildEventPayload(command))
+        val event = registerEvent(command, context, buildEventPayload(command))
         projectionApplier.apply(event.payload.projectionChange())
         return (event.payload as CategoryCreated).projection()
     }

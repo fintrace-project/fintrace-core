@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.service.command.handler.account
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.CreateAccountCommand
 import com.github.melancholic.fintrace.core.domain.command.CreateBalanceAnchorCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.AccountCreated
@@ -25,11 +26,11 @@ class CreateAccountCommandHandler(
 ) : AbstractAccountCommandHandler<CreateAccountCommand, AccountProjection, AccountCreated>(eventsDAO) {
     override val commandType: KClass<out CreateAccountCommand> = CreateAccountCommand::class
 
-    override fun handle(command: CreateAccountCommand): AccountProjection {
+    override fun handle(command: CreateAccountCommand, context: CommandContext): AccountProjection {
         validationService.validate(command)
 
         val payload = buildEventPayload(command)
-        val event = registerEvent(command, payload)
+        val event = registerEvent(command, context, payload)
 
         projectionApplier.apply(event.payload.projectionChange())
         if (command.initialBalance != null) {
@@ -38,7 +39,8 @@ class CreateAccountCommandHandler(
                     workspaceId = command.workspaceId,
                     accountId = payload.id,
                     value = command.initialBalance
-                )
+                ),
+                context
             )
         }
         return payload.projection()

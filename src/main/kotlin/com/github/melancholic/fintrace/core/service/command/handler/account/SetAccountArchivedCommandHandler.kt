@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.service.command.handler.account
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.SetAccountArchivedCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.AccountEventPayload
 import com.github.melancholic.fintrace.core.domain.event.payload.AccountRevised
@@ -24,9 +25,9 @@ class SetAccountArchivedCommandHandler(
 ) {
     override val commandType: KClass<out SetAccountArchivedCommand> = SetAccountArchivedCommand::class
 
-    override fun handle(command: SetAccountArchivedCommand): AccountProjection {
+    override fun handle(command: SetAccountArchivedCommand, context: CommandContext): AccountProjection {
         validationService.validate(command)
-        val event = registerEvent(command, buildEventPayload(command))
+        val event = registerEvent(command, context, buildEventPayload(command))
         projectionApplier.apply(event.payload.projectionChange())
         return (event.payload as AccountRevised).projection()
     }

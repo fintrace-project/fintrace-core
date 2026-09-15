@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.facade
 
 import com.github.melancholic.fintrace.core.domain.command.Command
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.entity.WorkspaceStatus
 import com.github.melancholic.fintrace.core.security.IdentityProvider
 import com.github.melancholic.fintrace.core.service.WorkspaceService
@@ -23,7 +24,7 @@ class CommandFacadeImpl(
     override fun <R> processCommand(command: Command<R>): R {
         val userId = identityProvider.currentUserId()
         val workspace = workspaceService.requireWritable(userId, command.workspaceId)
-        val result = commandDispatcher.dispatch(command)
+        val result = commandDispatcher.dispatch(command, CommandContext(initiator = userId))
         if (workspace.status == WorkspaceStatus.NEW) workspaceService.activateWorkspace(userId, command.workspaceId)
         return result
     }

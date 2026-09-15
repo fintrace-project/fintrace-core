@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.service.command
 
 import com.github.melancholic.fintrace.core.domain.command.Command
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.event.payload.EventPayload
 import com.github.melancholic.fintrace.core.service.command.handler.CommandHandler
 import org.springframework.beans.factory.ObjectProvider
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Service
 import kotlin.reflect.KClass
 
 sealed interface CommandDispatcher {
-    fun <R> dispatch(command: Command<R>): R
+    fun <R> dispatch(command: Command<R>, context: CommandContext): R
 }
 
 @Service
@@ -31,8 +32,8 @@ class CommandDispatcherImpl(
             }
     }
 
-    override fun <R> dispatch(command: Command<R>): R {
-        return resolveHandler(command).handle(command)
+    override fun <R> dispatch(command: Command<R>, context: CommandContext): R {
+        return resolveHandler(command).handle(command, context)
     }
 
     @Suppress("UNCHECKED_CAST")

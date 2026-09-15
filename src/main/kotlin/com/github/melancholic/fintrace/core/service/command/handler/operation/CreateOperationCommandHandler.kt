@@ -2,6 +2,7 @@ package com.github.melancholic.fintrace.core.service.command.handler.operation
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
 import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.CreateOperationCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.OperationCreated
 import com.github.melancholic.fintrace.core.domain.event.payload.OperationCreatedV1
@@ -24,9 +25,9 @@ class CreateOperationCommandHandler(
 ) : AbstractOperationCommandHandler<CreateOperationCommand, OperationProjection, OperationCreated>(eventsDAO) {
     override val commandType: KClass<out CreateOperationCommand> = CreateOperationCommand::class
 
-    override fun handle(command: CreateOperationCommand): OperationProjection {
+    override fun handle(command: CreateOperationCommand, context: CommandContext): OperationProjection {
         validationService.validate(command)
-        val event = registerEvent(command, buildEventPayload(command))
+        val event = registerEvent(command, context, buildEventPayload(command))
         projectionApplier.apply(event.payload.projectionChange())
         return (event.payload as OperationCreated).projection()
     }

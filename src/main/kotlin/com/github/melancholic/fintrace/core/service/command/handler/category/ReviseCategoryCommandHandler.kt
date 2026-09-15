@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.service.command.handler.category
 
 import com.github.melancholic.fintrace.core.dao.EventsDAO
+import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.ReviseCategoryCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.CategoryEventPayload
 import com.github.melancholic.fintrace.core.domain.event.payload.CategoryRevised
@@ -22,9 +23,9 @@ class ReviseCategoryCommandHandler(
 ) : AbstractCategoryCommandHandler<ReviseCategoryCommand, CategoryProjection, CategoryRevised>(eventsDAO) {
     override val commandType: KClass<out ReviseCategoryCommand> = ReviseCategoryCommand::class
 
-    override fun handle(command: ReviseCategoryCommand): CategoryProjection {
+    override fun handle(command: ReviseCategoryCommand, context: CommandContext): CategoryProjection {
         validationService.validate(command)
-        val event = registerEvent(command, buildEventPayload(command))
+        val event = registerEvent(command, context, buildEventPayload(command))
         projectionApplier.apply(event.payload.projectionChange())
         return (event.payload as CategoryRevised).projection()
     }
