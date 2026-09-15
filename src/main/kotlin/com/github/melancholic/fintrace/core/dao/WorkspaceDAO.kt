@@ -3,6 +3,7 @@ package com.github.melancholic.fintrace.core.dao
 import com.github.melancholic.fintrace.core.api.v1.dto.CreateWorkspaceRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.EditWorkspaceRequest
 import com.github.melancholic.fintrace.core.domain.entity.Workspace
+import com.github.melancholic.fintrace.core.domain.entity.WorkspacePurgeData
 import com.github.melancholic.fintrace.core.domain.entity.WorkspaceStatus
 import com.github.melancholic.fintrace.core.util.SqlHelper.orderBy
 import com.github.melancholic.fintrace.core.util.TimestampProvider
@@ -10,6 +11,7 @@ import com.github.melancholic.fintrace.core.util.UUIDGenerator
 import org.springframework.data.domain.Pageable
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
+import java.time.LocalDateTime
 import java.util.*
 
 interface WorkspaceDAO {
@@ -43,6 +45,10 @@ interface WorkspaceDAO {
     ): Boolean
 
     fun isEmpty(workspaceId: UUID): Boolean
+
+    fun findDeletedBefore(cutoff: LocalDateTime, limit: Int = 100): List<WorkspacePurgeData>
+
+    fun purgeWorkspace(workspacePurgeData: WorkspacePurgeData): Boolean
 }
 
 @Repository
@@ -153,6 +159,18 @@ class WorkspaceDAOImpl(
         .query(Boolean::class.java)
         .single()
 
+    override fun findDeletedBefore(cutoff: LocalDateTime, limit: Int): List<WorkspacePurgeData> =
+        jdbc.sql(FIND_CANDIDATES_FOR_PURGE)
+            .param("cutoffDateTime", cutoff)
+            .param("limit", limit)
+            .query(WorkspacePurgeData::class.java)
+            .list() as List<WorkspacePurgeData>
+
+    override fun purgeWorkspace(workspacePurgeData: WorkspacePurgeData): Boolean = jdbc.sql(PURGE_WORKSPACE)
+        .param("workspaceId", workspacePurgeData.id)
+        .param("version", workspacePurgeData.version)
+        .update() == 1
+
     private fun updateSql(request: EditWorkspaceRequest): String = buildString {
         append("UPDATE t_workspaces SET")
         request.workspaceName?.let { append(" name = :name,") }
@@ -206,5 +224,28 @@ class WorkspaceDAOImpl(
             AND status <> 'DELETED'
             AND status in (:sourceStatuses)
         """
+
+        const val FIND_CANDIDATES_FOR_PURGE = """
+            SELECT
+                w.id, w.version, w.deleted_at, 
+                (SELECT count(t_events.id) FROM t_events WHERE workspace_id = w.id) AS num_of_events,
+                (SELECT count(t_operations.id) FROM t_operations WHERE workspace_id = w.id) AS num_of_operations,
+                (SELECT count(t_accounts.id) FROM t_accounts WHERE workspace_id = w.id) AS num_of_accounts,
+                (SELECT count(t_categories.id) FROM t_categories WHERE workspace_id = w.id) AS num_of_categories,
+                (SELECT count(t_balance_anchors.id) FROM t_balance_anchors WHERE workspace_id = w.id) AS num_of_balance_anchors
+            FROM t_workspaces w
+            WHERE status = 'DELETED'
+            AND deleted_at < :cutoffDateTime
+            ORDER BY w.id
+            LIMIT :limit
+        """
+
+        const val PURGE_WORKSPACE = """
+            DELETE FROM t_workspaces
+            WHERE id = :workspaceId
+            AND version = :version
+            AND status = 'DELETED'
+        """
     }
+
 }

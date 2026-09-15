@@ -15,6 +15,12 @@ management:
       export:
         enabled: false
 
+jobs:
+  cleanWorkspacesBackgroundJob:
+    cron: "0 0 3 * * SUN"
+    params:
+      persistPeriod: 30d
+
 logging:
   pattern:
     correlation: "%X{traceId:-} [user=%X{userId:-}|workspace=%X{workspaceId:-}] "

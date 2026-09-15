@@ -15,6 +15,17 @@ data class Workspace(
     val deletedAt: LocalDateTime?
 )
 
+data class WorkspacePurgeData(
+    val id: UUID,
+    val version: Long,
+    val deletedAt: LocalDateTime,
+    val numOfEvents: Long,
+    val numOfOperations: Long,
+    val numOfAccounts: Long,
+    val numOfCategories: Long,
+    val numOfBalanceAnchors: Long
+)
+
 enum class WorkspaceStatus {
     NEW, ACTIVE, ARCHIVED, DELETED
 }
