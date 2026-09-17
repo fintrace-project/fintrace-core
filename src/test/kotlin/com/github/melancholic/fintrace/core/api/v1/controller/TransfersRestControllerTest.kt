@@ -220,7 +220,7 @@ class TransfersRestControllerTest(
     @Test
     fun `rejects an unauthenticated create`() {
         mvc.perform(post(transfersPath).contentType(MediaType.APPLICATION_JSON).content(body()))
-            .andExpect(status().isForbidden)
+            .andExpect(status().isUnauthorized)
 
         assertEquals(0, eventCount(), "nothing may be written for an unauthenticated caller")
     }
@@ -228,7 +228,7 @@ class TransfersRestControllerTest(
     @Test
     fun `rejects an unauthenticated read`() {
         mvc.perform(get("$transfersPath/${UUID.randomUUID()}"))
-            .andExpect(status().isForbidden)
+            .andExpect(status().isUnauthorized)
     }
 
     private fun createRequest(

@@ -35,6 +35,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-aspectj")
 	implementation("org.springframework.boot:spring-boot-starter-opentelemetry")
+	implementation("org.springframework.boot:spring-boot-starter-security-oauth2-resource-server")
 	implementation("com.github.ben-manes.caffeine:caffeine:3.2.4")
 	implementation("org.flywaydb:flyway-database-postgresql")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")

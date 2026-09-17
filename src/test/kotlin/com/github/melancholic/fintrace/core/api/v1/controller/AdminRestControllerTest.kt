@@ -94,7 +94,7 @@ class AdminRestControllerTest(
 	fun `rejects an unauthenticated replay`() {
 		repeat(2) { create() }
 
-		mvc.perform(post(replayPath)).andExpect(status().isForbidden)
+		mvc.perform(post(replayPath)).andExpect(status().isUnauthorized)
 
 		// The projection must be untouched — an unauthenticated caller cannot even clear it.
 		assertEquals(2, count())

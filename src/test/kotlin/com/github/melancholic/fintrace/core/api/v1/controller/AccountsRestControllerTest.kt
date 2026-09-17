@@ -196,14 +196,14 @@ class AccountsRestControllerTest(
         val id = createdId()
 
         mvc.perform(post(accountsPath).contentType(MediaType.APPLICATION_JSON).content(body()))
-            .andExpect(status().isForbidden)
-        mvc.perform(get(accountsPath)).andExpect(status().isForbidden)
-        mvc.perform(get("$accountsPath/$id")).andExpect(status().isForbidden)
+            .andExpect(status().isUnauthorized)
+        mvc.perform(get(accountsPath)).andExpect(status().isUnauthorized)
+        mvc.perform(get("$accountsPath/$id")).andExpect(status().isUnauthorized)
         mvc.perform(
             put("$accountsPath/$id").contentType(MediaType.APPLICATION_JSON).content("""{"name":"x"}""")
-        ).andExpect(status().isForbidden)
-        mvc.perform(delete("$accountsPath/$id")).andExpect(status().isForbidden)
-        mvc.perform(post("$accountsPath/$id/restore")).andExpect(status().isForbidden)
+        ).andExpect(status().isUnauthorized)
+        mvc.perform(delete("$accountsPath/$id")).andExpect(status().isUnauthorized)
+        mvc.perform(post("$accountsPath/$id/restore")).andExpect(status().isUnauthorized)
 
         assertEquals(1, count(), "nothing may be written for an unauthenticated caller")
     }

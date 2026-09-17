@@ -317,7 +317,7 @@ class OperationsRestControllerTest(
 
 		mvc.perform(
 			put("${operationsPath}/$id").contentType(MediaType.APPLICATION_JSON).content(body())
-		).andExpect(status().isForbidden)
+		).andExpect(status().isUnauthorized)
 
 		assertEquals(1, eventCount(), "nothing may be written for an unauthenticated caller")
 	}
@@ -413,7 +413,7 @@ class OperationsRestControllerTest(
 		val id = createdId()
 
 		mvc.perform(delete("${operationsPath}/$id"))
-			.andExpect(status().isForbidden)
+			.andExpect(status().isUnauthorized)
 
 		assertEquals(1, count(), "nothing may be removed for an unauthenticated caller")
 	}
@@ -422,7 +422,7 @@ class OperationsRestControllerTest(
 	fun `rejects an unauthenticated create`() {
 		mvc.perform(
 			post(operationsPath).contentType(MediaType.APPLICATION_JSON).content(body())
-		).andExpect(status().isForbidden)
+		).andExpect(status().isUnauthorized)
 
 		assertEquals(0, count(), "nothing may be written for an unauthenticated caller")
 	}
@@ -430,7 +430,7 @@ class OperationsRestControllerTest(
 	@Test
 	fun `rejects an unauthenticated read`() {
 		mvc.perform(get("${operationsPath}/${UUID.randomUUID()}"))
-			.andExpect(status().isForbidden)
+			.andExpect(status().isUnauthorized)
 	}
 
 	private fun createRequest(

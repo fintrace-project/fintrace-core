@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test
 import org.slf4j.MDC
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
-import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.web.servlet.HandlerMapping
 import java.util.UUID
 
@@ -69,8 +68,6 @@ class LoggingContextInterceptorTest {
     }
 
     private fun interceptorFor(currentUserId: () -> UUID) = LoggingContextInterceptor(object : IdentityProvider {
-        override fun currentUser(): UserDetails = throw UnsupportedOperationException()
-        override fun currentUserName(): String = throw UnsupportedOperationException()
         override fun currentSubject(): String = throw UnsupportedOperationException()
         override fun currentUserId(): UUID = currentUserId()
     })

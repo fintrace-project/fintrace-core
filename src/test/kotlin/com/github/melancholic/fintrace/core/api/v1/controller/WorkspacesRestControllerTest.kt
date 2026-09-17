@@ -278,14 +278,14 @@ class WorkspacesRestControllerTest(
 		val id = createdId()
 
 		mvc.perform(post(WORKSPACES_PATH).contentType(MediaType.APPLICATION_JSON).content(createBody()))
-			.andExpect(status().isForbidden)
-		mvc.perform(get(WORKSPACES_PATH)).andExpect(status().isForbidden)
-		mvc.perform(get("$WORKSPACES_PATH/$id")).andExpect(status().isForbidden)
+			.andExpect(status().isUnauthorized)
+		mvc.perform(get(WORKSPACES_PATH)).andExpect(status().isUnauthorized)
+		mvc.perform(get("$WORKSPACES_PATH/$id")).andExpect(status().isUnauthorized)
 		mvc.perform(
 			put("$WORKSPACES_PATH/$id").contentType(MediaType.APPLICATION_JSON)
 				.content("""{"version":0,"workspaceName":"renamed"}""")
-		).andExpect(status().isForbidden)
-		mvc.perform(delete("$WORKSPACES_PATH/$id?version=0")).andExpect(status().isForbidden)
+		).andExpect(status().isUnauthorized)
+		mvc.perform(delete("$WORKSPACES_PATH/$id?version=0")).andExpect(status().isUnauthorized)
 
 		assertEquals(1, count(), "nothing may be created or removed for an unauthenticated caller")
 	}

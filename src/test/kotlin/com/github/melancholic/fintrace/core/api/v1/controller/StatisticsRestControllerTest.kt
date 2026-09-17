@@ -144,7 +144,7 @@ class StatisticsRestControllerTest(
 
     @Test
     fun `rejects an unauthenticated read`() {
-        mvc.perform(get(balancesPath)).andExpect(status().isForbidden)
+        mvc.perform(get(balancesPath)).andExpect(status().isUnauthorized)
     }
 
     private fun operation(occurredAt: LocalDateTime, amount: String) = operationDAO.createOrUpdate(

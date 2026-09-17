@@ -220,14 +220,14 @@ class CategoriesRestControllerTest(
         val food = createdId(parent = expenseRootId(), name = "Food")
 
         mvc.perform(post(categoriesPath).contentType(MediaType.APPLICATION_JSON).content(body(expenseRootId(), "X")))
-            .andExpect(status().isForbidden)
-        mvc.perform(get(categoriesPath)).andExpect(status().isForbidden)
-        mvc.perform(get("$categoriesPath/$food")).andExpect(status().isForbidden)
+            .andExpect(status().isUnauthorized)
+        mvc.perform(get(categoriesPath)).andExpect(status().isUnauthorized)
+        mvc.perform(get("$categoriesPath/$food")).andExpect(status().isUnauthorized)
         mvc.perform(
             put("$categoriesPath/$food").contentType(MediaType.APPLICATION_JSON).content(body(expenseRootId(), "X"))
-        ).andExpect(status().isForbidden)
-        mvc.perform(delete("$categoriesPath/$food")).andExpect(status().isForbidden)
-        mvc.perform(post("$categoriesPath/$food/restore")).andExpect(status().isForbidden)
+        ).andExpect(status().isUnauthorized)
+        mvc.perform(delete("$categoriesPath/$food")).andExpect(status().isUnauthorized)
+        mvc.perform(post("$categoriesPath/$food/restore")).andExpect(status().isUnauthorized)
 
         assertEquals(5, count(), "four seeded plus Food; nothing written for an unauthenticated caller")
     }

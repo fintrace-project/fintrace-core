@@ -36,9 +36,9 @@ import java.util.*
 internal object TestWorkspaces {
 
 	/**
-	 * What a test authenticates as. It is the seeded user's `external_id`, not its username,
-	 * because `IdentityProvider` resolves the caller by subject — `Authentication.getName()`,
-	 * which is the `sub` claim once M5 puts a real token behind it.
+	 * What a test authenticates as: the caller's subject, which `IdentityProvider` resolves against
+	 * `external_id` — `Authentication.getName()`, the `sub` claim when a real token is behind it. No
+	 * user is seeded (§7.4); [ownerId] creates this one.
 	 */
 	const val TEST_SUBJECT = "stub:testuser"
 
@@ -181,6 +181,10 @@ internal object TestWorkspaces {
         return sourceId to targetId
     }
 
-	fun ownerId(usersDAO: UsersDAO): UUID = usersDAO.getUserIdByExternalId(TEST_SUBJECT)
-		.orElseThrow { IllegalStateException("The stub user seeded by V0004 is missing") }
+	/** The test user's id, created by the same insert a caller's first request runs. */
+	fun ownerId(usersDAO: UsersDAO): UUID {
+		usersDAO.createIfAbsent(TEST_SUBJECT, "testuser")
+		return usersDAO.getUserIdByExternalId(TEST_SUBJECT)
+			.orElseThrow { IllegalStateException("The test user could not be created") }
+	}
 }

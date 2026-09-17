@@ -23,3 +23,9 @@ object MDCConstants {
     const val MDC_USER_ID = "userId"
     const val MDC_WORKSPACE_ID = "workspaceId"
 }
+
+object SecurityConstants {
+    const val ROLE_USER = "USER"
+    const val ROLE_ADMIN = "ADMIN"
+    const val ROLE_IMPORTER = "IMPORTER"
+}

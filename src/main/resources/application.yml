@@ -1,6 +1,17 @@
 spring:
   application:
     name: fintrace-core
+  security:
+    oauth2:
+          resourceserver:
+            jwt:
+              audiences: fintrace-core
+              
+springdoc:
+  swagger-ui:
+    oauth:
+      client-id: fintrace-swagger
+      use-pkce-with-authorization-code-grant: true
 
 management:
   endpoints:

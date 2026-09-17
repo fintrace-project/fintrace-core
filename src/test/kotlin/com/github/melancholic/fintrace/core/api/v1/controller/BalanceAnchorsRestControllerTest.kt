@@ -230,14 +230,14 @@ class BalanceAnchorsRestControllerTest(
     @Test
     fun `rejects an unauthenticated create`() {
         mvc.perform(post(anchorsPath).contentType(MediaType.APPLICATION_JSON).content(body()))
-            .andExpect(status().isForbidden)
+            .andExpect(status().isUnauthorized)
 
         assertEquals(0, count(), "nothing may be written for an unauthenticated caller")
     }
 
     @Test
     fun `rejects an unauthenticated read`() {
-        mvc.perform(get(anchorsPath)).andExpect(status().isForbidden)
+        mvc.perform(get(anchorsPath)).andExpect(status().isUnauthorized)
     }
 
     private fun createRequest(value: String = "100.0000") = post(anchorsPath)
