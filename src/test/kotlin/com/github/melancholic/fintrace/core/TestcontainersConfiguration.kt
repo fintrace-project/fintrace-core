@@ -15,7 +15,7 @@ class TestcontainersConfiguration {
 	@Bean
 	@ServiceConnection
 	fun postgresContainer(): PostgreSQLContainer {
-		// Must track deploy/docker-compose.yml — testing against a different major is how
+		// Must track fintrace-infra's docker-compose.yml — testing against a different major is how
 		// a version-specific defect reaches the NAS unnoticed.
 		return PostgreSQLContainer(DockerImageName.parse("postgres:18"))
 	}
