@@ -1,18 +1,9 @@
 name: CI
 
-# Path-filtered so a change to docs, or later to the frontend, does not rebuild Core.
 on:
   pull_request:
-    paths:
-      - 'fintrace-core/**'
-      - 'deploy/Dockerfile'
-      - '.github/workflows/ci.yml'
   push:
     branches: [ main ]
-    paths:
-      - 'fintrace-core/**'
-      - 'deploy/Dockerfile'
-      - '.github/workflows/ci.yml'
 
 # A second push to the same branch cancels the first: the older answer is no longer interesting.
 concurrency:
@@ -33,10 +24,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      # `clean`, per CLAUDE.md: an incremental build has twice hidden a compile error in the tests.
+      # `clean`: an incremental build has twice hidden a compile error in the test sources.
       # Testcontainers needs a Docker daemon, which ubuntu-latest runners provide.
       - name: Test
-        working-directory: fintrace-core
         run: ./gradlew --no-daemon clean test
 
       - name: Upload reports
@@ -45,6 +35,6 @@ jobs:
         with:
           name: test-reports
           path: |
-            fintrace-core/build/reports/tests/test
-            fintrace-core/build/test-results/test
+            build/reports/tests/test
+            build/test-results/test
           retention-days: 7

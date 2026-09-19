@@ -29,7 +29,7 @@ jobs:
             echo "::error::Tag '${GITHUB_REF_NAME}' is not semver (expected vMAJOR.MINOR.PATCH[-prerelease])"
             exit 1
           fi
-          # GHCR rejects uppercase, and the owner here is "Melancholic"
+          # GHCR rejects uppercase; the owner is read from the repo so a fork publishes to itself
           owner="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
           image="ghcr.io/$owner/fintrace-core"
           # A pre-release never becomes :latest, or a NAS pulling latest quietly runs an rc
@@ -47,9 +47,9 @@ jobs:
             echo "TAGS_EOF"
           } >> "$GITHUB_OUTPUT"
 
-      # One stack-wide version (CLAUDE.md), but an unchanged component is renamed rather than
-      # rebuilt: a rebuild of identical source yields a new digest, and then "did Core change
-      # between 0.3.0 and 0.4.0?" can no longer be answered by comparing digests.
+      # One stack-wide version, but an unchanged Core is renamed rather than rebuilt: a rebuild
+      # of identical source yields a new digest, and then "did Core change between 0.3.0 and
+      # 0.4.0?" can no longer be answered by comparing digests.
       - name: Decide build or retag
         id: decide
         run: |
@@ -60,7 +60,7 @@ jobs:
             exit 0
           fi
           echo "previous=$previous" >> "$GITHUB_OUTPUT"
-          changed="$(git diff --name-only "$previous" "${GITHUB_REF_NAME}" -- fintrace-core deploy/Dockerfile)"
+          changed="$(git diff --name-only "$previous" "${GITHUB_REF_NAME}")"
           if [ -n "$changed" ]; then
             echo "Changed since $previous:"; echo "$changed"
             echo "build=true" >> "$GITHUB_OUTPUT"
@@ -79,11 +79,10 @@ jobs:
         if: steps.decide.outputs.build == 'true'
 
       # The tag is what gets deployed, so it is tested here too rather than trusted from CI.
-      # `bootJar` must run before the image is built: deploy/Dockerfile copies a pre-built jar,
+      # `bootJar` must run before the image is built: the Dockerfile copies a pre-built jar,
       # and .dockerignore lets nothing else through.
       - name: Test and package
         if: steps.decide.outputs.build == 'true'
-        working-directory: fintrace-core
         run: ./gradlew --no-daemon -Pversion=${{ steps.meta.outputs.version }} clean test bootJar
 
       - uses: docker/setup-buildx-action@v3
@@ -99,7 +98,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: deploy/Dockerfile
+          file: Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
