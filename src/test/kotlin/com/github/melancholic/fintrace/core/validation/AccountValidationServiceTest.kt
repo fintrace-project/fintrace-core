@@ -59,7 +59,7 @@ class AccountValidationServiceTest {
     fun `rejects a name outside the permitted pattern`() {
         val (_, validation) = service()
 
-        listOf("bad name", "-leading", "semi;colon").forEach {
+        listOf("-leading", "semi;colon", "slash/name").forEach {
             assertFailsWith<ValidationError>("expected '$it' to be rejected") {
                 validation.validate(CreateAccountCommand(WORKSPACE, it, "EUR", icon = null))
             }

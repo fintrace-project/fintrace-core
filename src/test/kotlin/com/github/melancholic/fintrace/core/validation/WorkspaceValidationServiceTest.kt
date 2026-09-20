@@ -35,7 +35,7 @@ class WorkspaceValidationServiceTest {
 
 	@Test
 	fun `rejects a name with characters outside the pattern`() {
-		listOf("bad name", "-leading-dash", "semi;colon", "quote'd").forEach {
+		listOf("-leading-dash", "semi;colon", "slash/name", "dot.name").forEach {
 			assertFailsWith<ValidationError>("expected '$it' to be rejected") {
 				validation.validate(CreateWorkspaceRequest(it, "EUR"))
 			}
@@ -86,7 +86,40 @@ class WorkspaceValidationServiceTest {
 	@Test
 	fun `rejects an edit carrying an invalid name`() {
 		assertFailsWith<ValidationError> {
-			validation.validate(EditWorkspaceRequest(version = 0, workspaceName = "bad name", defaultCurrency = null))
+			validation.validate(EditWorkspaceRequest(version = 0, workspaceName = "bad/name", defaultCurrency = null))
+		}
+	}
+
+	@Test
+	fun `accepts names in any script, with spaces`() {
+		// The MoneyOK dump the importer feeds in is Russian: every account and category name
+		// would be refused by an ASCII-only pattern (2.18b).
+		listOf(
+			"Мои деньги", "Наличные EUR", "Еда вне дома", "Default workspace", "budget-2026",
+			"Ann's", "M&S", "Food, drinks", "Счёт №1", "Apt #3", "me@home",
+		).forEach { validation.validate(EditWorkspaceRequest(version = 0, workspaceName = it, defaultCurrency = null)) }
+	}
+
+	@Test
+	fun `accepts letters that need combining marks`() {
+		// \p{L} alone cannot spell Hebrew, Arabic, Thai or Hindi, and it splits Latin in two:
+		// "Café" precomposed passes while the identical-looking decomposed form does not, which
+		// is a refusal the user cannot see the cause of.
+		listOf(
+			"Café",                       // NFD: e + combining acute
+			"Ann’s",                       // the apostrophe iOS and Word actually produce
+			"שָׁלום",
+			"บัญชี",
+		).forEach { validation.validate(EditWorkspaceRequest(version = 0, workspaceName = it, defaultCurrency = null)) }
+	}
+
+	@Test
+	fun `rejects a name that does not start with a letter or digit`() {
+		// Otherwise a leading space is representable, and two names differ by something invisible.
+		listOf(" budget", "-budget", "[budget]", "́budget").forEach {
+			assertFailsWith<ValidationError>("expected '$it' to be refused") {
+				validation.validate(EditWorkspaceRequest(version = 0, workspaceName = it, defaultCurrency = null))
+			}
 		}
 	}
 
