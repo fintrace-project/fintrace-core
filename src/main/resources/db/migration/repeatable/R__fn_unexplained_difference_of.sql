@@ -22,7 +22,7 @@ WITH this AS (SELECT account_id, value, occurred_at
                   WHERE a.workspace_id = p_workspace_id
                     AND a.account_id = this.account_id
                     AND a.occurred_at < this.occurred_at
-                  ORDER BY a.occurred_at DESC
+                  ORDER BY a.occurred_at DESC, a.id DESC
                   LIMIT 1)
 SELECT (
            (SELECT value FROM this)

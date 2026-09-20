@@ -111,7 +111,7 @@ class BalanceAnchorProjectionDAOImpl(
             SELECT :anchorId = (
                 SELECT id FROM $TABLE_NAME
                 WHERE workspace_id = :workspaceId AND account_id = :accountId
-                ORDER BY occurred_at DESC
+                ORDER BY occurred_at DESC, id DESC
                 LIMIT 1
             )
         """

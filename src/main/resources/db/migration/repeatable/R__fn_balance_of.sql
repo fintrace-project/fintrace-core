@@ -20,7 +20,7 @@ WITH anchor AS (SELECT value, occurred_at
                 WHERE workspace_id = p_workspace_id
                   AND account_id = p_account_id
                   AND occurred_at < p_until
-                ORDER BY occurred_at DESC
+                ORDER BY occurred_at DESC, id DESC
                 LIMIT 1)
 SELECT (
            COALESCE((SELECT value FROM anchor), 0)
