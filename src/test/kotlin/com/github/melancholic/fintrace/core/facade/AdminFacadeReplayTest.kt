@@ -319,6 +319,13 @@ class AdminFacadeReplayTest(
     fun `rebuilds every projection at once, leaving out what was cancelled or deleted`() {
         val ws = TestWorkspaces.createWithCategories(transactions, workspaceService, usersDAO, name = "everything")
         val food = createCategory(ws, parent = expenseRoot(ws), name = "Food")
+        // A move, because it is the one category change that travels by UPDATE rather than INSERT:
+        // a rebuild inserts the final parent, so an online path that never wrote it diverges here
+        // and nowhere else.
+        val snacks = createCategory(ws, parent = expenseRoot(ws), name = "Snacks")
+        commandFacade.processCommand(
+            ReviseCategoryCommand(workspaceId = ws, categoryId = snacks, parentId = food, name = "Snacks", icon = null)
+        )
         val cash = commandFacade.processCommand(
             CreateAccountCommand(ws, "cash", "EUR", icon = null, initialBalance = BigDecimal("100.0000"))
         ).id
@@ -379,6 +386,7 @@ class AdminFacadeReplayTest(
         assertEquals(2, operationsBefore.count { it.transferId == transfer.id }, "sanity: both legs of the transfer")
         assertEquals(BigDecimal("-42.0000"), operationsBefore.single { it.id == kept }.amount, "sanity: the revision")
         assertEquals("debit-card", accountsBefore.single { it.id == card }.name, "sanity: the account revision")
+        assertEquals(food, categoriesBefore.single { it.id == snacks }.parentId, "sanity: the category move")
         assertEquals(2, anchorsBefore.size, "sanity: the initial balance and the card's anchor")
     }
 
