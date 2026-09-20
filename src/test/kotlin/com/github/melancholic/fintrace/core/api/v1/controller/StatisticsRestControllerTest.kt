@@ -171,6 +171,7 @@ class StatisticsRestControllerTest(
             accountId = accountId,
             value = BigDecimal(value),
             occurredAt = occurredAt,
+            externalRef = null,
             recordedAt = occurredAt,
         )
     )

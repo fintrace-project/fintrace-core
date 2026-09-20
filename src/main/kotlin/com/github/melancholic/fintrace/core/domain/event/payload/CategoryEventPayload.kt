@@ -13,6 +13,7 @@ sealed interface CategoryEventPayload : EventPayload {
     val icon: String?
     val archived: Boolean
     val systemCode: CategorySystemCode?
+    val externalRef: String?
 
     override fun projectionChange(): ProjectionChange = ProjectionChange
         .Upsert(listOf(projection()))
@@ -26,6 +27,7 @@ sealed interface CategoryEventPayload : EventPayload {
         icon = icon,
         archived = archived,
         systemCode = systemCode,
+        externalRef = externalRef,
         recordedAt = recordedAt
     )
 }

@@ -43,6 +43,7 @@ class ReviseAccountCommandHandler(
             currency = current.currency,
             icon = command.icon,
             archived = current.archived,
+            externalRef = current.externalRef,
             recordedAt = timestampProvider.now()
         )
     }

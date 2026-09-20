@@ -21,6 +21,7 @@ data class BalanceAnchorCreatedV1(
     val value: BigDecimal,
     override val occurredAt: LocalDateTime,
     override val recordedAt: LocalDateTime,
+    val externalRef: String?,
     override val version: Int = VERSION
 ) : BalanceAnchorCreated {
     override fun projectionChange() = ProjectionChange.Upsert(listOf(projection()))
@@ -31,6 +32,7 @@ data class BalanceAnchorCreatedV1(
         accountId = accountId,
         value = value,
         occurredAt = recordedAt,
+        externalRef = externalRef,
         recordedAt = recordedAt
     )
 

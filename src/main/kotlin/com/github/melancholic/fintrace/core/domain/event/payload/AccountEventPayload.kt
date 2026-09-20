@@ -8,6 +8,7 @@ sealed interface AccountEventPayload : EventPayload {
     val currency: String
     val archived: Boolean
     val icon: String?
+    val externalRef: String?
 
     override fun projectionChange(): ProjectionChange = ProjectionChange
         .Upsert(listOf(projection()))
@@ -19,6 +20,7 @@ sealed interface AccountEventPayload : EventPayload {
         currency = currency,
         archived = archived,
         icon = icon,
+        externalRef = externalRef,
         recordedAt = recordedAt
     )
 }

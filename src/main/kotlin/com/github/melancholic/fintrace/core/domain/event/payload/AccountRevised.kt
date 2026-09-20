@@ -17,6 +17,7 @@ data class AccountRevisedV1(
     override val archived: Boolean,
     override val icon: String?,
     override val recordedAt: LocalDateTime,
+    override val externalRef: String?,
     override val version: Int = VERSION,
 ) : AccountRevised {
 

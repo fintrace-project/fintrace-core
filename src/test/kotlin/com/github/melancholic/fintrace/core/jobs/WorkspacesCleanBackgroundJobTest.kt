@@ -164,6 +164,7 @@ class WorkspacesCleanBackgroundJobTest(
                 accountId = source,
                 value = BigDecimal("10.0000"),
                 occurredAt = LocalDateTime.now(),
+                externalRef = null,
                 recordedAt = LocalDateTime.now(),
             )
         )

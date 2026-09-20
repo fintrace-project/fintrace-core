@@ -39,6 +39,7 @@ class CategoryProjectionDAOImpl(
             .param("icon", projection.icon)
             .param("archived", projection.archived)
             .param("systemCode", projection.systemCode?.name)
+            .param("externalRef", projection.externalRef)
             .param("recordedAt", projection.recordedAt)
             .query(UUID::class.java)
             .single()
@@ -113,13 +114,14 @@ class CategoryProjectionDAOImpl(
         const val TABLE_NAME = "t_categories"
 
         const val INSERT_OR_UPDATE = """
-            INSERT INTO $TABLE_NAME (id, workspace_id, parent_id, name, kind, icon, archived, system_code, recorded_at)
-            VALUES (:id, :workspaceId, :parentId, :name, :kind, :icon, :archived, :systemCode, :recordedAt) ON CONFLICT (id) DO
+            INSERT INTO $TABLE_NAME (id, workspace_id, parent_id, name, kind, icon, archived, system_code, external_ref, recorded_at)
+            VALUES (:id, :workspaceId, :parentId, :name, :kind, :icon, :archived, :systemCode, :externalRef, :recordedAt) ON CONFLICT (id) DO
             UPDATE SET
                 name = EXCLUDED.name,
                 icon = EXCLUDED.icon,
                 archived = EXCLUDED.archived,
                 system_code = EXCLUDED.system_code,
+                external_ref = EXCLUDED.external_ref,
                 recorded_at = EXCLUDED.recorded_at
             WHERE $TABLE_NAME.workspace_id = EXCLUDED.workspace_id
             RETURNING id

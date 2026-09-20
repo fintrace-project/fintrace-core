@@ -43,6 +43,7 @@ class ReviseCategoryCommandHandler(
             kind = current.kind,
             archived = current.archived,
             systemCode = current.systemCode,
+            externalRef = current.externalRef,
             recordedAt = timestampProvider.now()
         )
     }

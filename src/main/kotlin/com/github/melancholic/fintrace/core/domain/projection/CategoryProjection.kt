@@ -14,5 +14,6 @@ data class CategoryProjection(
     val archived: Boolean,
     val systemCode: CategorySystemCode?,
     val icon: String?,
+    val externalRef: String?,
     override val recordedAt: LocalDateTime
 ) : Projection

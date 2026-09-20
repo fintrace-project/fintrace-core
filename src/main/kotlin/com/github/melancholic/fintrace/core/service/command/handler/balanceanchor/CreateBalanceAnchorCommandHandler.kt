@@ -42,6 +42,7 @@ class CreateBalanceAnchorCommandHandler(
             accountId = command.accountId,
             value = command.value,
             occurredAt = now,
+            externalRef = null,
             recordedAt = now
         )
     }

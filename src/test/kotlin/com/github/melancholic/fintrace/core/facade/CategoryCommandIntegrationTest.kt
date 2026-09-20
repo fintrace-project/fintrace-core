@@ -361,7 +361,7 @@ class CategoryCommandIntegrationTest(
     private fun categories(): List<CategoryProjection> = jdbc
         .sql(
             """
-            SELECT id, workspace_id, parent_id, name, kind, icon, archived, system_code, recorded_at
+            SELECT id, workspace_id, parent_id, name, kind, icon, archived, system_code, external_ref, recorded_at
             FROM t_categories WHERE workspace_id = :ws ORDER BY recorded_at, id
             """
         )

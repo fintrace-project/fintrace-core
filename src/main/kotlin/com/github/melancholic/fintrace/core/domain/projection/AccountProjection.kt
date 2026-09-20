@@ -10,5 +10,6 @@ data class AccountProjection(
     val currency: String,
     val archived: Boolean,
     val icon: String?,
+    val externalRef: String?,
     override val recordedAt: LocalDateTime
 ) : Projection

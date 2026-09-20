@@ -340,6 +340,7 @@ class BalanceDAOIntegrationTest(
             accountId = accountId,
             value = BigDecimal(value),
             occurredAt = occurredAt,
+            externalRef = null,
             recordedAt = occurredAt,
         )
     )

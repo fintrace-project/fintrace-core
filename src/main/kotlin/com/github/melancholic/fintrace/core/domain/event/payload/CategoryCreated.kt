@@ -21,6 +21,7 @@ data class CategoryCreatedV1(
     override val archived: Boolean,
     override val systemCode: CategorySystemCode?,
     override val recordedAt: LocalDateTime,
+    override val externalRef: String?,
     override val version: Int = VERSION,
 ) : CategoryCreated {
 

@@ -32,6 +32,7 @@ class AccountProjectionDAOImpl(
             .param("currency", projection.currency)
             .param("icon", projection.icon)
             .param("archived", projection.archived)
+            .param("externalRef", projection.externalRef)
             .param("recordedAt", projection.recordedAt)
             .query(UUID::class.java)
             .single()
@@ -81,14 +82,15 @@ class AccountProjectionDAOImpl(
         const val TABLE_NAME = "t_accounts"
 
         const val INSERT_OR_UPDATE = """
-            INSERT INTO $TABLE_NAME (id, workspace_id, name, currency, archived, recorded_at, icon)
-            VALUES (:id, :workspaceId, :name, :currency, :archived, :recordedAt, :icon)
+            INSERT INTO $TABLE_NAME (id, workspace_id, name, currency, archived, recorded_at, icon, external_ref)
+            VALUES (:id, :workspaceId, :name, :currency, :archived, :recordedAt, :icon, :externalRef)
             ON CONFLICT (id) DO UPDATE SET
-                name        = EXCLUDED.name,
-                currency    = EXCLUDED.currency,
-                icon        = EXCLUDED.icon,
-                archived    = EXCLUDED.archived,
-                recorded_at = EXCLUDED.recorded_at
+                name         = EXCLUDED.name,
+                currency     = EXCLUDED.currency,
+                icon         = EXCLUDED.icon,
+                archived     = EXCLUDED.archived,
+                external_ref = EXCLUDED.external_ref,
+                recorded_at  = EXCLUDED.recorded_at
             WHERE $TABLE_NAME.workspace_id = EXCLUDED.workspace_id
             RETURNING id
         """

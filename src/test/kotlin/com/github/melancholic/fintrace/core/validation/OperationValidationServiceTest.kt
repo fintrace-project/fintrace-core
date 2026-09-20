@@ -97,6 +97,7 @@ class OperationValidationServiceTest {
                 currency = "EUR",
                 archived = archived,
                 icon = null,
+                externalRef = null,
                 recordedAt = NOW,
             )
         }
@@ -127,6 +128,7 @@ class OperationValidationServiceTest {
                 archived = archived,
                 systemCode = null,
                 icon = null,
+                externalRef = null,
                 recordedAt = NOW,
             )
         }

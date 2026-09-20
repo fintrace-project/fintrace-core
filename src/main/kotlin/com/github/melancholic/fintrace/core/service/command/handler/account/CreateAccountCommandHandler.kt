@@ -54,6 +54,7 @@ class CreateAccountCommandHandler(
             currency = command.currency,
             icon = command.icon,
             archived = false,
+            externalRef = null,
             recordedAt = timestampProvider.now()
         )
     }

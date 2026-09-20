@@ -94,6 +94,7 @@ class SetCategoryArchivedCommandHandler(
         icon = current.icon,
         systemCode = current.systemCode,
         archived = archived,
+        externalRef = current.externalRef,
         recordedAt = timestampProvider.now()
     )
 }

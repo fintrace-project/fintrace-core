@@ -43,7 +43,8 @@ class SetAccountArchivedCommandHandler(
             recordedAt = timestampProvider.now(),
             name = current.name,
             currency = current.currency,
-            icon = current.icon
+            icon = current.icon,
+            externalRef = current.externalRef
         )
     }
 }

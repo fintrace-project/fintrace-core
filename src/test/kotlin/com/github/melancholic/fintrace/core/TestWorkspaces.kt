@@ -111,6 +111,7 @@ internal object TestWorkspaces {
             currency = currency,
             archived = false,
             icon = null,
+            externalRef = null,
             recordedAt = LocalDateTime.now(),
         )
     )
@@ -130,6 +131,7 @@ internal object TestWorkspaces {
             archived = false,
             systemCode = null,
             icon = null,
+            externalRef = null,
             recordedAt = LocalDateTime.now(),
         )
     )

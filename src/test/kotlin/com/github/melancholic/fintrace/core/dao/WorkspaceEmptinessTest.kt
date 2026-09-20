@@ -79,6 +79,7 @@ class WorkspaceEmptinessTest(
                 currency = "EUR",
                 archived = true,
                 icon = null,
+                externalRef = null,
                 recordedAt = LocalDateTime.now(),
             )
         )
@@ -105,6 +106,7 @@ class WorkspaceEmptinessTest(
                 archived = true,
                 systemCode = null,
                 icon = null,
+                externalRef = null,
                 recordedAt = LocalDateTime.now(),
             )
         )
@@ -185,6 +187,7 @@ class WorkspaceEmptinessTest(
             accountId = UUID.randomUUID(),
             value = BigDecimal("50.0000"),
             occurredAt = NOW,
+            externalRef = null,
             recordedAt = NOW,
         )
     )

@@ -10,5 +10,6 @@ data class BalanceAnchorProjection(
     val accountId: UUID,
     val value: BigDecimal,
     override val occurredAt: LocalDateTime,
+    val externalRef: String?,
     override val recordedAt: LocalDateTime
 ) : TemporalProjection

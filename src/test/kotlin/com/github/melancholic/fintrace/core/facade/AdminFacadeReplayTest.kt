@@ -475,7 +475,7 @@ class AdminFacadeReplayTest(
     private fun categories(workspaceId: UUID): List<CategoryRow> = jdbc
         .sql(
             """
-			SELECT id, workspace_id, parent_id, name, kind, icon, archived, system_code, recorded_at
+			SELECT id, workspace_id, parent_id, name, kind, icon, archived, system_code, external_ref, recorded_at
 			FROM t_categories WHERE workspace_id = :ws ORDER BY id
 			"""
         )
@@ -490,6 +490,7 @@ class AdminFacadeReplayTest(
                 icon = rs.getString("icon"),
                 archived = rs.getBoolean("archived"),
 				systemCode = rs.getString("system_code"),
+                externalRef = rs.getString("external_ref"),
                 recordedAt = rs.getObject("recorded_at", LocalDateTime::class.java),
             )
         }
@@ -499,7 +500,7 @@ class AdminFacadeReplayTest(
 	private fun accounts(workspaceId: UUID): List<AccountRow> = jdbc
 		.sql(
 			"""
-			SELECT id, workspace_id, name, currency, icon, archived, recorded_at
+			SELECT id, workspace_id, name, currency, icon, archived, external_ref, recorded_at
 			FROM t_accounts WHERE workspace_id = :ws ORDER BY id
 			"""
 		)
@@ -512,6 +513,7 @@ class AdminFacadeReplayTest(
 				currency = rs.getString("currency").trim(),
 				icon = rs.getString("icon"),
 				archived = rs.getBoolean("archived"),
+				externalRef = rs.getString("external_ref"),
 				recordedAt = rs.getObject("recorded_at", LocalDateTime::class.java),
 			)
 		}
@@ -548,7 +550,7 @@ class AdminFacadeReplayTest(
     private fun anchorRows(workspaceId: UUID): List<AnchorRow> = jdbc
         .sql(
             """
-            SELECT id, workspace_id, account_id, value, occurred_at, recorded_at
+            SELECT id, workspace_id, account_id, value, occurred_at, external_ref, recorded_at
             FROM t_balance_anchors WHERE workspace_id = :ws ORDER BY id
             """
         )
@@ -560,6 +562,7 @@ class AdminFacadeReplayTest(
                 accountId = rs.getObject("account_id", UUID::class.java),
                 value = rs.getBigDecimal("value"),
                 occurredAt = rs.getObject("occurred_at", LocalDateTime::class.java),
+                externalRef = rs.getString("external_ref"),
                 recordedAt = rs.getObject("recorded_at", LocalDateTime::class.java),
             )
         }
@@ -574,6 +577,7 @@ class AdminFacadeReplayTest(
         val accountId: UUID,
         val value: BigDecimal,
         val occurredAt: LocalDateTime,
+        val externalRef: String?,
         val recordedAt: LocalDateTime,
     )
 
@@ -584,6 +588,7 @@ class AdminFacadeReplayTest(
 		val currency: String,
 		val icon: String?,
 		val archived: Boolean,
+		val externalRef: String?,
 		val recordedAt: LocalDateTime,
 	)
 
@@ -596,6 +601,7 @@ class AdminFacadeReplayTest(
         val icon: String?,
         val archived: Boolean,
         val systemCode: String?,
+        val externalRef: String?,
         val recordedAt: LocalDateTime,
     )
 

@@ -40,6 +40,7 @@ class CreateCategoryCommandHandler(
             kind = command.kind,
             archived = false,
             systemCode = command.systemCode,
+            externalRef = null,
             recordedAt = timestampProvider.now()
         )
     }
