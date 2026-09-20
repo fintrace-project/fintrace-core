@@ -117,7 +117,9 @@ class CategoryProjectionDAOImpl(
             INSERT INTO $TABLE_NAME (id, workspace_id, parent_id, name, kind, icon, archived, system_code, external_ref, recorded_at)
             VALUES (:id, :workspaceId, :parentId, :name, :kind, :icon, :archived, :systemCode, :externalRef, :recordedAt) ON CONFLICT (id) DO
             UPDATE SET
+                parent_id = EXCLUDED.parent_id,
                 name = EXCLUDED.name,
+                kind = EXCLUDED.kind,
                 icon = EXCLUDED.icon,
                 archived = EXCLUDED.archived,
                 system_code = EXCLUDED.system_code,

@@ -151,6 +151,9 @@ class CategoryCommandIntegrationTest(
         )
 
         assertEquals(food.id, moved.parentId)
+        // Read the row, not the returned value: a command returns the state it produced (§10.0),
+        // so asserting on it alone passes even when the upsert never writes parent_id.
+        assertEquals(food.id, category(groceries.id).parentId, "the move must reach the projection")
     }
 
     // ---------------------------------------------------------------- archive
