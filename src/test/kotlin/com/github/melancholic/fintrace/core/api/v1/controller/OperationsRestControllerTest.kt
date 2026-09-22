@@ -72,6 +72,17 @@ class OperationsRestControllerTest(
             .andExpect(jsonPath("$.recordedAt").exists())
 	}
 
+    @Test
+    fun `truncates an incoming timestamp to microseconds`() {
+        // §6.4: Postgres `timestamp` holds microseconds and rounds to them, so a finer value comes
+        // back as a different instant than it went in — and every comparison against a stored value
+        // is then off by a tick. Truncating at the boundary is what keeps that from depending on a
+        // client's clock precision.
+        mvc.perform(createRequest(occurredAt = "2026-03-15T14:30:00.123456789"))
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.occurredAt").value("2026-03-15T14:30:00.123456"))
+    }
+
 	@Test
 	fun `points the Location header at the created operation`() {
 		val response = mvc.perform(createRequest()).andExpect(status().isCreated).andReturn().response

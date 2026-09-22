@@ -274,7 +274,9 @@ class BalanceAnchorCommandIntegrationTest(
     private fun create(
         value: BigDecimal = BigDecimal("100.0000"),
         accountId: UUID = this.accountId,
-        occurredAt: LocalDateTime = LocalDateTime.now(),
+        // Aligned like TimestampProvider, because Postgres rounds to microseconds while Core
+        // truncates: an unaligned value would come back from a replay one tick off (§6.4).
+        occurredAt: LocalDateTime = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS),
     ) = CreateBalanceAnchorCommand(
         workspaceId = workspaceId,
         accountId = accountId,

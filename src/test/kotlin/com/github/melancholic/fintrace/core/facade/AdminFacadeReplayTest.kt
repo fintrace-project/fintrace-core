@@ -20,6 +20,7 @@ import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.transaction.support.TransactionTemplate
 import java.math.BigDecimal
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -362,7 +363,7 @@ class AdminFacadeReplayTest(
                 workspaceId = ws,
                 accountId = card,
                 value = BigDecimal("30.0000"),
-                occurredAt = LocalDateTime.now(),
+                occurredAt = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS),
             )
         )
         val deletedAnchor = commandFacade.processCommand(
@@ -370,7 +371,7 @@ class AdminFacadeReplayTest(
                 workspaceId = ws,
                 accountId = cash,
                 value = BigDecimal("25.0000"),
-                occurredAt = LocalDateTime.now(),
+                occurredAt = LocalDateTime.now().truncatedTo(ChronoUnit.MICROS),
             )
         ).projection.id
         commandFacade.processCommand(CancelBalanceAnchorCommand(workspaceId = ws, accountId = cash, anchorId = deletedAnchor))
