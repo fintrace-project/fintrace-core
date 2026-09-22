@@ -151,6 +151,22 @@ class OpenApiDocumentTest(@Autowired private val mvc: MockMvc) {
 			.andExpect(jsonPath("$.paths['/api/v1/workspaces/{workspaceId}/statistics/balances/accounts'].get.responses.404").exists())
 	}
 
+    @Test
+    fun `documents the import endpoint`() {
+        val import = "/api/v1/workspaces/{workspaceId}/import"
+        mvc.perform(get("/v3/api-docs"))
+            .andExpect(jsonPath("$.paths['$import'].post.summary").exists())
+            // The refusal a client has to expect: the workspace is not NEW, not empty, or already
+            // importing (§4.1.1). Without it, a second import looks like a server fault.
+            .andExpect(jsonPath("$.paths['$import'].post.responses.409").exists())
+            .andExpect(jsonPath("$.paths['$import'].post.responses.404").exists())
+            // The importer supplies the ids (§5.1), so a generated client must send them.
+            .andExpect(jsonPath("$.components.schemas.ImportAccountRequest.properties.id").exists())
+            // importId and the counts are what 2.24 promises back.
+            .andExpect(jsonPath("$.components.schemas.ImportJobResponse.properties.id").exists())
+            .andExpect(jsonPath("$.components.schemas.ImportJobResponse.properties.accounts").exists())
+    }
+
 	@Test
 	fun `serves the Swagger UI anonymously`() {
 		mvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk)

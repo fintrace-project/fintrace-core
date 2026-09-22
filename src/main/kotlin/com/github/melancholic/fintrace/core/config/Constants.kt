@@ -11,6 +11,7 @@ const val ACCOUNTS_AREA_API_PATH = WORKSPACE_AREA_API_PATH + "/accounts"
 const val ACCOUNT_BALANCE_ANCHORS_AREA_API_PATH = ACCOUNTS_AREA_API_PATH + "/{accountId}/balance-anchors"
 const val CATEGORIES_AREA_API_PATH = WORKSPACE_AREA_API_PATH + "/categories"
 const val STATISTICS_AREA_API_PATH = "$WORKSPACE_AREA_API_PATH/statistics"
+const val IMPORT_AREA_API_PATH = "$WORKSPACE_AREA_API_PATH/import"
 
 const val ADMIN_API_V1_BASE_PATH = "admin/api/v1"
 
@@ -28,4 +29,8 @@ object SecurityConstants {
     const val ROLE_USER = "USER"
     const val ROLE_ADMIN = "ADMIN"
     const val ROLE_IMPORTER = "IMPORTER"
+}
+
+object TimeoutConstants {
+    const val IMPORT_TIMEOUT_SECONDS = 180
 }
