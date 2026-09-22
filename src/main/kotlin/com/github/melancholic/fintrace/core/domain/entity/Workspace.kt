@@ -12,7 +12,8 @@ data class Workspace(
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
     val version: Long,
-    val deletedAt: LocalDateTime?
+    val deletedAt: LocalDateTime?,
+    val importStartedAt: LocalDateTime? = null
 )
 
 data class WorkspacePurgeData(
@@ -27,5 +28,5 @@ data class WorkspacePurgeData(
 )
 
 enum class WorkspaceStatus {
-    NEW, ACTIVE, ARCHIVED, DELETED
+    NEW, IMPORTING, ACTIVE, ARCHIVED, DELETED
 }

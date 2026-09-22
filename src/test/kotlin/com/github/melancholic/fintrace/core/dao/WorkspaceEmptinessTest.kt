@@ -203,6 +203,9 @@ class WorkspaceEmptinessTest(
         private val NOW: LocalDateTime = LocalDateTime.of(2026, 9, 1, 12, 0)
         private val CHECKED = setOf("t_accounts", "t_categories", "t_operations", "t_balance_anchors")
         // t_events: a fresh workspace already holds the four category events, so the log cannot say "empty"
-        private val EXCLUDED = setOf("t_events")
+        // t_import_jobs: operational metadata, not workspace data — and counting it would break §4.2's
+        // promise that a failed import can be retried, since the FAILED row would make the workspace
+        // permanently non-empty
+        private val EXCLUDED = setOf("t_events", "t_import_jobs")
     }
 }

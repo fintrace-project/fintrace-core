@@ -44,6 +44,12 @@ interface WorkspaceDAO {
         version: Long?
     ): Boolean
 
+    fun expireImportLease(
+        workspaceId: UUID,
+        before: LocalDateTime,
+        newStatus: WorkspaceStatus
+    ): Boolean
+
     fun isEmpty(workspaceId: UUID): Boolean
 
     fun findDeletedBefore(cutoff: LocalDateTime, limit: Int = 100): List<WorkspacePurgeData>
@@ -132,7 +138,7 @@ class WorkspaceDAOImpl(
         workspaceId: UUID,
         sourceStatuses: Set<WorkspaceStatus>,
         newStatus: WorkspaceStatus,
-        version: Long?
+        version: Long?,
     ): Boolean {
         val sql = if (version == null) CHANGE_STATUS else "$CHANGE_STATUS AND version = :version"
 
@@ -153,6 +159,17 @@ class WorkspaceDAOImpl(
         }
         return updated == 1
     }
+
+    override fun expireImportLease(
+        workspaceId: UUID,
+        before: LocalDateTime,
+        newStatus: WorkspaceStatus
+    ): Boolean = jdbc.sql(EXPIRE_IMPORT_LEASE)
+        .param("id", workspaceId)
+        .param("newStatus", newStatus.name)
+        .param("updatedAt", timestampProvider.now())
+        .param("before", before)
+        .update() == 1
 
     override fun isEmpty(workspaceId: UUID): Boolean = jdbc.sql("SELECT fn_is_workspace_empty(:workspaceId)")
         .param("workspaceId", workspaceId)
@@ -190,15 +207,17 @@ class WorkspaceDAOImpl(
             "createdAt" to "created_at",
         )
 
+        const val TABLE = "t_workspaces"
+
         const val CREATE_WORKSPACE = """
-            INSERT INTO t_workspaces (id, name, status, owner_id, default_currency, created_at, updated_at, version)
+            INSERT INTO $TABLE (id, name, status, owner_id, default_currency, created_at, updated_at, version)
             VALUES (:id, :name, :status, :ownerId, :defaultCurrency, :createdAt, :createdAt, 0)
             RETURNING id       
         """
 
         const val GET_BY_ID_AND_OWNER_ID = """
-            SELECT * 
-            FROM t_workspaces
+            SELECT id, name, status, owner_id, default_currency, created_at, updated_at, import_started_at, deleted_at, version
+            FROM $TABLE
             WHERE id = :id
             AND owner_id = :ownerId
             AND status <> 'DELETED'
@@ -206,23 +225,38 @@ class WorkspaceDAOImpl(
 
         const val SEARCH_WORKSPACE_PER_OWNER = """
             SELECT *
-            FROM t_workspaces
+            FROM $TABLE
             WHERE owner_id = :ownerId 
-            AND status <> 'DELETED'
+                AND status <> 'DELETED'
             ORDER BY %s
             LIMIT :limit OFFSET :offset
         """
 
         const val CHANGE_STATUS = """
-            UPDATE t_workspaces
+            UPDATE $TABLE
             SET status = :newStatus,
-            updated_at = :updatedAt,
-            deleted_at = CASE WHEN :newStatus = 'DELETED' THEN :updatedAt END,
-            version = version + 1
+                updated_at = :updatedAt,
+                deleted_at = CASE WHEN :newStatus = 'DELETED' THEN :updatedAt END,
+                import_started_at = CASE
+                    WHEN :newStatus = 'IMPORTING' THEN :updatedAt
+                    WHEN :newStatus = 'NEW'       THEN NULL
+                    ELSE import_started_at
+                END,
+                version = version + 1
             WHERE id = :id
-            AND owner_id = :ownerId
-            AND status <> 'DELETED'
-            AND status in (:sourceStatuses)
+                AND owner_id = :ownerId
+                AND status <> 'DELETED'
+                AND status in (:sourceStatuses)
+        """
+
+        const val EXPIRE_IMPORT_LEASE = """
+            UPDATE $TABLE
+            SET status = :newStatus,
+                updated_at = :updatedAt,
+                version = version + 1
+            WHERE id = :id
+                AND status = 'IMPORTING'
+                AND import_started_at < :before
         """
 
         const val FIND_CANDIDATES_FOR_PURGE = """
@@ -233,18 +267,18 @@ class WorkspaceDAOImpl(
                 (SELECT count(t_accounts.id) FROM t_accounts WHERE workspace_id = w.id) AS num_of_accounts,
                 (SELECT count(t_categories.id) FROM t_categories WHERE workspace_id = w.id) AS num_of_categories,
                 (SELECT count(t_balance_anchors.id) FROM t_balance_anchors WHERE workspace_id = w.id) AS num_of_balance_anchors
-            FROM t_workspaces w
+            FROM $TABLE w
             WHERE status = 'DELETED'
-            AND deleted_at < :cutoffDateTime
+                AND deleted_at < :cutoffDateTime
             ORDER BY w.id
             LIMIT :limit
         """
 
         const val PURGE_WORKSPACE = """
-            DELETE FROM t_workspaces
+            DELETE FROM $TABLE
             WHERE id = :workspaceId
-            AND version = :version
-            AND status = 'DELETED'
+                AND version = :version
+                AND status = 'DELETED'
         """
     }
 

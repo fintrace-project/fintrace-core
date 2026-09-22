@@ -39,6 +39,8 @@ interface WorkspaceService {
     fun activateWorkspace(userId: UUID, workspaceId: UUID): Boolean
     fun requireWritable(userId: UUID, workspaceId: UUID): Workspace
     fun requireReadable(userId: UUID, workspaceId: UUID): Workspace
+    fun initImport(userId: UUID, workspaceId: UUID)
+    fun repairAfterFailedImport(userId: UUID, workspaceId: UUID)
 }
 
 @Service
@@ -141,7 +143,7 @@ class WorkspaceServiceImpl(
     }
 
     override fun activateWorkspace(userId: UUID, workspaceId: UUID): Boolean {
-        return workspaceDAO.changeStatus(userId, workspaceId, setOf(WorkspaceStatus.NEW), WorkspaceStatus.ACTIVE)
+        return workspaceDAO.changeStatus(userId, workspaceId, TO_ACTIVE_STATUSES, WorkspaceStatus.ACTIVE)
     }
 
     override fun requireWritable(
@@ -161,6 +163,39 @@ class WorkspaceServiceImpl(
             throw OperationNotAllowedException("Operations from workspace '${workspace.id}' not allowed to read")
         }
         return workspace
+    }
+
+    override fun initImport(userId: UUID, workspaceId: UUID) {
+        val workspace = workspaceDAO.get(userId, workspaceId)
+            .orElseThrow { NotFoundEntityException("Workspace not found (workspaceId='$workspaceId')") }
+
+        if (!TO_IMPORT_STATUSES.contains(workspace.status)) {
+            throw OperationNotAllowedException("Import not allowed into workspace '${workspace.id}': workspace is not new")
+        }
+
+        if (!workspaceDAO.isEmpty(workspaceId)) {
+            throw OperationNotAllowedException("Import not allowed into workspace '${workspace.id}': workspace is not empty")
+        }
+
+        if (!workspaceDAO.changeStatus(
+                userId = userId,
+                workspaceId = workspace.id,
+                sourceStatuses = TO_IMPORT_STATUSES,
+                newStatus = WorkspaceStatus.IMPORTING,
+                version = workspace.version
+            )
+        ) {
+            throw ActionConflictException("Couldn't update workspace: concurrent modification")
+        }
+    }
+
+    override fun repairAfterFailedImport(userId: UUID, workspaceId: UUID) {
+        workspaceDAO.changeStatus(
+            userId = userId,
+            workspaceId = workspaceId,
+            sourceStatuses = setOf(WorkspaceStatus.IMPORTING),
+            newStatus = WorkspaceStatus.NEW
+        )
     }
 
     private fun initWorkspace(userId: UUID, workspace: Workspace) {
@@ -224,9 +259,33 @@ class WorkspaceServiceImpl(
     }
 
     companion object {
-        val TO_DELETE_STATUSES = setOf(WorkspaceStatus.NEW, WorkspaceStatus.ACTIVE, WorkspaceStatus.ARCHIVED)
-        val WRITABLE_STATUSES = setOf(WorkspaceStatus.NEW, WorkspaceStatus.ACTIVE)
-        val READABLE_STATUSES = setOf(WorkspaceStatus.NEW, WorkspaceStatus.ACTIVE, WorkspaceStatus.ARCHIVED)
+        val WRITABLE_STATUSES = setOf(
+            WorkspaceStatus.NEW,
+            WorkspaceStatus.ACTIVE
+        )
+        val READABLE_STATUSES = setOf(
+            WorkspaceStatus.NEW,
+            WorkspaceStatus.IMPORTING,
+            WorkspaceStatus.ACTIVE,
+            WorkspaceStatus.ARCHIVED
+        )
+
+        val TO_IMPORT_STATUSES = setOf(
+            WorkspaceStatus.NEW
+        )
+
+        val TO_ACTIVE_STATUSES = setOf(
+            WorkspaceStatus.NEW,
+            WorkspaceStatus.IMPORTING
+        )
+
+        val TO_DELETE_STATUSES = setOf(
+            WorkspaceStatus.NEW,
+            WorkspaceStatus.IMPORTING,
+            WorkspaceStatus.ACTIVE,
+            WorkspaceStatus.ARCHIVED
+        )
+
         const val STATUS_CONFLICT_MSG = "Couldn't change workspace status due statuses conflict"
     }
 }
