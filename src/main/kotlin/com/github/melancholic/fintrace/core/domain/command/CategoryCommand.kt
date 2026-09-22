@@ -12,6 +12,8 @@ sealed interface ExistingCategoryCommand<R> : CategoryCommand<R> {
 }
 
 data class CreateCategoryCommand(
+    override val id: UUID? = null,
+    override val externalRef: String? = null,
     override val workspaceId: UUID,
     val parentId: UUID?,
     val name: String,
@@ -23,19 +25,23 @@ data class CreateCategoryCommand(
     companion object {
 
         fun custom(
+            id: UUID? = null,
             workspaceId: UUID,
             kind: CategoryKind,
             name: String,
             parentId: UUID,
-            icon: String?
+            icon: String?,
+            externalRef: String? = null
         ): CreateCategoryCommand {
             return CreateCategoryCommand(
+                id = id,
                 workspaceId = workspaceId,
                 parentId = parentId,
                 kind = kind,
                 systemCode = null,
                 name = name,
-                icon = icon
+                icon = icon,
+                externalRef = externalRef
             )
         }
 
@@ -48,12 +54,14 @@ data class CreateCategoryCommand(
             parentId: UUID?
         ): CreateCategoryCommand {
             return CreateCategoryCommand(
+                id = null,
                 workspaceId = workspaceId,
                 parentId = parentId,
                 kind = kind,
                 systemCode = systemCode,
                 name = name,
-                icon = icon
+                icon = icon,
+                externalRef = null
             )
         }
     }

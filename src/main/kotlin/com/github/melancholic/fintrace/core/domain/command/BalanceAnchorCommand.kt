@@ -2,6 +2,7 @@ package com.github.melancholic.fintrace.core.domain.command
 
 import com.github.melancholic.fintrace.core.domain.entity.BalanceAnchorContainer
 import java.math.BigDecimal
+import java.time.LocalDateTime
 import java.util.*
 
 sealed interface BalanceAnchorCommand<R> : Command<R> {
@@ -13,10 +14,15 @@ sealed interface ExistingBalanceAnchorCommand<R> : BalanceAnchorCommand<R> {
 }
 
 data class CreateBalanceAnchorCommand(
+    override val id: UUID? = null,
+    override val externalRef: String? = null,
     override val workspaceId: UUID,
     override val accountId: UUID,
     val value: BigDecimal,
-) : BalanceAnchorCommand<BalanceAnchorContainer>, CreateCommand<BalanceAnchorContainer>
+    override val occurredAt: LocalDateTime
+) : TemporalCommand<BalanceAnchorContainer>,
+    BalanceAnchorCommand<BalanceAnchorContainer>,
+    CreateCommand<BalanceAnchorContainer>
 
 data class CancelBalanceAnchorCommand(
     override val workspaceId: UUID,

@@ -3,6 +3,7 @@ package com.github.melancholic.fintrace.core.validation
 object ValidationConstants {
     const val MAX_NAME_LENGTH = 30
     const val MAX_ICON_LENGTH = 30
+    const val MAX_EXTERNAL_REF_LENGTH = 60
     const val NAME_PATTERN = "[\\p{L}\\p{N}][\\p{L}\\p{N}\\p{M} \\-_\\[\\]()',’\\&#@№]*"
     const val WORKSPACE_NAME_PATTERN = NAME_PATTERN
     const val ACCOUNT_NAME_PATTERN = NAME_PATTERN

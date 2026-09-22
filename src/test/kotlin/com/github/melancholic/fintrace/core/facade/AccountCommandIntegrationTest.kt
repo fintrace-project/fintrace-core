@@ -211,7 +211,7 @@ class AccountCommandIntegrationTest(
     @Test
     fun `rejects an unknown currency before anything is written`() {
         assertFailsWith<ValidationError> {
-            facade.processCommand(CreateAccountCommand(workspaceId, "cash", "ZZZ", null))
+            facade.processCommand(CreateAccountCommand(workspaceId = workspaceId, name = "cash", currency = "ZZZ", icon = null))
         }
 
         assertEquals(0, count("t_events"), "validation runs before the event is appended (§4.10)")
@@ -221,7 +221,7 @@ class AccountCommandIntegrationTest(
     fun `isolates accounts by workspace`() {
         val other = TestWorkspaces.create(workspaceDAO, usersDAO, name = "other-workspace")
         create()
-        facade.processCommand(CreateAccountCommand(other, "theirs", "USD", null))
+        facade.processCommand(CreateAccountCommand(workspaceId = other, name = "theirs", currency = "USD", icon = null))
 
         assertEquals(1, countIn(workspaceId))
         assertEquals(1, countIn(other))
@@ -277,7 +277,7 @@ class AccountCommandIntegrationTest(
     @Test
     fun `the initial balance anchor is rejected with the account when the command fails`() {
         assertFailsWith<ValidationError> {
-            facade.processCommand(CreateAccountCommand(workspaceId, "cash", "ZZZ", null, BigDecimal.TEN))
+            facade.processCommand(CreateAccountCommand(workspaceId = workspaceId, name = "cash", currency = "ZZZ", icon = null, initialBalance = BigDecimal.TEN))
         }
 
         // One transaction: an invalid account must not leave an anchor behind.
@@ -299,7 +299,7 @@ class AccountCommandIntegrationTest(
         currency: String = "EUR",
         icon: String? = null,
         initialBalance: BigDecimal? = null,
-    ): UUID = facade.processCommand(CreateAccountCommand(workspaceId, name, currency, icon, initialBalance)).id
+    ): UUID = facade.processCommand(CreateAccountCommand(workspaceId = workspaceId, name = name, currency = currency, icon = icon, initialBalance = initialBalance)).id
 
     private fun count(table: String) =
         jdbc.sql("SELECT count(*) FROM $table").query(Int::class.java).single()

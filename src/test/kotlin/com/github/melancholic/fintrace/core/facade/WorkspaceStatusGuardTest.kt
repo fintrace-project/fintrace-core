@@ -59,11 +59,16 @@ class WorkspaceStatusGuardTest(
         // One of every aggregate, through the command path; the first command also activates the workspace
         cash = commandFacade.processCommand(CreateAccountCommand(workspaceId = workspaceId, name = "cash", currency = "EUR", icon = null)).id
         card = commandFacade.processCommand(CreateAccountCommand(workspaceId = workspaceId, name = "card", currency = "EUR", icon = null)).id
-        food = commandFacade.processCommand(CreateCategoryCommand.custom(workspaceId, CategoryKind.EXPENSE, "Food", expenseRoot(), icon = null)).id
+        food = commandFacade.processCommand(CreateCategoryCommand.custom(workspaceId = workspaceId, kind = CategoryKind.EXPENSE, name = "Food", parentId = expenseRoot(), icon = null)).id
         operationId = commandFacade.processCommand(expense()).id
         transferId = commandFacade.processCommand(transfer()).id
         anchorId = commandFacade.processCommand(
-            CreateBalanceAnchorCommand(workspaceId = workspaceId, accountId = cash, value = BigDecimal("50.0000"))
+            CreateBalanceAnchorCommand(
+                workspaceId = workspaceId,
+                accountId = cash,
+                value = BigDecimal("50.0000"),
+                occurredAt = LocalDateTime.now(),
+            )
         ).projection.id
     }
 
@@ -113,13 +118,18 @@ class WorkspaceStatusGuardTest(
     private fun commandsOfEveryAggregate(): List<Command<*>> = listOf(
         CreateAccountCommand(workspaceId = workspaceId, name = "savings", currency = "EUR", icon = null),
         ReviseAccountCommand(workspaceId = workspaceId, accountId = cash, name = "wallet", icon = null),
-        CreateCategoryCommand.custom(workspaceId, CategoryKind.EXPENSE, "Rent", expenseRoot(), icon = null),
+        CreateCategoryCommand.custom(workspaceId = workspaceId, kind = CategoryKind.EXPENSE, name = "Rent", parentId = expenseRoot(), icon = null),
         SetCategoryArchivedCommand(workspaceId = workspaceId, categoryId = food, archived = true),
         expense(),
         CancelOperationCommand(workspaceId = workspaceId, operationId = operationId),
         transfer(),
         CancelTransferCommand(workspaceId = workspaceId, transferId = transferId),
-        CreateBalanceAnchorCommand(workspaceId = workspaceId, accountId = cash, value = BigDecimal.ZERO),
+        CreateBalanceAnchorCommand(
+            workspaceId = workspaceId,
+            accountId = cash,
+            value = BigDecimal.ZERO,
+            occurredAt = LocalDateTime.now(),
+        ),
         CancelBalanceAnchorCommand(workspaceId = workspaceId, accountId = cash, anchorId = anchorId),
     )
 

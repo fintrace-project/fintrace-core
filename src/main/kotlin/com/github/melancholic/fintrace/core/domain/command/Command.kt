@@ -13,7 +13,12 @@ sealed interface TemporalCommand<R> : Command<R> {
     val occurredAt: LocalDateTime
 }
 
-sealed interface CreateCommand<R> : Command<R> {
+sealed interface IdentifiedCommand<R> : Command<R> {
+    val id: UUID?
+    val externalRef: String?
+}
+
+sealed interface CreateCommand<R> : IdentifiedCommand<R> {
     override fun eventType() = EventType.CREATED
 }
 

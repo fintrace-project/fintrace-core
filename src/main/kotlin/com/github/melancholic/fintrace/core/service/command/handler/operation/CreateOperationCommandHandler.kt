@@ -40,7 +40,7 @@ class CreateOperationCommandHandler(
             ).id
 
         return OperationCreatedV1(
-            id = uuidGenerator.nextUUID(),
+            id = command.id ?: uuidGenerator.nextUUID(),
             workspaceId = command.workspaceId,
             accountId = command.accountId,
             amount = command.kind.signedAmount(command.amount),
@@ -51,7 +51,7 @@ class CreateOperationCommandHandler(
             recordedAt = timestampProvider.now(),
             transferId = null,
             counterpartId = null,
-            externalRef = null,
+            externalRef = command.externalRef,
         )
     }
 }

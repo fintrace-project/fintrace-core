@@ -32,7 +32,7 @@ class CreateCategoryCommandHandler(
 
     private fun buildEventPayload(command: CreateCategoryCommand): CategoryCreated {
         return CategoryCreatedV1(
-            id = uuidGenerator.nextUUID(),
+            id = command.id ?: uuidGenerator.nextUUID(),
             workspaceId = command.workspaceId,
             name = command.name,
             icon = command.icon,
@@ -40,7 +40,7 @@ class CreateCategoryCommandHandler(
             kind = command.kind,
             archived = false,
             systemCode = command.systemCode,
-            externalRef = null,
+            externalRef = command.externalRef,
             recordedAt = timestampProvider.now()
         )
     }

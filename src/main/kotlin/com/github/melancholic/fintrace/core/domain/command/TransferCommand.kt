@@ -20,6 +20,8 @@ sealed interface TransferStateCommand<R> : TransferCommand<R>, TemporalCommand<R
 }
 
 data class CreateTransferCommand(
+    override val id: UUID? = null,
+    override val externalRef: String? = null,
     override val workspaceId: UUID,
     override val occurredAt: LocalDateTime,
     override val sourceAccountId: UUID,

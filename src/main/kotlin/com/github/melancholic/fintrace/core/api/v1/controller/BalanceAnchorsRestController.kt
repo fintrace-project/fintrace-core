@@ -9,6 +9,7 @@ import com.github.melancholic.fintrace.core.domain.command.CreateBalanceAnchorCo
 import com.github.melancholic.fintrace.core.domain.entity.BalanceAnchorContainer
 import com.github.melancholic.fintrace.core.facade.CommandFacade
 import com.github.melancholic.fintrace.core.facade.ProjectionFacade
+import com.github.melancholic.fintrace.core.util.TimestampProvider
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
@@ -25,7 +26,8 @@ import java.util.*
 class BalanceAnchorsRestController(
     private val commandFacade: CommandFacade,
     private val projectionFacade: ProjectionFacade,
-    private val mapper: BalanceAnchorMapper
+    private val mapper: BalanceAnchorMapper,
+    private val timestampProvider: TimestampProvider
 ) {
 
     @Operation(summary = "Record a balance anchor")
@@ -46,7 +48,8 @@ class BalanceAnchorsRestController(
             CreateBalanceAnchorCommand(
                 workspaceId = workspaceId,
                 accountId = accountId,
-                value = request.value
+                value = request.value,
+                occurredAt = timestampProvider.now(),
             )
         )
 

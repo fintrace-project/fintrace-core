@@ -37,12 +37,12 @@ class CreateBalanceAnchorCommandHandler(
     private fun buildEventPayload(command: CreateBalanceAnchorCommand): BalanceAnchorCreated {
         val now = timestampProvider.now()
         return BalanceAnchorCreatedV1(
-            id = uuidGenerator.nextUUID(),
+            id = command.id ?: uuidGenerator.nextUUID(),
             workspaceId = command.workspaceId,
             accountId = command.accountId,
             value = command.value,
-            occurredAt = now,
-            externalRef = null,
+            occurredAt = command.occurredAt,
+            externalRef = command.externalRef,
             recordedAt = now
         )
     }

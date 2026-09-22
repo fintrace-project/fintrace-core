@@ -31,6 +31,7 @@ class BalanceAnchorProjectionDAOImpl(
             .param("accountId", projection.accountId)
             .param("value", projection.value)
             .param("externalRef", projection.externalRef)
+            .param("occurredAt", projection.occurredAt)
             .param("recordedAt", projection.recordedAt)
             .query(UUID::class.java)
             .single()
@@ -92,7 +93,7 @@ class BalanceAnchorProjectionDAOImpl(
 
         const val INSERT = """
             INSERT INTO $TABLE_NAME (id, workspace_id, account_id, value, occurred_at, external_ref, recorded_at)
-            VALUES (:id, :workspaceId, :accountId, :value, :recordedAt, :externalRef, :recordedAt)
+            VALUES (:id, :workspaceId, :accountId, :value, :occurredAt, :externalRef, :recordedAt)
             RETURNING id
         """
 

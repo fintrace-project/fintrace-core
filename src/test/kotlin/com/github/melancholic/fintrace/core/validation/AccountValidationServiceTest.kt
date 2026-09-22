@@ -43,7 +43,7 @@ class AccountValidationServiceTest {
     fun `accepts a well-formed account`() {
         val (_, validation) = service()
 
-        validation.validate(CreateAccountCommand(WORKSPACE, "cash-eur", "EUR", icon = null))
+        validation.validate(CreateAccountCommand(workspaceId = WORKSPACE, name = "cash-eur", currency = "EUR", icon = null))
     }
 
     @Test
@@ -51,7 +51,7 @@ class AccountValidationServiceTest {
         val (_, validation) = service()
 
         assertFailsWith<ValidationError> {
-            validation.validate(CreateAccountCommand(WORKSPACE, "   ", "EUR", icon = null))
+            validation.validate(CreateAccountCommand(workspaceId = WORKSPACE, name = "   ", currency = "EUR", icon = null))
         }
     }
 
@@ -61,7 +61,7 @@ class AccountValidationServiceTest {
 
         listOf("-leading", "semi;colon", "slash/name").forEach {
             assertFailsWith<ValidationError>("expected '$it' to be rejected") {
-                validation.validate(CreateAccountCommand(WORKSPACE, it, "EUR", icon = null))
+                validation.validate(CreateAccountCommand(workspaceId = WORKSPACE, name = it, currency = "EUR", icon = null))
             }
         }
     }
@@ -72,7 +72,7 @@ class AccountValidationServiceTest {
 
         // The reason the check is here and not only in the DTO: a regex cannot tell ZZZ from EUR.
         assertFailsWith<ValidationError> {
-            validation.validate(CreateAccountCommand(WORKSPACE, "cash", "ZZZ", icon = null))
+            validation.validate(CreateAccountCommand(workspaceId = WORKSPACE, name = "cash", currency = "ZZZ", icon = null))
         }
     }
 
@@ -82,7 +82,7 @@ class AccountValidationServiceTest {
 
         listOf("eur", "EURO", "EU", "").forEach {
             assertFailsWith<ValidationError>("expected '$it' to be rejected") {
-                validation.validate(CreateAccountCommand(WORKSPACE, "cash", it, icon = null))
+                validation.validate(CreateAccountCommand(workspaceId = WORKSPACE, name = "cash", currency = it, icon = null))
             }
         }
     }
@@ -93,7 +93,7 @@ class AccountValidationServiceTest {
         val tooLong = "x".repeat(ValidationConstants.MAX_ICON_LENGTH + 1)
 
         assertFailsWith<ValidationError> {
-            validation.validate(CreateAccountCommand(WORKSPACE, "cash", "EUR", icon = tooLong))
+            validation.validate(CreateAccountCommand(workspaceId = WORKSPACE, name = "cash", currency = "EUR", icon = tooLong))
         }
     }
 

@@ -21,6 +21,8 @@ sealed interface OperationStateCommand<R> : OperationCommand<R>, TemporalCommand
 }
 
 data class CreateOperationCommand(
+    override val id: UUID? = null,
+    override val externalRef: String? = null,
     override val workspaceId: UUID,
     override val occurredAt: LocalDateTime,
     override val amount: BigDecimal,

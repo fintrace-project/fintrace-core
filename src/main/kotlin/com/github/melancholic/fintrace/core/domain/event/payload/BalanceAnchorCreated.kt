@@ -31,7 +31,7 @@ data class BalanceAnchorCreatedV1(
         workspaceId = workspaceId,
         accountId = accountId,
         value = value,
-        occurredAt = recordedAt,
+        occurredAt = occurredAt,
         externalRef = externalRef,
         recordedAt = recordedAt
     )

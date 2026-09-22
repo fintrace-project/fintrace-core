@@ -257,7 +257,7 @@ class AdminFacadeReplayTest(
     @Test
     fun `rebuilds an account and the anchor its initial balance created`() {
         val id = commandFacade.processCommand(
-            CreateAccountCommand(workspace, "cash", "EUR", icon = null, initialBalance = BigDecimal("1500.0000"))
+            CreateAccountCommand(workspaceId = workspace, name = "cash", currency = "EUR", icon = null, initialBalance = BigDecimal("1500.0000"))
         ).id
         val accountsBefore = accounts(workspace)
         val anchorsBefore = anchors(workspace)
@@ -275,7 +275,7 @@ class AdminFacadeReplayTest(
 
     @Test
     fun `does not invent an anchor for an account created without an initial balance`() {
-        commandFacade.processCommand(CreateAccountCommand(workspace, "cash", "EUR", icon = null))
+        commandFacade.processCommand(CreateAccountCommand(workspaceId = workspace, name = "cash", currency = "EUR", icon = null))
 
         jdbc.sql("DELETE FROM t_accounts").update()
         adminFacade.replayWorkspace(workspace)
@@ -298,7 +298,7 @@ class AdminFacadeReplayTest(
         val seeded = TestWorkspaces.createWithCategories(transactions, workspaceService, usersDAO, name = "seeded")
         val food = createCategory(seeded, parent = expenseRoot(seeded), name = "Food")
         createCategory(seeded, parent = food, name = "Groceries")
-        commandFacade.processCommand(CreateAccountCommand(seeded, "cash", "EUR", icon = null))
+        commandFacade.processCommand(CreateAccountCommand(workspaceId = seeded, name = "cash", currency = "EUR", icon = null))
         create(workspaceId = seeded)
         val categoriesBefore = categories(seeded)
         val accountsBefore = accounts(seeded)
@@ -327,9 +327,9 @@ class AdminFacadeReplayTest(
             ReviseCategoryCommand(workspaceId = ws, categoryId = snacks, parentId = food, name = "Snacks", icon = null)
         )
         val cash = commandFacade.processCommand(
-            CreateAccountCommand(ws, "cash", "EUR", icon = null, initialBalance = BigDecimal("100.0000"))
+            CreateAccountCommand(workspaceId = ws, name = "cash", currency = "EUR", icon = null, initialBalance = BigDecimal("100.0000"))
         ).id
-        val card = commandFacade.processCommand(CreateAccountCommand(ws, "card", "EUR", icon = null)).id
+        val card = commandFacade.processCommand(CreateAccountCommand(workspaceId = ws, name = "card", currency = "EUR", icon = null)).id
         commandFacade.processCommand(ReviseAccountCommand(workspaceId = ws, accountId = card, name = "debit-card", icon = null))
         val kept = create(workspaceId = ws, accountId = cash, categoryId = food)
         commandFacade.processCommand(
@@ -357,9 +357,21 @@ class AdminFacadeReplayTest(
                 comment = "to card",
             )
         )
-        commandFacade.processCommand(CreateBalanceAnchorCommand(workspaceId = ws, accountId = card, value = BigDecimal("30.0000")))
+        commandFacade.processCommand(
+            CreateBalanceAnchorCommand(
+                workspaceId = ws,
+                accountId = card,
+                value = BigDecimal("30.0000"),
+                occurredAt = LocalDateTime.now(),
+            )
+        )
         val deletedAnchor = commandFacade.processCommand(
-            CreateBalanceAnchorCommand(workspaceId = ws, accountId = cash, value = BigDecimal("25.0000"))
+            CreateBalanceAnchorCommand(
+                workspaceId = ws,
+                accountId = cash,
+                value = BigDecimal("25.0000"),
+                occurredAt = LocalDateTime.now(),
+            )
         ).projection.id
         commandFacade.processCommand(CancelBalanceAnchorCommand(workspaceId = ws, accountId = cash, anchorId = deletedAnchor))
 
@@ -467,11 +479,11 @@ class AdminFacadeReplayTest(
 	private fun createAccount(
 		name: String = "account",
 		currency: String = "EUR",
-	): UUID = commandFacade.processCommand(CreateAccountCommand(workspace, name, currency, icon = null)).id
+	): UUID = commandFacade.processCommand(CreateAccountCommand(workspaceId = workspace, name = name, currency = currency, icon = null)).id
 
     private fun createCategory(workspaceId: UUID, parent: UUID, name: String): UUID = commandFacade
         .processCommand(
-            CreateCategoryCommand.custom(workspaceId, CategoryKind.EXPENSE, name, parent, icon = null)
+            CreateCategoryCommand.custom(workspaceId = workspaceId, kind = CategoryKind.EXPENSE, name = name, parentId = parent, icon = null)
         ).id
 
     private fun expenseRoot(workspaceId: UUID): UUID = jdbc

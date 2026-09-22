@@ -17,10 +17,13 @@ import org.springframework.context.annotation.Import
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.security.test.context.support.WithMockUser
 import java.math.BigDecimal
+import java.time.Duration
 import java.time.LocalDateTime
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * The balance anchor aggregate through its real entry point (1.21–1.23).
@@ -74,13 +77,19 @@ class BalanceAnchorCommandIntegrationTest(
     }
 
     @Test
-    fun `stamps the same instant on occurred_at and recorded_at`() {
+    fun `dates an interactive anchor at the moment of the count`() {
         val anchor = facade.processCommand(create())
 
-        // §4.6: a count happens now, so the two timestamps coincide by construction — and the
-        // balance query orders by occurred_at, so it has to be populated.
+        // §4.6: a count happens now. Since decision 6 made the command temporal the caller supplies
+        // occurredAt, so the two stamps are separate clock reads rather than one — what still has to
+        // hold is that the business date is the present, and that it is populated at all, because
+        // the balance query orders by it.
         val (occurredAt, recordedAt) = timestamps(anchor.projection.id)
-        assertEquals(occurredAt, recordedAt)
+        assertFalse(occurredAt.isAfter(recordedAt), "the count cannot happen after it was recorded")
+        assertTrue(
+            Duration.between(occurredAt, recordedAt).abs() < Duration.ofSeconds(1),
+            "an interactive anchor is dated now, not at some other time",
+        )
     }
 
     @Test
@@ -208,7 +217,12 @@ class BalanceAnchorCommandIntegrationTest(
     private fun create(
         value: BigDecimal = BigDecimal("100.0000"),
         accountId: UUID = this.accountId,
-    ) = CreateBalanceAnchorCommand(workspaceId = workspaceId, accountId = accountId, value = value)
+    ) = CreateBalanceAnchorCommand(
+        workspaceId = workspaceId,
+        accountId = accountId,
+        value = value,
+        occurredAt = LocalDateTime.now(),
+    )
 
     private fun cancel(anchorId: UUID, accountId: UUID = this.accountId) =
         CancelBalanceAnchorCommand(workspaceId = workspaceId, accountId = accountId, anchorId = anchorId)

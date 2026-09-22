@@ -30,24 +30,23 @@ class CreateTransferCommandHandler(
 
     override fun handle(command: CreateTransferCommand, context: CommandContext): Transfer {
         validationService.validate(command)
-        val transferId = uuidGenerator.nextUUID()
+        val transferId = command.id ?: uuidGenerator.nextUUID()
         val payload = TransferCreatedV1(
             id = transferId,
             workspaceId = command.workspaceId,
             occurredAt = command.occurredAt,
             recordedAt = timestampProvider.now(),
             comment = command.comment,
-            externalRef = null,
+            externalRef = command.externalRef,
             source = TransferLegPayload(
                 operationId = uuidGenerator.nextUUID(),
                 accountId = command.sourceAccountId,
-                amount = command.sourceAmount.negate(),
-
+                amount = command.sourceAmount.negate()
                 ),
             target = TransferLegPayload(
                 operationId = uuidGenerator.nextUUID(),
                 accountId = command.targetAccountId,
-                amount = command.targetAmount,
+                amount = command.targetAmount
             )
         )
 

@@ -38,7 +38,8 @@ class CreateAccountCommandHandler(
                 CreateBalanceAnchorCommand(
                     workspaceId = command.workspaceId,
                     accountId = payload.id,
-                    value = command.initialBalance
+                    value = command.initialBalance,
+                    occurredAt = command.initialBalanceAt ?: timestampProvider.now(),
                 ),
                 context
             )
@@ -48,13 +49,13 @@ class CreateAccountCommandHandler(
 
     private fun buildEventPayload(command: CreateAccountCommand): AccountCreated {
         return AccountCreatedV1(
-            id = uuidGenerator.nextUUID(),
+            id = command.id ?: uuidGenerator.nextUUID(),
             workspaceId = command.workspaceId,
             name = command.name,
             currency = command.currency,
             icon = command.icon,
             archived = false,
-            externalRef = null,
+            externalRef = command.externalRef,
             recordedAt = timestampProvider.now()
         )
     }
