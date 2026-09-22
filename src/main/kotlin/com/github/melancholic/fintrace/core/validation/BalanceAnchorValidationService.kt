@@ -6,6 +6,8 @@ import com.github.melancholic.fintrace.core.domain.command.BalanceAnchorCommand
 import com.github.melancholic.fintrace.core.domain.command.CancelBalanceAnchorCommand
 import com.github.melancholic.fintrace.core.domain.command.CreateBalanceAnchorCommand
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
+import com.github.melancholic.fintrace.core.exception.ValidationError
+import com.github.melancholic.fintrace.core.util.TimestampProvider
 import org.springframework.stereotype.Service
 
 interface BalanceAnchorValidationService {
@@ -16,10 +18,26 @@ interface BalanceAnchorValidationService {
 @Service
 class BalanceAnchorValidationServiceImpl(
     private val projectionDAO: BalanceAnchorProjectionDAO,
-    private val accountDAO: AccountProjectionDAO
+    private val accountDAO: AccountProjectionDAO,
+    private val timestampProvider: TimestampProvider
 ) : BalanceAnchorValidationService {
     override fun validate(command: CreateBalanceAnchorCommand) {
         checkAccount(command)
+        checkOccurredAt(command)
+    }
+
+    private fun checkOccurredAt(command: CreateBalanceAnchorCommand) {
+        if (timestampProvider.now().isBefore(command.occurredAt)) {
+            throw ValidationError("Couldn't record balance anchor: 'occurredAt' is in the future")
+        }
+
+        projectionDAO.latestOccurredAt(command.workspaceId, command.accountId)
+            .filter { command.occurredAt.isBefore(it) }
+            .ifPresent {
+                throw ActionConflictException(
+                    "Couldn't record balance anchor: it precedes the account's newest anchor ($it)"
+                )
+            }
     }
 
     override fun validate(command: CancelBalanceAnchorCommand) {

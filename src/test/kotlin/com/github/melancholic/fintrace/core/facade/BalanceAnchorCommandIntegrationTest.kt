@@ -9,6 +9,7 @@ import com.github.melancholic.fintrace.core.domain.command.CancelBalanceAnchorCo
 import com.github.melancholic.fintrace.core.domain.command.CreateBalanceAnchorCommand
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
+import com.github.melancholic.fintrace.core.exception.ValidationError
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -19,6 +20,7 @@ import org.springframework.security.test.context.support.WithMockUser
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -90,6 +92,61 @@ class BalanceAnchorCommandIntegrationTest(
             Duration.between(occurredAt, recordedAt).abs() < Duration.ofSeconds(1),
             "an interactive anchor is dated now, not at some other time",
         )
+    }
+
+    @Test
+    fun `rejects an anchor dated in the future`() {
+        // §4.6 as amended: a count cannot have happened yet.
+        assertFailsWith<ValidationError> {
+            facade.processCommand(create(occurredAt = LocalDateTime.now().plusDays(1)))
+        }
+        assertEquals(0, count("t_balance_anchors"))
+    }
+
+    @Test
+    fun `rejects an anchor that precedes the account's newest`() {
+        facade.processCommand(create(occurredAt = LocalDateTime.now().minusDays(1)))
+
+        // Per-account anchors are append-only in business time — the ordering fn_balance_of and
+        // the delete-only-the-head rule (§10.4) both assume. Inserting behind the head would
+        // shift every balance after it.
+        assertFailsWith<ActionConflictException> {
+            facade.processCommand(create(occurredAt = LocalDateTime.now().minusDays(2)))
+        }
+        assertEquals(1, count("t_balance_anchors"), "the refused anchor wrote nothing")
+    }
+
+    @Test
+    fun `accepts an anchor at the same instant as the newest`() {
+        // The rule is "may not precede", not "must be strictly after" — import can legitimately
+        // produce two readings a microsecond apart, and fn_balance_of breaks the tie by id.
+        //
+        // Truncated on purpose: Postgres stores microseconds and rounds, so a value carrying finer
+        // digits comes back as a different instant and the comparison stops being about the rule.
+        val sameInstant = LocalDateTime.now().minusDays(1).truncatedTo(ChronoUnit.MICROS)
+        facade.processCommand(create(occurredAt = sameInstant))
+        facade.processCommand(create(occurredAt = sameInstant))
+
+        assertEquals(2, count("t_balance_anchors"))
+    }
+
+    @Test
+    fun `accepts a back-dated anchor on an account that has none`() {
+        // Import's opening anchor is dated before the earliest operation (decision 5), so
+        // back-dating is only refused relative to an existing anchor, never on its own.
+        facade.processCommand(create(occurredAt = LocalDateTime.now().minusYears(3)))
+
+        assertEquals(1, count("t_balance_anchors"))
+    }
+
+    @Test
+    fun `orders anchors per account, not across them`() {
+        facade.processCommand(create(occurredAt = LocalDateTime.now().minusDays(1)))
+
+        // A second account starts its own sequence; the first account's head must not constrain it.
+        facade.processCommand(create(accountId = otherAccountId, occurredAt = LocalDateTime.now().minusDays(5)))
+
+        assertEquals(2, count("t_balance_anchors"))
     }
 
     @Test
@@ -217,11 +274,12 @@ class BalanceAnchorCommandIntegrationTest(
     private fun create(
         value: BigDecimal = BigDecimal("100.0000"),
         accountId: UUID = this.accountId,
+        occurredAt: LocalDateTime = LocalDateTime.now(),
     ) = CreateBalanceAnchorCommand(
         workspaceId = workspaceId,
         accountId = accountId,
         value = value,
-        occurredAt = LocalDateTime.now(),
+        occurredAt = occurredAt,
     )
 
     private fun cancel(anchorId: UUID, accountId: UUID = this.accountId) =

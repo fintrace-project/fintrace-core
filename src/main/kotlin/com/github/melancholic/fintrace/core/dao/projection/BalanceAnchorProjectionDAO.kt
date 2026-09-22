@@ -6,6 +6,7 @@ import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
+import java.time.LocalDateTime
 import java.util.*
 
 
@@ -18,6 +19,7 @@ interface BalanceAnchorProjectionDAO : ProjectionDAO<BalanceAnchorProjection> {
     fun getAll(workspaceId: UUID, accountId: UUID): List<BalanceAnchorProjection>
     fun getById(workspaceId: UUID, accountId: UUID, anchorId: UUID): BalanceAnchorProjection
     fun isLast(requested: BalanceAnchorProjection): Boolean
+    fun latestOccurredAt(workspaceId: UUID, accountId: UUID): Optional<LocalDateTime>
 }
 
 @Repository
@@ -75,6 +77,13 @@ class BalanceAnchorProjectionDAOImpl(
         .optional()
         .orElseThrow { ApplicationException("Couldn't check that the balance anchor is the latest: nothing was returned") }
 
+    override fun latestOccurredAt(workspaceId: UUID, accountId: UUID): Optional<LocalDateTime> =
+        jdbc.sql(SELECT_LATEST_OCCURRED_AT)
+            .param("workspaceId", workspaceId)
+            .param("accountId", accountId)
+            .query(LocalDateTime::class.java)
+            .optional()
+
     override fun removeAll(workspaceId: UUID) {
         jdbc.sql(DELETE_BY_WORKSPACE)
             .param("workspaceId", workspaceId)
@@ -109,13 +118,17 @@ class BalanceAnchorProjectionDAOImpl(
             AND id = :anchorId
         """
 
+        private const val LATEST_ANCHOR_OF_ACCOUNT = """
+            FROM $TABLE_NAME
+            WHERE workspace_id = :workspaceId AND account_id = :accountId
+            ORDER BY occurred_at DESC, id DESC
+            LIMIT 1
+        """
+
+        const val SELECT_LATEST_OCCURRED_AT = "SELECT occurred_at $LATEST_ANCHOR_OF_ACCOUNT"
+
         const val IS_LATEST = """
-            SELECT :anchorId = (
-                SELECT id FROM $TABLE_NAME
-                WHERE workspace_id = :workspaceId AND account_id = :accountId
-                ORDER BY occurred_at DESC, id DESC
-                LIMIT 1
-            )
+            SELECT :anchorId = (SELECT id $LATEST_ANCHOR_OF_ACCOUNT)
         """
 
         const val SELECT_BY_ID = SELECT_ALL + """
