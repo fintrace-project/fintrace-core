@@ -31,6 +31,8 @@ jobs:
     cron: "0 0 3 * * SUN"
     params:
       persistPeriod: 30d
+  resetWorkspaceStatusBackgroundJob:
+    cron: "0 */10 * * * *"
 
 logging:
   pattern:
