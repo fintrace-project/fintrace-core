@@ -44,17 +44,14 @@ interface WorkspaceDAO {
         version: Long?
     ): Boolean
 
-    fun expireImportLease(
-        workspaceId: UUID,
-        before: LocalDateTime,
-        newStatus: WorkspaceStatus
-    ): Boolean
-
     fun isEmpty(workspaceId: UUID): Boolean
 
     fun findDeletedBefore(cutoff: LocalDateTime, limit: Int = 100): List<WorkspacePurgeData>
 
     fun purgeWorkspace(workspacePurgeData: WorkspacePurgeData): Boolean
+
+    fun resetWorkspaceStatusIfImportAbandoned(id: UUID, staleBefore: LocalDateTime): Optional<Workspace>
+    fun resetMultipleWorkspacesWithAbandonedImport(chunkSize: Int, staleBefore: LocalDateTime): List<UUID>
 }
 
 @Repository
@@ -160,17 +157,6 @@ class WorkspaceDAOImpl(
         return updated == 1
     }
 
-    override fun expireImportLease(
-        workspaceId: UUID,
-        before: LocalDateTime,
-        newStatus: WorkspaceStatus
-    ): Boolean = jdbc.sql(EXPIRE_IMPORT_LEASE)
-        .param("id", workspaceId)
-        .param("newStatus", newStatus.name)
-        .param("updatedAt", timestampProvider.now())
-        .param("before", before)
-        .update() == 1
-
     override fun isEmpty(workspaceId: UUID): Boolean = jdbc.sql("SELECT fn_is_workspace_empty(:workspaceId)")
         .param("workspaceId", workspaceId)
         .query(Boolean::class.java)
@@ -187,6 +173,25 @@ class WorkspaceDAOImpl(
         .param("workspaceId", workspacePurgeData.id)
         .param("version", workspacePurgeData.version)
         .update() == 1
+
+    override fun resetWorkspaceStatusIfImportAbandoned(
+        id: UUID,
+        staleBefore: LocalDateTime
+    ): Optional<Workspace> = jdbc.sql(RESET_STATUS_IF_ABANDONED_IMPORT)
+        .param("workspaceId", id)
+        .param("staleBefore", staleBefore)
+        .param("updatedAt", timestampProvider.now())
+        .query(Workspace::class.java)
+        .optional()
+
+    override fun resetMultipleWorkspacesWithAbandonedImport(chunkSize: Int, staleBefore: LocalDateTime): List<UUID> =
+        jdbc.sql(RESET_MULTIPLE_WORKSPACES_WITH_ABANDONED_IMPORT)
+            .param("chunkSize", chunkSize)
+            .param("staleBefore", staleBefore)
+            .param("updatedAt", timestampProvider.now())
+            .query(UUID::class.java)
+            .list() as List<UUID>
+
 
     private fun updateSql(request: EditWorkspaceRequest): String = buildString {
         append("UPDATE t_workspaces SET")
@@ -209,6 +214,8 @@ class WorkspaceDAOImpl(
 
         const val TABLE = "t_workspaces"
 
+        const val ALL_FIELDS = "id, name, status, owner_id, default_currency, created_at, updated_at, import_started_at, deleted_at, version"
+
         const val CREATE_WORKSPACE = """
             INSERT INTO $TABLE (id, name, status, owner_id, default_currency, created_at, updated_at, version)
             VALUES (:id, :name, :status, :ownerId, :defaultCurrency, :createdAt, :createdAt, 0)
@@ -216,7 +223,7 @@ class WorkspaceDAOImpl(
         """
 
         const val GET_BY_ID_AND_OWNER_ID = """
-            SELECT id, name, status, owner_id, default_currency, created_at, updated_at, import_started_at, deleted_at, version
+            SELECT $ALL_FIELDS
             FROM $TABLE
             WHERE id = :id
             AND owner_id = :ownerId
@@ -224,7 +231,7 @@ class WorkspaceDAOImpl(
         """
 
         const val SEARCH_WORKSPACE_PER_OWNER = """
-            SELECT *
+            SELECT $ALL_FIELDS
             FROM $TABLE
             WHERE owner_id = :ownerId 
                 AND status <> 'DELETED'
@@ -249,16 +256,6 @@ class WorkspaceDAOImpl(
                 AND status in (:sourceStatuses)
         """
 
-        const val EXPIRE_IMPORT_LEASE = """
-            UPDATE $TABLE
-            SET status = :newStatus,
-                updated_at = :updatedAt,
-                version = version + 1
-            WHERE id = :id
-                AND status = 'IMPORTING'
-                AND import_started_at < :before
-        """
-
         const val FIND_CANDIDATES_FOR_PURGE = """
             SELECT
                 w.id, w.version, w.deleted_at, 
@@ -279,6 +276,33 @@ class WorkspaceDAOImpl(
             WHERE id = :workspaceId
                 AND version = :version
                 AND status = 'DELETED'
+        """
+
+        const val RESET_STATUS_IF_ABANDONED_IMPORT = """
+            UPDATE $TABLE
+            SET
+                status = 'NEW',
+                import_started_at = NULL,
+                updated_at = :updatedAt,
+                version = version + 1
+            WHERE id = :workspaceId AND status = 'IMPORTING' AND import_started_at < :staleBefore
+            RETURNING $ALL_FIELDS
+        """
+
+        const val RESET_MULTIPLE_WORKSPACES_WITH_ABANDONED_IMPORT = """
+            UPDATE $TABLE
+            SET
+                status = 'NEW',
+                import_started_at = NULL,
+                updated_at = :updatedAt,
+                version = version + 1
+            WHERE id IN (
+                SELECT id FROM $TABLE
+                WHERE status = 'IMPORTING' AND import_started_at < :staleBefore
+                ORDER BY import_started_at
+                LIMIT :chunkSize
+            )
+            RETURNING id
         """
     }
 
