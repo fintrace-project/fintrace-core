@@ -22,6 +22,12 @@ interface ImportJobDAO {
         message: String? = null
     ): ImportJob
 
+    fun updateStatus(
+        workspaceId: UUID,
+        oldStatus: ImportJobStatus,
+        newStatus: ImportJobStatus
+    ): Optional<ImportJob>
+
     fun getById(workspaceId: UUID, id: UUID): ImportJob
 }
 
@@ -68,6 +74,18 @@ class ImportJobDAOImpl(
         .query(rowMapper)
         .single()
 
+    override fun updateStatus(
+        workspaceId: UUID,
+        oldStatus: ImportJobStatus,
+        newStatus: ImportJobStatus
+    ): Optional<ImportJob> = jdbc.sql(UPDATE_STATUS_IMPORT_JOB)
+        .param("workspaceId", workspaceId)
+        .param("oldStatus", oldStatus.name)
+        .param("newStatus", newStatus.name)
+        .param("finishedAt", timestampProvider.now())
+        .query(rowMapper)
+        .optional()
+
     override fun getById(
         workspaceId: UUID,
         id: UUID
@@ -80,6 +98,12 @@ class ImportJobDAOImpl(
 
     companion object {
         const val TABLE = "t_import_jobs"
+
+        const val ALL_FIELDS = """
+            id, workspace_id, status, started_by, started_at, finished_at, importer_name,
+            importer_version, message, accounts, categories, operations, 
+            transfers, anchors, diagnostics
+        """
 
         const val CREATE_IMPORT_JOB = """
             INSERT INTO $TABLE (id, workspace_id, status, started_at, started_by, importer_name, importer_version)
@@ -99,15 +123,19 @@ class ImportJobDAOImpl(
                 anchors = :anchors,
                 diagnostics = CAST(:diagnostics AS jsonb)
             WHERE id = :id and workspace_id = :workspaceId
-            RETURNING id, workspace_id, status, started_by, started_at, finished_at, importer_name,
-                importer_version, message, accounts, categories, operations, 
-                transfers, anchors, diagnostics
+            RETURNING $ALL_FIELDS
+        """
+
+        const val UPDATE_STATUS_IMPORT_JOB = """
+            UPDATE $TABLE SET 
+                status = :newStatus,
+                finished_at = :finishedAt
+            WHERE workspace_id = :workspaceId and status = :oldStatus
+            RETURNING $ALL_FIELDS
         """
 
         const val SELECT_IMPORT_JOB = """
-            SELECT id, workspace_id, status, started_by, started_at, finished_at, importer_name,
-                importer_version, message, accounts, categories, operations, 
-                transfers, anchors, diagnostics
+            SELECT $ALL_FIELDS
             FROM $TABLE 
             WHERE id = :id AND workspace_id = :workspaceId
         """
