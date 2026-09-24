@@ -1,5 +1,7 @@
 package com.github.melancholic.fintrace.core.config
 
+import com.github.melancholic.fintrace.core.config.TimeoutConstants.IMPORT_TIMEOUT_SECONDS
+
 
 // API Constants
 const val API_V1_BASE_PATH = "/api/v1"
@@ -33,4 +35,8 @@ object SecurityConstants {
 
 object TimeoutConstants {
     const val IMPORT_TIMEOUT_SECONDS = 180
+}
+
+object WorkspaceImportConstants {
+    const val IMPORT_LEASE_TIME = IMPORT_TIMEOUT_SECONDS + 60L // + 1min
 }

@@ -3,14 +3,19 @@ package com.github.melancholic.fintrace.core.facade
 import com.github.melancholic.fintrace.core.TestWorkspaces
 import com.github.melancholic.fintrace.core.TestcontainersConfiguration
 import com.github.melancholic.fintrace.core.api.v1.dto.*
+import com.github.melancholic.fintrace.core.config.WorkspaceImportConstants.IMPORT_LEASE_TIME
 import com.github.melancholic.fintrace.core.dao.UsersDAO
 import com.github.melancholic.fintrace.core.dao.projection.AccountProjectionDAO
 import com.github.melancholic.fintrace.core.domain.command.CreateAccountCommand
 import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
+import com.github.melancholic.fintrace.core.domain.entity.ImportJobStatistics
 import com.github.melancholic.fintrace.core.domain.entity.ImportJobStatus
+import com.github.melancholic.fintrace.core.domain.entity.ImporterDetails
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.entity.WorkspaceStatus
+import com.github.melancholic.fintrace.core.exception.ActionConflictException
 import com.github.melancholic.fintrace.core.exception.OperationNotAllowedException
+import com.github.melancholic.fintrace.core.service.ImportLifecycleService
 import com.github.melancholic.fintrace.core.service.WorkspaceService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -45,6 +50,7 @@ class ImportFacadeIntegrationTest(
     @Autowired private val workspaceFacade: WorkspaceFacade,
     @Autowired private val jdbc: JdbcClient,
     @Autowired private val workspaceService: WorkspaceService,
+    @Autowired private val importLifecycleService: ImportLifecycleService,
     @Autowired private val usersDAO: UsersDAO,
     @Autowired private val accountDAO: AccountProjectionDAO,
     @Autowired private val transactions: TransactionTemplate,
@@ -83,8 +89,8 @@ class ImportFacadeIntegrationTest(
     fun `records the job with the importer that produced it`() {
         val job = importFacade.importWorkspaceData(workspaceId, fullPayload())
 
-        assertEquals("mok", job.importerName)
-        assertEquals("1.2.3", job.importerVersion)
+        assertEquals(IMPORTER_NAME, job.importerName)
+        assertEquals(IMPORTER_VERSION, job.importerVersion)
         assertEquals(workspaceId, job.workspaceId)
     }
 
@@ -268,12 +274,95 @@ class ImportFacadeIntegrationTest(
         assertEquals(ImportJobStatus.SUCCEEDED, job.status)
     }
 
+    // ---------------------------------------------------------------- abandoned imports
+
+    @Test
+    fun `releases a workspace whose import lease expired`() {
+        val jobId = beginImport()
+        expireLease()
+
+        val workspace = transactions.execute { workspaceService.requireWritable(ownerId(), workspaceId) }!!
+
+        assertEquals(WorkspaceStatus.NEW, workspace.status)
+        assertEquals(null, importStartedAt(), "the lease is cleared with the status")
+        assertEquals(ImportJobStatus.FAILED.name, jobStatus(jobId), "the sweep reconciles the job row too")
+    }
+
+    @Test
+    fun `leaves a live import lease alone`() {
+        val jobId = beginImport()
+
+        assertThrows<OperationNotAllowedException> {
+            transactions.execute { workspaceService.requireWritable(ownerId(), workspaceId) }
+        }
+        assertEquals("IMPORTING", status())
+        assertEquals(ImportJobStatus.RUNNING.name, jobStatus(jobId))
+    }
+
+    @Test
+    fun `the sweep releases a workspace nobody is touching`() {
+        val jobId = beginImport()
+        expireLease()
+
+        val released = transactions.execute { importLifecycleService.recoverAbandoned(10) }!!
+
+        assertEquals(listOf(workspaceId), released)
+        assertEquals("NEW", status())
+        assertEquals(ImportJobStatus.FAILED.name, jobStatus(jobId))
+    }
+
+    @Test
+    fun `the sweep passes over a live import`() {
+        beginImport()
+
+        assertTrue(transactions.execute { importLifecycleService.recoverAbandoned(10) }!!.isEmpty())
+        assertEquals("IMPORTING", status())
+    }
+
+    @Test
+    fun `an import that lost its lease cannot commit`() {
+        val jobId = beginImport()
+        expireLease()
+        transactions.execute { importLifecycleService.recoverAbandoned(10) }
+
+        assertThrows<ActionConflictException> {
+            transactions.execute {
+                importLifecycleService.succeed(ownerId(), workspaceId, jobId, NO_COUNTS, emptyList())
+            }
+        }
+        assertEquals("NEW", status(), "the workspace stays released")
+    }
+
+    @Test
+    fun `retries an import after its lease expired`() {
+        beginImport()
+        expireLease()
+
+        val job = importFacade.importWorkspaceData(workspaceId, fullPayload())
+
+        assertEquals(ImportJobStatus.SUCCEEDED, job.status)
+        assertEquals("ACTIVE", status())
+        assertEquals(2, count("t_import_jobs"), "the abandoned job is kept beside the one that worked")
+    }
+
     // ---------------------------------------------------------------- fixtures
 
     /** Takes the workspace the way an import does, without running one. */
-    private fun beginImport() = transactions.execute {
-        workspaceService.initImport(userId = TestWorkspaces.ownerId(usersDAO), workspaceId = workspaceId)
-    }
+    private fun beginImport(): UUID = importLifecycleService.begin(
+        userId = TestWorkspaces.ownerId(usersDAO),
+        workspaceId = workspaceId,
+        importer = ImporterDetails(name = IMPORTER_NAME, version = IMPORTER_VERSION)
+    )
+
+    private fun ownerId(): UUID = TestWorkspaces.ownerId(usersDAO)
+
+    private fun expireLease() = jdbc.sql("UPDATE t_workspaces SET import_started_at = :startedAt WHERE id = :id")
+        .param("id", workspaceId)
+        .param("startedAt", LocalDateTime.now().minusSeconds(IMPORT_LEASE_TIME * 2))
+        .update()
+
+    private fun jobStatus(jobId: UUID): String = jdbc.sql("SELECT status FROM t_import_jobs WHERE id = :id")
+        .param("id", jobId).query(String::class.java).single()
 
     private fun version(): Long = jdbc.sql("SELECT version FROM t_workspaces WHERE id = :id")
         .param("id", workspaceId).query(Long::class.java).single()
@@ -407,7 +496,7 @@ class ImportFacadeIntegrationTest(
     )
 
     private fun envelope(payload: ImportPayloadRequest) =
-        ImportEnvelopRequest(importerName = "mok", importerVersion = "1.2.3", payload = payload)
+        ImportEnvelopRequest(importerName = IMPORTER_NAME, importerVersion = IMPORTER_VERSION, payload = payload)
 
     private fun status(): String = jdbc.sql("SELECT status FROM t_workspaces WHERE id = :id")
         .param("id", workspaceId).query(String::class.java).single()
@@ -422,6 +511,11 @@ class ImportFacadeIntegrationTest(
         .single()
 
     private companion object {
+        const val IMPORTER_NAME = "mok"
+        const val IMPORTER_VERSION = "1.2.3"
+
+        val NO_COUNTS = ImportJobStatistics(accounts = 0, categories = 0, operations = 0, transfers = 0, anchors = 0)
+
         val CASH: UUID = UUID.fromString("01930000-0000-7000-8000-00000000cca1")
         val CARD: UUID = UUID.fromString("01930000-0000-7000-8000-00000000cca2")
         val FOOD: UUID = UUID.fromString("01930000-0000-7000-8000-0000000000f0")
