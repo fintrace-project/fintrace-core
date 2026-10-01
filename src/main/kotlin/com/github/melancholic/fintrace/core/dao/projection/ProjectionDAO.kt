@@ -8,7 +8,8 @@ sealed interface ProjectionDAO<P : Projection> {
     fun supportedClass(): Class<P>
     fun projectionTarget(): ProjectionTarget
 
-    fun createOrUpdate(projection: P): UUID
+    fun create(projection: P): UUID
+    fun update(projection: P): P
     fun removeAll(workspaceId: UUID)
     fun remove(workspaceId: UUID, ids: Set<UUID>)
     fun getById(workspaceId: UUID, id: UUID): P

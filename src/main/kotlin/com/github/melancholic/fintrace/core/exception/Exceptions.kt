@@ -33,3 +33,5 @@ class WorkspaceNotPermitted(userId: String, workspaceId: UUID) :
 open class ApplicationException(message: String = "Server error") : RuntimeException(message)
 
 class BrokenTransferException(message: String = "Broken transfer") : ApplicationException(message)
+
+class OperationIsNotApplicableException(message: String = "Operation is not applicable") : ApplicationException(message)

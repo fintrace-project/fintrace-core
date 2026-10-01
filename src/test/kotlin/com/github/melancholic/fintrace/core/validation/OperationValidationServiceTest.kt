@@ -67,7 +67,8 @@ class OperationValidationServiceTest {
 
         override fun getTransferPartiesById(workspaceId: UUID, transferId: UUID): Pair<UUID, UUID> = unsupported()
         override fun existsTransferById(workspaceId: UUID, transferId: UUID): Boolean = unsupported()
-		override fun createOrUpdate(projection: OperationProjection): UUID = unsupported()
+		override fun create(projection: OperationProjection): UUID = unsupported()
+		override fun update(row: OperationProjection): OperationProjection = unsupported()
 		override fun getById(workspaceId: UUID, operationId: UUID): OperationProjection = unsupported()
 		override fun removeAll(workspaceId: UUID): Unit = unsupported()
 		override fun remove(workspaceId: UUID, id: UUID): Unit = unsupported()
@@ -102,7 +103,8 @@ class OperationValidationServiceTest {
             )
         }
 
-        override fun createOrUpdate(projection: AccountProjection): UUID = unsupported()
+        override fun create(projection: AccountProjection): UUID = unsupported()
+        override fun update(row: AccountProjection): AccountProjection = unsupported()
         override fun getAllAccounts(workspaceId: UUID, includeArchived: Boolean): List<AccountProjection> =
             unsupported()
 
@@ -133,7 +135,8 @@ class OperationValidationServiceTest {
             )
         }
 
-        override fun createOrUpdate(projection: CategoryProjection): UUID = unsupported()
+        override fun create(projection: CategoryProjection): UUID = unsupported()
+        override fun update(row: CategoryProjection): CategoryProjection = unsupported()
         override fun getByIdAsOptional(workspaceId: UUID, categoryId: UUID): Optional<CategoryProjection> =
             unsupported()
 

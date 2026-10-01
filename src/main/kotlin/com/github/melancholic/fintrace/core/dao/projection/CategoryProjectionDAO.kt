@@ -3,6 +3,7 @@ package com.github.melancholic.fintrace.core.dao.projection
 import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.entity.CategorySystemCode
 import com.github.melancholic.fintrace.core.domain.projection.CategoryProjection
+import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
 import org.springframework.jdbc.core.simple.JdbcClient
@@ -14,7 +15,8 @@ interface CategoryProjectionDAO : ProjectionDAO<CategoryProjection> {
     override fun projectionTarget() = ProjectionTarget.CATEGORY
     override fun supportedClass() = CategoryProjection::class.java
 
-    override fun createOrUpdate(projection: CategoryProjection): UUID
+    override fun create(projection: CategoryProjection): UUID
+    override fun update(projection: CategoryProjection): CategoryProjection
     override fun getById(workspaceId: UUID, id: UUID): CategoryProjection
     fun getByIdAsOptional(workspaceId: UUID, categoryId: UUID): Optional<CategoryProjection>
     fun remove(workspaceId: UUID, categoryId: UUID)
@@ -29,21 +31,34 @@ interface CategoryProjectionDAO : ProjectionDAO<CategoryProjection> {
 class CategoryProjectionDAOImpl(
     private val jdbc: JdbcClient
 ) : CategoryProjectionDAO {
-    override fun createOrUpdate(projection: CategoryProjection): UUID {
-        return jdbc.sql(INSERT_OR_UPDATE)
-            .param("id", projection.id)
-            .param("workspaceId", projection.workspaceId)
-            .param("parentId", projection.parentId)
-            .param("name", projection.name)
-            .param("kind", projection.kind.name)
-            .param("icon", projection.icon)
-            .param("archived", projection.archived)
-            .param("systemCode", projection.systemCode?.name)
-            .param("externalRef", projection.externalRef)
-            .param("recordedAt", projection.recordedAt)
-            .query(UUID::class.java)
-            .single()
-    }
+    override fun create(projection: CategoryProjection): UUID = jdbc.sql(INSERT)
+        .param("id", projection.id)
+        .param("workspaceId", projection.workspaceId)
+        .param("parentId", projection.parentId)
+        .param("name", projection.name)
+        .param("kind", projection.kind.name)
+        .param("icon", projection.icon)
+        .param("archived", projection.archived)
+        .param("systemCode", projection.systemCode?.name)
+        .param("externalRef", projection.externalRef)
+        .param("recordedAt", projection.recordedAt)
+        .query(UUID::class.java)
+        .single()
+
+    override fun update(projection: CategoryProjection): CategoryProjection = jdbc.sql(UPDATE)
+        .param("id", projection.id)
+        .param("workspaceId", projection.workspaceId)
+        .param("parentId", projection.parentId)
+        .param("name", projection.name)
+        .param("kind", projection.kind.name)
+        .param("icon", projection.icon)
+        .param("archived", projection.archived)
+        .param("systemCode", projection.systemCode?.name)
+        .param("externalRef", projection.externalRef)
+        .param("recordedAt", projection.recordedAt)
+        .query(CategoryProjection::class.java)
+        .optional()
+        .orElseThrow { ApplicationException("Couldn't update category '${projection.id}': no such row in workspace '${projection.workspaceId}'") }
 
     override fun getById(workspaceId: UUID, id: UUID): CategoryProjection = getByIdAsOptional(workspaceId, id)
         .orElseThrow { NotFoundEntityException("Category not found into workspace (workspaceId='$workspaceId', categoryId='$id')") }
@@ -112,25 +127,32 @@ class CategoryProjectionDAOImpl(
 
     companion object {
         const val TABLE_NAME = "t_categories"
+        const val ALL_COLUMNS =
+            "id, workspace_id, parent_id, name, kind, icon, archived, system_code, external_ref, recorded_at"
 
-        const val INSERT_OR_UPDATE = """
-            INSERT INTO $TABLE_NAME (id, workspace_id, parent_id, name, kind, icon, archived, system_code, external_ref, recorded_at)
-            VALUES (:id, :workspaceId, :parentId, :name, :kind, :icon, :archived, :systemCode, :externalRef, :recordedAt) ON CONFLICT (id) DO
-            UPDATE SET
-                parent_id = EXCLUDED.parent_id,
-                name = EXCLUDED.name,
-                kind = EXCLUDED.kind,
-                icon = EXCLUDED.icon,
-                archived = EXCLUDED.archived,
-                system_code = EXCLUDED.system_code,
-                external_ref = EXCLUDED.external_ref,
-                recorded_at = EXCLUDED.recorded_at
-            WHERE $TABLE_NAME.workspace_id = EXCLUDED.workspace_id
+        const val INSERT = """
+            INSERT INTO $TABLE_NAME ($ALL_COLUMNS)
+            VALUES (:id, :workspaceId, :parentId, :name, :kind, :icon, :archived, :systemCode, :externalRef, :recordedAt) 
             RETURNING id
         """
 
+        const val UPDATE = """
+            UPDATE $TABLE_NAME
+            SET
+                parent_id = :parentId,
+                name = :name,
+                kind = :kind,
+                icon = :icon,
+                archived = :archived,
+                system_code = :systemCode,
+                external_ref = :externalRef,
+                recorded_at = :recordedAt
+            WHERE id = :id AND workspace_id = :workspaceId
+            RETURNING $ALL_COLUMNS
+        """
+
         const val SELECT_ALL = """
-            SELECT *
+            SELECT $ALL_COLUMNS
             from $TABLE_NAME
             WHERE workspace_id = :workspaceId
         """

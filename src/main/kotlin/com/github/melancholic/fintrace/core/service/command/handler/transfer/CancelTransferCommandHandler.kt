@@ -6,6 +6,7 @@ import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.event.payload.TransferCanceled
 import com.github.melancholic.fintrace.core.domain.event.payload.TransferCanceledV1
 import com.github.melancholic.fintrace.core.domain.event.payload.TransferStateEventPayload
+import com.github.melancholic.fintrace.core.domain.event.projectionChange
 import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
 import com.github.melancholic.fintrace.core.util.TimestampProvider
@@ -38,6 +39,6 @@ class CancelTransferCommandHandler(
         )
 
         val event = registerEvent(command, context, payload)
-        projectionApplier.apply(event.payload.projectionChange())
+        projectionApplier.apply(event.projectionChange())
     }
 }

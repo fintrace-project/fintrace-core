@@ -5,7 +5,7 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.*
 
-sealed interface OperationCreated : BalanceOperationEventPayload {
+sealed interface OperationCreated : BalanceOperationEventPayload, CreateEventPayload {
 
 }
 

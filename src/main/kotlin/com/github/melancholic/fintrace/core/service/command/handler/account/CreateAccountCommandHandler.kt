@@ -6,6 +6,8 @@ import com.github.melancholic.fintrace.core.domain.command.CreateAccountCommand
 import com.github.melancholic.fintrace.core.domain.command.CreateBalanceAnchorCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.AccountCreated
 import com.github.melancholic.fintrace.core.domain.event.payload.AccountCreatedV1
+import com.github.melancholic.fintrace.core.domain.event.payload.ProjectionEventPayload
+import com.github.melancholic.fintrace.core.domain.event.projectionChange
 import com.github.melancholic.fintrace.core.domain.projection.AccountProjection
 import com.github.melancholic.fintrace.core.service.command.CommandDispatcher
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
@@ -32,7 +34,7 @@ class CreateAccountCommandHandler(
         val payload = buildEventPayload(command)
         val event = registerEvent(command, context, payload)
 
-        projectionApplier.apply(event.payload.projectionChange())
+        projectionApplier.apply(event.projectionChange())
         if (command.initialBalance != null) {
             commandDispatcher.dispatch(
                 CreateBalanceAnchorCommand(
@@ -44,7 +46,7 @@ class CreateAccountCommandHandler(
                 context
             )
         }
-        return payload.projection()
+        return payload.projections().single()
     }
 
     private fun buildEventPayload(command: CreateAccountCommand): AccountCreated {

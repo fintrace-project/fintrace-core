@@ -4,7 +4,8 @@ import com.github.melancholic.fintrace.core.domain.projection.Projection
 import java.util.*
 
 sealed interface ProjectionChange {
-    data class Upsert(val rows: List<Projection>) : ProjectionChange
+    data class Create(val rows: List<Projection>) : ProjectionChange
+    data class Update(val rows: List<Projection>) : ProjectionChange
     data class Remove(val target: ProjectionTarget, val workspaceId: UUID, val ids: Set<UUID>) : ProjectionChange
 }
 

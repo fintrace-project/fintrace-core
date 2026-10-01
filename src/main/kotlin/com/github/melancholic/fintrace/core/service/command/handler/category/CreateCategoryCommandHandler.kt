@@ -5,6 +5,7 @@ import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.CreateCategoryCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.CategoryCreated
 import com.github.melancholic.fintrace.core.domain.event.payload.CategoryCreatedV1
+import com.github.melancholic.fintrace.core.domain.event.projectionChange
 import com.github.melancholic.fintrace.core.domain.projection.CategoryProjection
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
 import com.github.melancholic.fintrace.core.util.TimestampProvider
@@ -26,8 +27,8 @@ class CreateCategoryCommandHandler(
     override fun handle(command: CreateCategoryCommand, context: CommandContext): CategoryProjection {
         validationService.validate(command)
         val event = registerEvent(command, context, buildEventPayload(command))
-        projectionApplier.apply(event.payload.projectionChange())
-        return (event.payload as CategoryCreated).projection()
+        projectionApplier.apply(event.projectionChange())
+        return (event.payload as CategoryCreated).projections().single()
     }
 
     private fun buildEventPayload(command: CreateCategoryCommand): CategoryCreated {

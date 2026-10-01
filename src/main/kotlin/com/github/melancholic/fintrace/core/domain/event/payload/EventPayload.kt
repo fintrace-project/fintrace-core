@@ -2,7 +2,10 @@ package com.github.melancholic.fintrace.core.domain.event.payload
 
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.github.melancholic.fintrace.core.domain.event.EventType
+import com.github.melancholic.fintrace.core.domain.projection.Projection
 import com.github.melancholic.fintrace.core.service.projection.ProjectionChange
+import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
 import java.time.LocalDateTime
 import java.util.*
 
@@ -37,9 +40,34 @@ sealed interface EventPayload {
 	val id: UUID
 	val workspaceId: UUID
 	val recordedAt: LocalDateTime
+	
+	fun eventType(): EventType
+
 	fun projectionChange(): ProjectionChange
 }
 
 sealed interface TemporalEventPayload : EventPayload {
 	val occurredAt: LocalDateTime
+}
+
+sealed interface CancelEventPayload : EventPayload {
+	fun affectedIds(): Set<UUID>
+	fun projectionTarget(): ProjectionTarget
+
+	override fun eventType() = EventType.CANCELLED
+	override fun projectionChange() = ProjectionChange.Remove(projectionTarget(), workspaceId, affectedIds())
+}
+
+sealed interface ProjectionEventPayload : EventPayload {
+	fun projections(): List<Projection>
+}
+
+sealed interface CreateEventPayload : ProjectionEventPayload {
+	override fun eventType() = EventType.CREATED
+	override fun projectionChange() = ProjectionChange.Create(projections())
+}
+
+sealed interface ReviseEventPayload : ProjectionEventPayload {
+	override fun eventType() = EventType.REVISED
+	override fun projectionChange() = ProjectionChange.Update(projections())
 }

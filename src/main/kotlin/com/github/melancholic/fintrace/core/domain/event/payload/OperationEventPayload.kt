@@ -8,7 +8,7 @@ import java.util.*
 
 sealed interface OperationEventPayload : EventPayload
 
-sealed interface BalanceOperationEventPayload : OperationEventPayload, TemporalEventPayload {
+sealed interface BalanceOperationEventPayload : OperationEventPayload, ProjectionEventPayload, TemporalEventPayload {
     val amount: BigDecimal
     val categoryId: UUID
     val kind: OperationKind
@@ -18,10 +18,7 @@ sealed interface BalanceOperationEventPayload : OperationEventPayload, TemporalE
     val externalRef: String?
     val comment: String?
 
-    override fun projectionChange(): ProjectionChange = ProjectionChange
-        .Upsert(listOf(projection()))
-
-    fun projection(): OperationProjection = OperationProjection(
+    override fun projections() = listOf(OperationProjection(
         id = id,
         workspaceId = workspaceId,
         amount = amount,
@@ -34,5 +31,5 @@ sealed interface BalanceOperationEventPayload : OperationEventPayload, TemporalE
         externalRef = externalRef,
         occurredAt = occurredAt,
         recordedAt = recordedAt
-    )
+    ))
 }

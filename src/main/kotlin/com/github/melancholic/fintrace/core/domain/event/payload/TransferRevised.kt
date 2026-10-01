@@ -3,7 +3,7 @@ package com.github.melancholic.fintrace.core.domain.event.payload
 import java.time.LocalDateTime
 import java.util.*
 
-sealed interface TransferRevised : TransferStateEventPayload
+sealed interface TransferRevised : TransferStateEventPayload, ReviseEventPayload
 
 /**
  * WARNING: Shouldn't be changed ever.

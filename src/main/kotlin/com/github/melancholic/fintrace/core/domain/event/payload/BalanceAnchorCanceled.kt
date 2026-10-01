@@ -1,16 +1,12 @@
 package com.github.melancholic.fintrace.core.domain.event.payload
 
-import com.github.melancholic.fintrace.core.service.projection.ProjectionChange
 import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
 import java.time.LocalDateTime
 import java.util.*
 
-sealed interface BalanceAnchorCanceled : BalanceAnchorEventPayload {
-    override fun projectionChange() = ProjectionChange.Remove(
-        ProjectionTarget.BALANCE_ANCHOR,
-        workspaceId = workspaceId,
-        setOf(id)
-    )
+sealed interface BalanceAnchorCanceled : BalanceAnchorEventPayload, CancelEventPayload {
+    override fun affectedIds(): Set<UUID> = setOf(id)
+    override fun projectionTarget() = ProjectionTarget.BALANCE_ANCHOR
 }
 
 /**

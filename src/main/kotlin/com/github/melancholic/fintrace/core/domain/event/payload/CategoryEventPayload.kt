@@ -6,7 +6,7 @@ import com.github.melancholic.fintrace.core.domain.projection.CategoryProjection
 import com.github.melancholic.fintrace.core.service.projection.ProjectionChange
 import java.util.*
 
-sealed interface CategoryEventPayload : EventPayload {
+sealed interface CategoryEventPayload : ProjectionEventPayload {
     val parentId: UUID?
     val name: String
     val kind: CategoryKind
@@ -15,10 +15,7 @@ sealed interface CategoryEventPayload : EventPayload {
     val systemCode: CategorySystemCode?
     val externalRef: String?
 
-    override fun projectionChange(): ProjectionChange = ProjectionChange
-        .Upsert(listOf(projection()))
-
-    fun projection(): CategoryProjection = CategoryProjection(
+   override fun projections() = listOf(CategoryProjection(
         id = id,
         workspaceId = workspaceId,
         parentId = parentId,
@@ -29,5 +26,5 @@ sealed interface CategoryEventPayload : EventPayload {
         systemCode = systemCode,
         externalRef = externalRef,
         recordedAt = recordedAt
-    )
+    ))
 }

@@ -5,7 +5,7 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.*
 
-sealed interface OperationRevised : BalanceOperationEventPayload
+sealed interface OperationRevised : BalanceOperationEventPayload, ReviseEventPayload
 
 /**
  * WARNING: Shouldn't be changed ever. 

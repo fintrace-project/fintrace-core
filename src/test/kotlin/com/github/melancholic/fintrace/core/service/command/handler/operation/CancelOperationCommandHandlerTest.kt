@@ -39,7 +39,7 @@ class CancelOperationCommandHandlerTest {
 		assertEquals(ProjectionTarget.OPERATION, removal.target)
 		assertEquals(WORKSPACE, removal.workspaceId)
 		assertEquals(setOf(OPERATION), removal.ids)
-		assertTrue(projections.upsertedRows.isEmpty(), "a cancellation writes no row")
+		assertTrue(projections.writtenRows.isEmpty(), "a cancellation writes no row")
 	}
 
 	@Test

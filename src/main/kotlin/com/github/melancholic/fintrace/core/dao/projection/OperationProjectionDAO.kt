@@ -13,7 +13,8 @@ interface OperationProjectionDAO : ProjectionDAO<OperationProjection> {
     override fun projectionTarget() = ProjectionTarget.OPERATION
     override fun supportedClass() = OperationProjection::class.java
 
-    override fun createOrUpdate(projection: OperationProjection): UUID
+    override fun create(projection: OperationProjection): UUID
+    override fun update(projection: OperationProjection): OperationProjection
     override fun getById(workspaceId: UUID, id: UUID): OperationProjection
     fun getByIdAsOptional(workspaceId: UUID, operationId: UUID): Optional<OperationProjection>
     fun remove(workspaceId: UUID, id: UUID)
@@ -26,22 +27,38 @@ class OperationProjectionDAOImpl(
     private val jdbc: JdbcClient
 ) : OperationProjectionDAO {
 
-    override fun createOrUpdate(projection: OperationProjection): UUID {
-        return jdbc.sql(INSERT_OR_UPDATE).param("id", projection.id).param("workspaceId", projection.workspaceId)
-            .param("amount", projection.amount)
-            .param("kind", projection.kind.name)
-            .param("accountId", projection.accountId)
-            .param("categoryId", projection.categoryId)
-            .param("transferId", projection.transferId)
-            .param("counterpartId", projection.counterpartId)
-            .param("comment", projection.comment)
-            .param("externalRef", projection.externalRef)
-            .param("occurredAt", projection.occurredAt)
-            .param("recordedAt", projection.recordedAt)
-            .query(
-                UUID::class.java
-            ).single()
-    }
+    override fun create(projection: OperationProjection): UUID = jdbc.sql(INSERT)
+        .param("id", projection.id)
+        .param("workspaceId", projection.workspaceId)
+        .param("amount", projection.amount)
+        .param("kind", projection.kind.name)
+        .param("accountId", projection.accountId)
+        .param("categoryId", projection.categoryId)
+        .param("transferId", projection.transferId)
+        .param("counterpartId", projection.counterpartId)
+        .param("comment", projection.comment)
+        .param("externalRef", projection.externalRef)
+        .param("occurredAt", projection.occurredAt)
+        .param("recordedAt", projection.recordedAt)
+        .query(UUID::class.java)
+        .single()
+
+    override fun update(projection: OperationProjection): OperationProjection = jdbc.sql(UPDATE)
+        .param("id", projection.id)
+        .param("workspaceId", projection.workspaceId)
+        .param("amount", projection.amount)
+        .param("kind", projection.kind.name)
+        .param("accountId", projection.accountId)
+        .param("categoryId", projection.categoryId)
+        .param("transferId", projection.transferId)
+        .param("counterpartId", projection.counterpartId)
+        .param("comment", projection.comment)
+        .param("externalRef", projection.externalRef)
+        .param("occurredAt", projection.occurredAt)
+        .param("recordedAt", projection.recordedAt)
+        .query(OperationProjection::class.java)
+        .optional()
+        .orElseThrow { ApplicationException("Couldn't update operation '${projection.id}': no such row in workspace '${projection.workspaceId}'") }
 
     override fun getById(workspaceId: UUID, id: UUID): OperationProjection = getByIdAsOptional(workspaceId, id)
         .orElseThrow { NotFoundEntityException("Operation not found into workspace (workspaceId='$workspaceId', operationId='$id')") }
@@ -92,32 +109,45 @@ class OperationProjectionDAOImpl(
 
     private companion object {
         const val TABLE_NAME = "t_operations"
+        const val ALL_COLUMNS = "id, workspace_id, amount, kind, account_id, category_id, transfer_id, counterpart_id, comment, external_ref, occurred_at, recorded_at"
 
-        const val INSERT_OR_UPDATE = """
-            INSERT INTO $TABLE_NAME (id, workspace_id, amount, kind, account_id, category_id,
-                                     transfer_id, counterpart_id, comment, external_ref,
-                                     occurred_at, recorded_at)
-            VALUES (:id, :workspaceId, :amount, :kind, :accountId, :categoryId,
-                    :transferId, :counterpartId, :comment, :externalRef,
-                    :occurredAt, :recordedAt)
-            ON CONFLICT (id) DO UPDATE SET
-                amount         = EXCLUDED.amount,
-                kind           = EXCLUDED.kind,
-                account_id     = EXCLUDED.account_id,
-                category_id    = EXCLUDED.category_id,
-                transfer_id    = EXCLUDED.transfer_id,
-                counterpart_id = EXCLUDED.counterpart_id,
-                comment        = EXCLUDED.comment,
-                external_ref   = EXCLUDED.external_ref,
-                occurred_at    = EXCLUDED.occurred_at,
-                recorded_at    = EXCLUDED.recorded_at
-            WHERE $TABLE_NAME.workspace_id = EXCLUDED.workspace_id
-            RETURNING id
+        const val INSERT = """
+            INSERT INTO $TABLE_NAME ($ALL_COLUMNS)
+            VALUES (
+                :id,
+                :workspaceId, 
+                :amount,
+                :kind,
+                :accountId,
+                :categoryId,
+                :transferId,
+                :counterpartId,
+                :comment,
+                :externalRef,
+                :occurredAt,
+                :recordedAt
+            ) RETURNING id
+        """
+
+        const val UPDATE = """
+            UPDATE $TABLE_NAME
+            SET 
+                amount = :amount,
+                kind = :kind,
+                account_id = :accountId,
+                category_id = :categoryId,
+                transfer_id = :transferId,
+                counterpart_id = :counterpartId,
+                comment = :comment,
+                external_ref = :externalRef,
+                occurred_at = :occurredAt,
+                recorded_at = :recordedAt
+            WHERE id = :id AND workspace_id = :workspaceId
+            RETURNING $ALL_COLUMNS
         """
 
         const val SELECT = """
-            SELECT id, workspace_id, amount, kind, account_id, category_id, transfer_id,
-                   counterpart_id, comment, external_ref, occurred_at, recorded_at
+            SELECT $ALL_COLUMNS
             from $TABLE_NAME
             WHERE workspace_id = :workspaceId AND id = :id
         """

@@ -17,7 +17,7 @@ abstract class AbstractCommandHandler<C : Command<R>, R, P : EventPayload>(
     protected fun registerEvent(command: C, context: CommandContext, payload: P) = eventsDAO.registerEvent(
         workspaceId = command.workspaceId,
         payload = payload,
-        eventType = command.eventType(),
+        eventType = payload.eventType(),
         entityType = entityType,
         recordedBy = context.initiator
     )

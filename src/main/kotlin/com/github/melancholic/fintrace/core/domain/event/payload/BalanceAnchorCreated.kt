@@ -6,9 +6,21 @@ import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.util.*
 
-sealed interface BalanceAnchorCreated : BalanceAnchorEventPayload, TemporalEventPayload {
-    fun projection(): BalanceAnchorProjection
-}
+sealed interface BalanceAnchorCreated : BalanceAnchorEventPayload, CreateEventPayload, TemporalEventPayload {
+    val value: BigDecimal
+    val externalRef: String?
+
+    override fun projections() = listOf(
+        BalanceAnchorProjection(
+            id = id,
+            workspaceId = workspaceId,
+            accountId = accountId,
+            value = value,
+            occurredAt = occurredAt,
+            externalRef = externalRef,
+            recordedAt = recordedAt
+        )
+    )}
 
 /**
  * WARNING: Shouldn't be changed ever. 
@@ -18,23 +30,12 @@ data class BalanceAnchorCreatedV1(
     override val id: UUID,
     override val workspaceId: UUID,
     override val accountId: UUID,
-    val value: BigDecimal,
+    override val value: BigDecimal,
     override val occurredAt: LocalDateTime,
     override val recordedAt: LocalDateTime,
-    val externalRef: String?,
+    override val externalRef: String?,
     override val version: Int = VERSION
 ) : BalanceAnchorCreated {
-    override fun projectionChange() = ProjectionChange.Upsert(listOf(projection()))
-
-    override fun projection(): BalanceAnchorProjection = BalanceAnchorProjection(
-        id = id,
-        workspaceId = workspaceId,
-        accountId = accountId,
-        value = value,
-        occurredAt = occurredAt,
-        externalRef = externalRef,
-        recordedAt = recordedAt
-    )
 
     companion object {
         const val TYPE = "balance_anchor.created.v1"

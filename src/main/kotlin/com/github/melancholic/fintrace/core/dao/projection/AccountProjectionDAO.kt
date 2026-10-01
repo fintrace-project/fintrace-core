@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.dao.projection
 
 import com.github.melancholic.fintrace.core.domain.projection.AccountProjection
+import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
 import org.springframework.jdbc.core.simple.JdbcClient
@@ -12,8 +13,10 @@ interface AccountProjectionDAO : ProjectionDAO<AccountProjection> {
     override fun projectionTarget() = ProjectionTarget.ACCOUNT
     override fun supportedClass() = AccountProjection::class.java
 
-    override fun createOrUpdate(projection: AccountProjection): UUID
+    override fun create(projection: AccountProjection): UUID
+    override fun update(projection: AccountProjection): AccountProjection
     override fun getById(workspaceId: UUID, id: UUID): AccountProjection
+
     fun remove(workspaceId: UUID, accountId: UUID)
     fun exists(workspaceId: UUID, accountId: UUID): Boolean
     fun getAllAccounts(workspaceId: UUID, includeArchived: Boolean): List<AccountProjection>
@@ -24,19 +27,31 @@ interface AccountProjectionDAO : ProjectionDAO<AccountProjection> {
 class AccountProjectionDAOImpl(
     private val jdbc: JdbcClient
 ) : AccountProjectionDAO {
-    override fun createOrUpdate(projection: AccountProjection): UUID {
-        return jdbc.sql(INSERT_OR_UPDATE)
-            .param("id", projection.id)
-            .param("workspaceId", projection.workspaceId)
-            .param("name", projection.name)
-            .param("currency", projection.currency)
-            .param("icon", projection.icon)
-            .param("archived", projection.archived)
-            .param("externalRef", projection.externalRef)
-            .param("recordedAt", projection.recordedAt)
-            .query(UUID::class.java)
-            .single()
-    }
+
+    override fun create(projection: AccountProjection): UUID = jdbc.sql(INSERT)
+        .param("id", projection.id)
+        .param("workspaceId", projection.workspaceId)
+        .param("name", projection.name)
+        .param("currency", projection.currency)
+        .param("icon", projection.icon)
+        .param("archived", projection.archived)
+        .param("externalRef", projection.externalRef)
+        .param("recordedAt", projection.recordedAt)
+        .query(UUID::class.java)
+        .single()
+
+    override fun update(projection: AccountProjection): AccountProjection = jdbc.sql(UPDATE)
+        .param("id", projection.id)
+        .param("workspaceId", projection.workspaceId)
+        .param("name", projection.name)
+        .param("currency", projection.currency)
+        .param("icon", projection.icon)
+        .param("archived", projection.archived)
+        .param("externalRef", projection.externalRef)
+        .param("recordedAt", projection.recordedAt)
+        .query(AccountProjection::class.java)
+        .optional()
+        .orElseThrow { ApplicationException("Couldn't update account '${projection.id}': no such row in workspace '${projection.workspaceId}'") }
 
     override fun getById(workspaceId: UUID, id: UUID): AccountProjection {
         return jdbc.sql(SELECT_BY_ID).param("id", id).param("workspaceId", workspaceId)
@@ -80,23 +95,23 @@ class AccountProjectionDAOImpl(
 
     companion object {
         const val TABLE_NAME = "t_accounts"
+        const val ALL_COLUMNS = "id, workspace_id, name, currency, archived, recorded_at, icon, external_ref"
 
-        const val INSERT_OR_UPDATE = """
-            INSERT INTO $TABLE_NAME (id, workspace_id, name, currency, archived, recorded_at, icon, external_ref)
+        const val INSERT = """
+            INSERT INTO $TABLE_NAME ($ALL_COLUMNS)
             VALUES (:id, :workspaceId, :name, :currency, :archived, :recordedAt, :icon, :externalRef)
-            ON CONFLICT (id) DO UPDATE SET
-                name         = EXCLUDED.name,
-                currency     = EXCLUDED.currency,
-                icon         = EXCLUDED.icon,
-                archived     = EXCLUDED.archived,
-                external_ref = EXCLUDED.external_ref,
-                recorded_at  = EXCLUDED.recorded_at
-            WHERE $TABLE_NAME.workspace_id = EXCLUDED.workspace_id
             RETURNING id
         """
 
+        const val UPDATE = """
+            UPDATE $TABLE_NAME
+            SET name = :name, currency = :currency, archived = :archived, recorded_at = :recordedAt, icon = :icon, external_ref = :externalRef
+            WHERE workspace_id = :workspaceId AND id = :id
+            RETURNING $ALL_COLUMNS
+        """
+
         const val SELECT_ALL = """
-            SELECT *
+            SELECT $ALL_COLUMNS
             from $TABLE_NAME
             WHERE workspace_id = :workspaceId
         """

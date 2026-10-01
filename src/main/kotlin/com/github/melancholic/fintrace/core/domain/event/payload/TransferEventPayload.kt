@@ -2,26 +2,23 @@ package com.github.melancholic.fintrace.core.domain.event.payload
 
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
-import com.github.melancholic.fintrace.core.service.projection.ProjectionChange
 import java.math.BigDecimal
 import java.util.*
 
 sealed interface TransferEventPayload : EventPayload
 
-sealed interface TransferStateEventPayload : TransferEventPayload, TemporalEventPayload {
+sealed interface TransferStateEventPayload : TransferEventPayload, ProjectionEventPayload, TemporalEventPayload {
     val source: TransferLegPayload
     val target: TransferLegPayload
     val comment: String?
     val externalRef: String?
 
-    override fun projectionChange(): ProjectionChange = ProjectionChange.Upsert(
-        listOf(
-            projection(source, counterpart = target),
-            projection(target, counterpart = source)
-        )
+    override fun projections() = listOf(
+        projection(source, counterpart = target),
+        projection(target, counterpart = source)
     )
 
-    fun projection(leg: TransferLegPayload, counterpart: TransferLegPayload) = OperationProjection(
+    private fun projection(leg: TransferLegPayload, counterpart: TransferLegPayload) = OperationProjection(
         id = leg.operationId,
         workspaceId = workspaceId,
         amount = leg.amount,

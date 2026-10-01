@@ -250,7 +250,7 @@ class BalanceAnchorsRestControllerTest(
         idOf(mvc.perform(createRequest(value)).andExpect(status().isCreated).andReturn().response.contentAsString)
     )
 
-    private fun operation(occurredAt: LocalDateTime, amount: String) = operationDAO.createOrUpdate(
+    private fun operation(occurredAt: LocalDateTime, amount: String) = operationDAO.create(
         OperationProjection(
             id = UUID.randomUUID(),
             workspaceId = workspaceId,

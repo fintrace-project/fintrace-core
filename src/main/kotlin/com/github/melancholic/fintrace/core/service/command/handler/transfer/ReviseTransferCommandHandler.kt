@@ -8,6 +8,7 @@ import com.github.melancholic.fintrace.core.domain.event.payload.TransferLegPayl
 import com.github.melancholic.fintrace.core.domain.event.payload.TransferRevised
 import com.github.melancholic.fintrace.core.domain.event.payload.TransferRevisedV1
 import com.github.melancholic.fintrace.core.domain.event.payload.TransferStateEventPayload
+import com.github.melancholic.fintrace.core.domain.event.projectionChange
 import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
 import com.github.melancholic.fintrace.core.service.transfer.TransferLoader
@@ -54,7 +55,7 @@ class ReviseTransferCommandHandler(
         )
 
         val event = registerEvent(command, context, payload)
-        projectionApplier.apply(event.payload.projectionChange())
+        projectionApplier.apply(event.projectionChange())
 
         return transferLoader.loadTransfer(event.workspaceId, command.transferId)
     }

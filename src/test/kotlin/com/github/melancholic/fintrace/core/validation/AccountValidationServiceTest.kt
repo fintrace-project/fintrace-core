@@ -23,7 +23,8 @@ class AccountValidationServiceTest {
             return workspaceId to accountId in known
         }
 
-        override fun createOrUpdate(projection: AccountProjection): UUID = unsupported()
+        override fun create(projection: AccountProjection): UUID = unsupported()
+        override fun update(row: AccountProjection): AccountProjection = unsupported()
         override fun getById(workspaceId: UUID, accountId: UUID): AccountProjection = unsupported()
         override fun getAllAccounts(workspaceId: UUID, includeArchived: Boolean): List<AccountProjection> =
             unsupported()

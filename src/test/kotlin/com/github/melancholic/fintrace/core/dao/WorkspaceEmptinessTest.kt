@@ -71,7 +71,7 @@ class WorkspaceEmptinessTest(
 
     @Test
     fun `an archived account still counts`() {
-        accountDAO.createOrUpdate(
+        accountDAO.create(
             AccountProjection(
                 id = UUID.randomUUID(),
                 workspaceId = workspaceId,
@@ -96,7 +96,7 @@ class WorkspaceEmptinessTest(
 
     @Test
     fun `an archived custom category still counts`() {
-        categoryDAO.createOrUpdate(
+        categoryDAO.create(
             CategoryProjection(
                 id = UUID.randomUUID(),
                 workspaceId = workspaceId,
@@ -117,7 +117,7 @@ class WorkspaceEmptinessTest(
     @Test
     fun `an operation makes it non-empty`() {
         // Booked against a system category, so the operation is the only thing that can count
-        operationDAO.createOrUpdate(
+        operationDAO.create(
             OperationProjection(
                 id = UUID.randomUUID(),
                 workspaceId = workspaceId,
@@ -180,7 +180,7 @@ class WorkspaceEmptinessTest(
         assertEquals(emptySet(), CHECKED.filterNot { it in definition }.toSet(), "tables the function does not read")
     }
 
-    private fun seedAnchor(workspaceId: UUID) = anchorDAO.createOrUpdate(
+    private fun seedAnchor(workspaceId: UUID) = anchorDAO.create(
         BalanceAnchorProjection(
             id = UUID.randomUUID(),
             workspaceId = workspaceId,

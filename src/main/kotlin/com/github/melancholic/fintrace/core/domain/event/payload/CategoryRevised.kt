@@ -5,7 +5,7 @@ import com.github.melancholic.fintrace.core.domain.entity.CategorySystemCode
 import java.time.LocalDateTime
 import java.util.*
 
-sealed interface CategoryRevised : CategoryEventPayload
+sealed interface CategoryRevised : CategoryEventPayload, ReviseEventPayload
 
 /**
  * WARNING: Shouldn't be changed ever.

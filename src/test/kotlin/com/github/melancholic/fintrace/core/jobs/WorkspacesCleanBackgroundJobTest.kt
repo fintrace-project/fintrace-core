@@ -157,7 +157,7 @@ class WorkspacesCleanBackgroundJobTest(
         val target = TestWorkspaces.seedAccount(accountDAO, id, name = "target")
         TestWorkspaces.seedCategory(categoryDAO, id)
         TestWorkspaces.seedTransferPair(operationDAO, id, source, target)
-        anchorDAO.createOrUpdate(
+        anchorDAO.create(
             BalanceAnchorProjection(
                 id = UUID.randomUUID(),
                 workspaceId = id,

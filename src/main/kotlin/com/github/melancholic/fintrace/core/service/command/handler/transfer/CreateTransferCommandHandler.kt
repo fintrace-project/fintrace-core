@@ -7,6 +7,7 @@ import com.github.melancholic.fintrace.core.domain.entity.Transfer
 import com.github.melancholic.fintrace.core.domain.event.payload.TransferCreated
 import com.github.melancholic.fintrace.core.domain.event.payload.TransferCreatedV1
 import com.github.melancholic.fintrace.core.domain.event.payload.TransferLegPayload
+import com.github.melancholic.fintrace.core.domain.event.projectionChange
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
 import com.github.melancholic.fintrace.core.service.transfer.TransferLoader
 import com.github.melancholic.fintrace.core.util.TimestampProvider
@@ -51,7 +52,7 @@ class CreateTransferCommandHandler(
         )
 
         val event = registerEvent(command, context, payload)
-        projectionApplier.apply(event.payload.projectionChange())
+        projectionApplier.apply(event.projectionChange())
 
         return transferLoader.loadTransfer(event.workspaceId, transferId)
     }

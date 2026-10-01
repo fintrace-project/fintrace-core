@@ -138,8 +138,9 @@ class ReviseOperationCommandHandlerTest {
 
         val payload = events.registered.last().payload as OperationRevisedV1
 		assertEquals(
-			(payload.projectionChange() as ProjectionChange.Upsert).rows.single(),
-			projections.upsertedRows.single(),
+			payload.projections().single(),
+			projections.updatedRows.single(),
+			"a revision reaches the projection as an Update, carrying the payload's row",
 		)
 	}
 

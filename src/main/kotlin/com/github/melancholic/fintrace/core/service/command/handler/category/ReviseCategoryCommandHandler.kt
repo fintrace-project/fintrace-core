@@ -6,6 +6,7 @@ import com.github.melancholic.fintrace.core.domain.command.ReviseCategoryCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.CategoryEventPayload
 import com.github.melancholic.fintrace.core.domain.event.payload.CategoryRevised
 import com.github.melancholic.fintrace.core.domain.event.payload.CategoryRevisedV1
+import com.github.melancholic.fintrace.core.domain.event.projectionChange
 import com.github.melancholic.fintrace.core.domain.projection.CategoryProjection
 import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
@@ -26,8 +27,8 @@ class ReviseCategoryCommandHandler(
     override fun handle(command: ReviseCategoryCommand, context: CommandContext): CategoryProjection {
         validationService.validate(command)
         val event = registerEvent(command, context, buildEventPayload(command))
-        projectionApplier.apply(event.payload.projectionChange())
-        return (event.payload as CategoryRevised).projection()
+        projectionApplier.apply(event.projectionChange())
+        return (event.payload as CategoryRevised).projections().single()
     }
 
     private fun buildEventPayload(command: ReviseCategoryCommand): CategoryRevised {

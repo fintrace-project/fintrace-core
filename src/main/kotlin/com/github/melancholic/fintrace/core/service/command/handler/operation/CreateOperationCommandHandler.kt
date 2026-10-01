@@ -6,6 +6,7 @@ import com.github.melancholic.fintrace.core.domain.command.CommandContext
 import com.github.melancholic.fintrace.core.domain.command.CreateOperationCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.OperationCreated
 import com.github.melancholic.fintrace.core.domain.event.payload.OperationCreatedV1
+import com.github.melancholic.fintrace.core.domain.event.projectionChange
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
 import com.github.melancholic.fintrace.core.util.TimestampProvider
@@ -28,8 +29,8 @@ class CreateOperationCommandHandler(
     override fun handle(command: CreateOperationCommand, context: CommandContext): OperationProjection {
         validationService.validate(command)
         val event = registerEvent(command, context, buildEventPayload(command))
-        projectionApplier.apply(event.payload.projectionChange())
-        return (event.payload as OperationCreated).projection()
+        projectionApplier.apply(event.projectionChange())
+        return (event.payload as OperationCreated).projections().single()
     }
 
     private fun buildEventPayload(command: CreateOperationCommand): OperationCreated {

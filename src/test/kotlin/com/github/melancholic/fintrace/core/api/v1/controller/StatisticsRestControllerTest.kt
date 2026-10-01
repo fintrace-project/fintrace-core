@@ -147,7 +147,7 @@ class StatisticsRestControllerTest(
         mvc.perform(get(balancesPath)).andExpect(status().isUnauthorized)
     }
 
-    private fun operation(occurredAt: LocalDateTime, amount: String) = operationDAO.createOrUpdate(
+    private fun operation(occurredAt: LocalDateTime, amount: String) = operationDAO.create(
         OperationProjection(
             id = UUID.randomUUID(),
             workspaceId = workspaceId,
@@ -164,7 +164,7 @@ class StatisticsRestControllerTest(
         )
     )
 
-    private fun anchor(occurredAt: LocalDateTime, value: String) = anchorDAO.createOrUpdate(
+    private fun anchor(occurredAt: LocalDateTime, value: String) = anchorDAO.create(
         BalanceAnchorProjection(
             id = UUID.randomUUID(),
             workspaceId = workspaceId,

@@ -39,13 +39,13 @@ class SetCategoryArchivedCommandHandler(
             val category = forArchive.singleOrNull { it.id == command.categoryId }
                 ?: throw ApplicationException("Category '${command.categoryId}' was not part of its own subtree")
 
-            projectionApplier.apply(ProjectionChange.Upsert(forArchive))
+            projectionApplier.apply(ProjectionChange.Update(forArchive))
 
             return category
         } else {
             // Restore only specific category
             val category = restore(command, context, command.categoryId)
-            projectionApplier.apply(ProjectionChange.Upsert(listOf(category)))
+            projectionApplier.apply(ProjectionChange.Update(listOf(category)))
             return category
         }
     }
@@ -59,11 +59,11 @@ class SetCategoryArchivedCommandHandler(
         val current = currentState(command.workspaceId, categoryId)
         if (current.archived) {
             // Already archived - just return current state
-            return current.projection()
+            return current.projections().single()
         }
 
         val event = registerEvent(command, context, buildEventPayload(current, command.archived))
-        return (event.payload as CategoryRevised).projection()
+        return (event.payload as CategoryRevised).projections().single()
     }
 
     private fun restore(
@@ -74,11 +74,11 @@ class SetCategoryArchivedCommandHandler(
         val current = currentState(command.workspaceId, categoryId)
         if (!current.archived) {
             // Already not archived - just return current state
-            return current.projection()
+            return current.projections().single()
         }
 
         val event = registerEvent(command, context, buildEventPayload(current, command.archived))
-        return (event.payload as CategoryRevised).projection()
+        return (event.payload as CategoryRevised).projections().single()
     }
 
     private fun currentState(workspaceId: UUID, categoryId: UUID): CategoryEventPayload =

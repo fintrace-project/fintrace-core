@@ -3,6 +3,7 @@ package com.github.melancholic.fintrace.core.dao.projection
 import com.github.melancholic.fintrace.core.domain.projection.BalanceAnchorProjection
 import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
+import com.github.melancholic.fintrace.core.exception.OperationIsNotApplicableException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
@@ -14,8 +15,13 @@ interface BalanceAnchorProjectionDAO : ProjectionDAO<BalanceAnchorProjection> {
     override fun projectionTarget() = ProjectionTarget.BALANCE_ANCHOR
     override fun supportedClass() = BalanceAnchorProjection::class.java
 
-    override fun createOrUpdate(projection: BalanceAnchorProjection): UUID
+    override fun create(projection: BalanceAnchorProjection): UUID
+    override fun update(projection: BalanceAnchorProjection): BalanceAnchorProjection {
+        throw OperationIsNotApplicableException()
+    }
+
     override fun getById(workspaceId: UUID, id: UUID): BalanceAnchorProjection
+
     fun getAll(workspaceId: UUID, accountId: UUID): List<BalanceAnchorProjection>
     fun getById(workspaceId: UUID, accountId: UUID, anchorId: UUID): BalanceAnchorProjection
     fun isLast(requested: BalanceAnchorProjection): Boolean
@@ -26,18 +32,17 @@ interface BalanceAnchorProjectionDAO : ProjectionDAO<BalanceAnchorProjection> {
 class BalanceAnchorProjectionDAOImpl(
     private val jdbc: JdbcClient
 ) : BalanceAnchorProjectionDAO {
-    override fun createOrUpdate(projection: BalanceAnchorProjection): UUID {
-        return jdbc.sql(INSERT)
-            .param("id", projection.id)
-            .param("workspaceId", projection.workspaceId)
-            .param("accountId", projection.accountId)
-            .param("value", projection.value)
-            .param("externalRef", projection.externalRef)
-            .param("occurredAt", projection.occurredAt)
-            .param("recordedAt", projection.recordedAt)
-            .query(UUID::class.java)
-            .single()
-    }
+
+    override fun create(projection: BalanceAnchorProjection): UUID = jdbc.sql(INSERT)
+        .param("id", projection.id)
+        .param("workspaceId", projection.workspaceId)
+        .param("accountId", projection.accountId)
+        .param("value", projection.value)
+        .param("externalRef", projection.externalRef)
+        .param("occurredAt", projection.occurredAt)
+        .param("recordedAt", projection.recordedAt)
+        .query(UUID::class.java)
+        .single()
 
     override fun getById(workspaceId: UUID, id: UUID): BalanceAnchorProjection {
         return jdbc.sql(SELECT_BY_ID)
@@ -99,15 +104,16 @@ class BalanceAnchorProjectionDAOImpl(
 
     companion object {
         const val TABLE_NAME = "t_balance_anchors"
+        const val ALL_COLUMNS = "id, workspace_id, account_id, value, occurred_at, external_ref, recorded_at"
 
         const val INSERT = """
-            INSERT INTO $TABLE_NAME (id, workspace_id, account_id, value, occurred_at, external_ref, recorded_at)
+            INSERT INTO $TABLE_NAME ($ALL_COLUMNS)
             VALUES (:id, :workspaceId, :accountId, :value, :occurredAt, :externalRef, :recordedAt)
             RETURNING id
         """
 
         const val SELECT_ALL = """
-            SELECT id, workspace_id, account_id, value, occurred_at, external_ref, recorded_at
+            SELECT $ALL_COLUMNS
             from $TABLE_NAME
             WHERE workspace_id = :workspaceId
         """

@@ -55,7 +55,8 @@ class CommandFacadeTransactionTest(
 		@Bean
 		@Primary
 		fun failingOperationProjectionDAO() = object : OperationProjectionDAO {
-			override fun createOrUpdate(projection: OperationProjection): UUID = throw ProjectionFailed()
+			override fun create(projection: OperationProjection): UUID = throw ProjectionFailed()
+			override fun update(row: OperationProjection): OperationProjection = throw ProjectionFailed()
 
 			// Unused here — this class only exercises the write path's rollback.
 			override fun getById(workspaceId: UUID, operationId: UUID): OperationProjection =

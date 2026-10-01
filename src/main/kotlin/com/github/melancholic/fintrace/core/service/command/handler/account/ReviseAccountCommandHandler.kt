@@ -6,6 +6,7 @@ import com.github.melancholic.fintrace.core.domain.command.ReviseAccountCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.AccountEventPayload
 import com.github.melancholic.fintrace.core.domain.event.payload.AccountRevised
 import com.github.melancholic.fintrace.core.domain.event.payload.AccountRevisedV1
+import com.github.melancholic.fintrace.core.domain.event.projectionChange
 import com.github.melancholic.fintrace.core.domain.projection.AccountProjection
 import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
@@ -28,8 +29,8 @@ class ReviseAccountCommandHandler(
     override fun handle(command: ReviseAccountCommand, context: CommandContext): AccountProjection {
         validationService.validate(command)
         val event = registerEvent(command, context, buildEventPayload(command))
-        projectionApplier.apply(event.payload.projectionChange())
-        return (event.payload as AccountRevised).projection()
+        projectionApplier.apply(event.projectionChange())
+        return (event.payload as AccountRevised).projections().single()
     }
 
     private fun buildEventPayload(command: ReviseAccountCommand): AccountRevised {

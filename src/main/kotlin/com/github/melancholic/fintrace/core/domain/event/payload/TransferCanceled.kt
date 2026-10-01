@@ -1,18 +1,13 @@
 package com.github.melancholic.fintrace.core.domain.event.payload
 
-import com.github.melancholic.fintrace.core.service.projection.ProjectionChange
 import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
 import java.time.LocalDateTime
 import java.util.*
 
-sealed interface TransferCanceled : TransferEventPayload {
+sealed interface TransferCanceled : TransferEventPayload, CancelEventPayload {
     val legIds: Set<UUID>
-
-    override fun projectionChange() = ProjectionChange.Remove(
-        ProjectionTarget.OPERATION,
-        workspaceId,
-        legIds
-    )
+    override fun affectedIds(): Set<UUID> = legIds
+    override fun projectionTarget() = ProjectionTarget.OPERATION
 }
 
 /**

@@ -17,7 +17,8 @@ class ProjectionApplierImpl(
 
     override fun apply(change: ProjectionChange) {
         when (change) {
-            is ProjectionChange.Upsert -> change.rows.forEach { upsert(it) }
+            is ProjectionChange.Create -> change.rows.forEach { create(it) }
+            is ProjectionChange.Update -> change.rows.forEach { update(it) }
             is ProjectionChange.Remove -> remove(change)
         }
     }
@@ -26,8 +27,12 @@ class ProjectionApplierImpl(
         projectionDAORegistry.asList().forEach { it.removeAll(workspaceId) }
     }
 
-    private fun <P : Projection> upsert(row: P) {
-        projectionDAORegistry.resolve(row.javaClass).createOrUpdate(row)
+    private fun <P : Projection> create(row: P) {
+        projectionDAORegistry.resolve(row.javaClass).create(row)
+    }
+
+    private fun <P : Projection> update(row: P) {
+        projectionDAORegistry.resolve(row.javaClass).update(row)
     }
 
     private fun remove(change: ProjectionChange.Remove) {

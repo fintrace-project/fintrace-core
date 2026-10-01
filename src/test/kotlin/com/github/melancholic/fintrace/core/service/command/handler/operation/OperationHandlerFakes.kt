@@ -68,11 +68,23 @@ internal class RecordingProjectionApplier : ProjectionApplier {
 		cleared++
 	}
 
-	val upsertedRows: List<Projection>
-		get() = applied.filterIsInstance<ProjectionChange.Upsert>().flatMap { it.rows }
+	val writtenRows: List<Projection>
+		get() = applied.flatMap {
+			when (it) {
+				is ProjectionChange.Create -> it.rows
+				is ProjectionChange.Update -> it.rows
+				is ProjectionChange.Remove -> emptyList()
+			}
+		}
+
+	val createdRows: List<Projection>
+		get() = applied.filterIsInstance<ProjectionChange.Create>().flatMap { it.rows }
+
+	val updatedRows: List<Projection>
+		get() = applied.filterIsInstance<ProjectionChange.Update>().flatMap { it.rows }
 
 	val operations: List<OperationProjection>
-		get() = upsertedRows.filterIsInstance<OperationProjection>()
+		get() = writtenRows.filterIsInstance<OperationProjection>()
 
 	val removals: List<ProjectionChange.Remove>
 		get() = applied.filterIsInstance<ProjectionChange.Remove>()

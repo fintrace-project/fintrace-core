@@ -6,6 +6,7 @@ import com.github.melancholic.fintrace.core.domain.command.ReviseOperationComman
 import com.github.melancholic.fintrace.core.domain.event.payload.BalanceOperationEventPayload
 import com.github.melancholic.fintrace.core.domain.event.payload.OperationRevised
 import com.github.melancholic.fintrace.core.domain.event.payload.OperationRevisedV1
+import com.github.melancholic.fintrace.core.domain.event.projectionChange
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
 import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
@@ -28,8 +29,8 @@ class ReviseOperationCommandHandler(
     override fun handle(command: ReviseOperationCommand, context: CommandContext): OperationProjection {
         validationService.validate(command)
         val event = registerEvent(command, context, buildEventPayload(command))
-        projectionApplier.apply(event.payload.projectionChange())
-        return (event.payload as OperationRevised).projection()
+        projectionApplier.apply(event.projectionChange())
+        return (event.payload as OperationRevised).projections().single()
     }
 
     private fun buildEventPayload(command: ReviseOperationCommand): OperationRevised {

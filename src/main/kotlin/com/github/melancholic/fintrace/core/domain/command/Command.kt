@@ -1,12 +1,10 @@
 package com.github.melancholic.fintrace.core.domain.command
 
-import com.github.melancholic.fintrace.core.domain.event.EventType
 import java.time.LocalDateTime
 import java.util.*
 
 sealed interface Command<R> {
     val workspaceId: UUID
-    fun eventType(): EventType
 }
 
 sealed interface TemporalCommand<R> : Command<R> {
@@ -18,14 +16,8 @@ sealed interface IdentifiedCommand<R> : Command<R> {
     val externalRef: String?
 }
 
-sealed interface CreateCommand<R> : IdentifiedCommand<R> {
-    override fun eventType() = EventType.CREATED
-}
+sealed interface CreateCommand<R> : IdentifiedCommand<R>
 
-sealed interface ReviseCommand<R> : Command<R> {
-    override fun eventType() = EventType.REVISED
-}
+sealed interface ReviseCommand<R> : Command<R>
 
-sealed interface CancelCommand<R> : Command<R> {
-    override fun eventType() = EventType.CANCELLED
-}
+sealed interface CancelCommand<R> : Command<R>

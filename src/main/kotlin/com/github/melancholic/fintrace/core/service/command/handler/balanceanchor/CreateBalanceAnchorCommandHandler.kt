@@ -6,6 +6,7 @@ import com.github.melancholic.fintrace.core.domain.command.CreateBalanceAnchorCo
 import com.github.melancholic.fintrace.core.domain.entity.BalanceAnchorContainer
 import com.github.melancholic.fintrace.core.domain.event.payload.BalanceAnchorCreated
 import com.github.melancholic.fintrace.core.domain.event.payload.BalanceAnchorCreatedV1
+import com.github.melancholic.fintrace.core.domain.event.projectionChange
 import com.github.melancholic.fintrace.core.service.BalanceAnchorContainerFactory
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
 import com.github.melancholic.fintrace.core.util.TimestampProvider
@@ -30,8 +31,8 @@ class CreateBalanceAnchorCommandHandler(
     override fun handle(command: CreateBalanceAnchorCommand, context: CommandContext): BalanceAnchorContainer {
         validationService.validate(command)
         val event = registerEvent(command, context, buildEventPayload(command))
-        projectionApplier.apply(event.payload.projectionChange())
-        return anchorContainerFactory.buildBalanceAnchorContainer((event.payload as BalanceAnchorCreated).projection())
+        projectionApplier.apply(event.projectionChange())
+        return anchorContainerFactory.buildBalanceAnchorContainer((event.payload as BalanceAnchorCreated).projections().single())
     }
 
     private fun buildEventPayload(command: CreateBalanceAnchorCommand): BalanceAnchorCreated {

@@ -103,7 +103,7 @@ internal object TestWorkspaces {
         workspaceId: UUID,
         name: String = "seeded-account",
         currency: String = "EUR",
-    ): UUID = accountDAO.createOrUpdate(
+    ): UUID = accountDAO.create(
         AccountProjection(
             id = UUID.randomUUID(),
             workspaceId = workspaceId,
@@ -121,7 +121,7 @@ internal object TestWorkspaces {
         workspaceId: UUID,
         kind: CategoryKind = CategoryKind.EXPENSE,
         name: String = "seeded-category",
-    ): UUID = categoryDAO.createOrUpdate(
+    ): UUID = categoryDAO.create(
         CategoryProjection(
             id = UUID.randomUUID(),
             workspaceId = workspaceId,
@@ -178,8 +178,8 @@ internal object TestWorkspaces {
             recordedAt = recordedAt,
         )
 
-        operationDAO.createOrUpdate(leg(sourceId, targetId, sourceAccountId, sourceAmount.negate()))
-        operationDAO.createOrUpdate(leg(targetId, sourceId, targetAccountId, targetAmount))
+        operationDAO.create(leg(sourceId, targetId, sourceAccountId, sourceAmount.negate()))
+        operationDAO.create(leg(targetId, sourceId, targetAccountId, targetAmount))
         return sourceId to targetId
     }
 

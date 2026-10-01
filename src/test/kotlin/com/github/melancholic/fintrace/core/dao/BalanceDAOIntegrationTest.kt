@@ -124,7 +124,7 @@ class BalanceDAOIntegrationTest(
     @Test
     fun `transfer legs count towards the balance`() {
         // They move money, which is the one place this query differs from income/expense figures.
-        operationDAO.createOrUpdate(
+        operationDAO.create(
             leg(MARCH_05, BigDecimal("-120.0000"))
         )
 
@@ -301,7 +301,7 @@ class BalanceDAOIntegrationTest(
 
     private fun balanceOf(asOf: LocalDateTime) = balanceDAO.getBalanceOf(workspaceId, accountId, asOf)
 
-    private fun operation(occurredAt: LocalDateTime, amount: String): UUID = operationDAO.createOrUpdate(
+    private fun operation(occurredAt: LocalDateTime, amount: String): UUID = operationDAO.create(
         OperationProjection(
             id = UUID.randomUUID(),
             workspaceId = workspaceId,
@@ -333,7 +333,7 @@ class BalanceDAOIntegrationTest(
         recordedAt = occurredAt,
     )
 
-    private fun anchor(occurredAt: LocalDateTime, value: String): UUID = anchorDAO.createOrUpdate(
+    private fun anchor(occurredAt: LocalDateTime, value: String): UUID = anchorDAO.create(
         BalanceAnchorProjection(
             id = UUID.randomUUID(),
             workspaceId = workspaceId,
