@@ -4,12 +4,14 @@ import com.github.melancholic.fintrace.core.api.v1.dto.ImportEnvelopRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportJobResponse
 import com.github.melancholic.fintrace.core.api.v1.mapper.ImportMapper
 import com.github.melancholic.fintrace.core.config.IMPORT_AREA_API_PATH
+import com.github.melancholic.fintrace.core.domain.entity.ImportJobStatus
 import com.github.melancholic.fintrace.core.facade.ImportFacade
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.annotation.MvcUriComponentsBuilder
@@ -41,6 +43,11 @@ class ImportRestController(
         @Valid @RequestBody request: ImportEnvelopRequest
     ): ResponseEntity<ImportJobResponse> {
         val import = importFacade.importWorkspaceData(workspaceId, request)
+        val status = when (import.status) {
+            ImportJobStatus.RUNNING -> HttpStatus.ACCEPTED
+            ImportJobStatus.SUCCEEDED -> HttpStatus.OK
+            ImportJobStatus.FAILED -> HttpStatus.BAD_REQUEST
+        }
 
         val location = MvcUriComponentsBuilder
             .fromController(WorkspacesRestController::class.java)
@@ -48,7 +55,7 @@ class ImportRestController(
             .buildAndExpand(workspaceId)
             .toUri()
 
-        return ResponseEntity.ok()
+        return ResponseEntity.status(status)
             .location(location)
             .body(mapper.toResponse(import))
     }

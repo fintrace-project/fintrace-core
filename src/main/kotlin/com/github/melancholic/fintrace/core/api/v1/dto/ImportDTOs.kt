@@ -1,6 +1,8 @@
 package com.github.melancholic.fintrace.core.api.v1.dto
 
+import com.github.melancholic.fintrace.core.config.UUID_VERSION
 import com.github.melancholic.fintrace.core.domain.entity.*
+import com.github.melancholic.fintrace.core.domain.event.EntityType
 import com.github.melancholic.fintrace.core.validation.ValidationConstants.ACCOUNT_NAME_PATTERN
 import com.github.melancholic.fintrace.core.validation.ValidationConstants.CATEGORY_NAME_PATTERN
 import com.github.melancholic.fintrace.core.validation.ValidationConstants.CURRENCY_PATTERN
@@ -39,9 +41,13 @@ data class ImportPayloadRequest(
     val diagnostics: List<ImportDiagnosticRequest> = emptyList()
 )
 
+sealed interface ImportIdentifiedEntityRequest {
+    val id: UUID
+}
+
 data class ImportAccountRequest(
     @NotNull
-    val id: UUID,
+    override val id: UUID,
     @Length(max = MAX_EXTERNAL_REF_LENGTH)
     val externalRef: String?,
     @Length(max = MAX_NAME_LENGTH)
@@ -56,11 +62,11 @@ data class ImportAccountRequest(
     val archived: Boolean = false,
     val initialBalance: BigDecimal?,
     val initialBalanceAt: LocalDateTime?
-)
+): ImportIdentifiedEntityRequest
 
 data class ImportCategoryRequest(
     @NotNull
-    val id: UUID,
+    override val id: UUID,
     @Length(max = MAX_EXTERNAL_REF_LENGTH)
     val externalRef: String?,
     @Length(max = MAX_NAME_LENGTH)
@@ -72,11 +78,11 @@ data class ImportCategoryRequest(
     val parentId: UUID?,
     @Length(max = MAX_ICON_LENGTH)
     val icon: String?
-)
+): ImportIdentifiedEntityRequest
 
 data class ImportOperationRequest(
     @NotNull
-    val id: UUID,
+    override val id: UUID,
     @Length(max = MAX_EXTERNAL_REF_LENGTH)
     val externalRef: String?,
     @NotNull
@@ -91,11 +97,11 @@ data class ImportOperationRequest(
     val categoryId: UUID?,
     @Length(max = 255)
     val comment: String?
-)
+): ImportIdentifiedEntityRequest
 
 data class ImportTransferRequest(
     @NotNull
-    val id: UUID,
+    override val id: UUID,
     @Length(max = MAX_EXTERNAL_REF_LENGTH)
     val externalRef: String?,
     @NotNull
@@ -108,7 +114,7 @@ data class ImportTransferRequest(
     val target: ImportTransferLegRequest,
     @Length(max = 255)
     val comment: String?
-)
+): ImportIdentifiedEntityRequest
 
 data class ImportTransferLegRequest(
     @NotNull
@@ -120,7 +126,7 @@ data class ImportTransferLegRequest(
 
 data class ImportBalanceAnchorRequest(
     @NotNull
-    val id: UUID,
+    override val id: UUID,
     @Length(max = MAX_EXTERNAL_REF_LENGTH)
     val externalRef: String?,
     @NotNull
@@ -129,7 +135,7 @@ data class ImportBalanceAnchorRequest(
     val occurredAt: LocalDateTime,
     @NotNull
     val value: BigDecimal
-)
+): ImportIdentifiedEntityRequest
 
 data class ImportDiagnosticRequest(
     @NotNull
@@ -157,7 +163,8 @@ data class ImportJobResponse(
     val operations: Int = 0,
     val transfers: Int = 0,
     val anchors: Int = 0,
-    val diagnostics: List<ImportDiagnosticDTO> = listOf()
+    val diagnostics: List<ImportDiagnosticDTO> = listOf(),
+    val problems: List<ImportProblemDTO> = listOf()
 )
 
 data class ImportDiagnosticDTO(
@@ -165,4 +172,10 @@ data class ImportDiagnosticDTO(
     val code: ImportDiagnosticCode,
     val count: Long,
     val detail: String?
+)
+
+data class ImportProblemDTO(
+    val message: String,
+    val aggregateType: EntityType,
+    val affectedIDs: Set<UUID>
 )
