@@ -61,7 +61,7 @@ class BalanceAnchorProjectionDAOImpl(
     override fun getAll(
         workspaceId: UUID,
         accountId: UUID
-    ): List<BalanceAnchorProjection> = jdbc.sql(SELECT_ALL_BY_ACCOUNT_ID + " ORDER BY occurred_at desc")
+    ): List<BalanceAnchorProjection> = jdbc.sql(SELECT_ALL_BY_ACCOUNT_ID)
         .param("workspaceId", workspaceId)
         .param("accountId", accountId)
         .query(BalanceAnchorProjection::class.java)
@@ -124,10 +124,14 @@ class BalanceAnchorProjectionDAOImpl(
             WHERE workspace_id = :workspaceId
         """
 
-        const val SELECT_ALL_BY_ACCOUNT_ID = SELECT_ALL + " AND account_id = :accountId"
+        const val SELECT_ALL_BY_ACCOUNT_ID = SELECT_ALL + """
+             AND account_id = :accountId
+             ORDER BY occurred_at DESC, id DESC
+        """
 
-        const val SELECT_BY_WORKSPACE_ACCOUNT_ANCHOR = SELECT_ALL_BY_ACCOUNT_ID + """
-            AND id = :anchorId
+        const val SELECT_BY_WORKSPACE_ACCOUNT_ANCHOR = SELECT_ALL + """
+             AND account_id = :accountId
+             AND id = :anchorId
         """
 
         private const val LATEST_ANCHOR_OF_ACCOUNT = """
