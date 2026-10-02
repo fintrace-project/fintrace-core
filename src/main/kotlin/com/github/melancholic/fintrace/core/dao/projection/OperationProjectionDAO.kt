@@ -1,9 +1,11 @@
 package com.github.melancholic.fintrace.core.dao.projection
 
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
+import com.github.melancholic.fintrace.core.exception.ActionConflictException
 import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.util.*
@@ -27,21 +29,25 @@ class OperationProjectionDAOImpl(
     private val jdbc: JdbcClient
 ) : OperationProjectionDAO {
 
-    override fun create(projection: OperationProjection): UUID = jdbc.sql(INSERT)
-        .param("id", projection.id)
-        .param("workspaceId", projection.workspaceId)
-        .param("amount", projection.amount)
-        .param("kind", projection.kind.name)
-        .param("accountId", projection.accountId)
-        .param("categoryId", projection.categoryId)
-        .param("transferId", projection.transferId)
-        .param("counterpartId", projection.counterpartId)
-        .param("comment", projection.comment)
-        .param("externalRef", projection.externalRef)
-        .param("occurredAt", projection.occurredAt)
-        .param("recordedAt", projection.recordedAt)
-        .query(UUID::class.java)
-        .single()
+    override fun create(projection: OperationProjection): UUID = try {
+            jdbc.sql(INSERT)
+                .param("id", projection.id)
+                .param("workspaceId", projection.workspaceId)
+                .param("amount", projection.amount)
+                .param("kind", projection.kind.name)
+                .param("accountId", projection.accountId)
+                .param("categoryId", projection.categoryId)
+                .param("transferId", projection.transferId)
+                .param("counterpartId", projection.counterpartId)
+                .param("comment", projection.comment)
+                .param("externalRef", projection.externalRef)
+                .param("occurredAt", projection.occurredAt)
+                .param("recordedAt", projection.recordedAt)
+                .query(UUID::class.java)
+                .single()
+        } catch (_: DuplicateKeyException) {
+            throw ActionConflictException("Couldn't create operation '${projection.id}': that id is already taken")
+        }
 
     override fun update(projection: OperationProjection): OperationProjection = jdbc.sql(UPDATE)
         .param("id", projection.id)

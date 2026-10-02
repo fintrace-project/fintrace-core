@@ -1,10 +1,12 @@
 package com.github.melancholic.fintrace.core.dao.projection
 
 import com.github.melancholic.fintrace.core.domain.projection.BalanceAnchorProjection
+import com.github.melancholic.fintrace.core.exception.ActionConflictException
 import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.exception.OperationIsNotApplicableException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
@@ -33,16 +35,20 @@ class BalanceAnchorProjectionDAOImpl(
     private val jdbc: JdbcClient
 ) : BalanceAnchorProjectionDAO {
 
-    override fun create(projection: BalanceAnchorProjection): UUID = jdbc.sql(INSERT)
-        .param("id", projection.id)
-        .param("workspaceId", projection.workspaceId)
-        .param("accountId", projection.accountId)
-        .param("value", projection.value)
-        .param("externalRef", projection.externalRef)
-        .param("occurredAt", projection.occurredAt)
-        .param("recordedAt", projection.recordedAt)
-        .query(UUID::class.java)
-        .single()
+    override fun create(projection: BalanceAnchorProjection): UUID = try {
+        jdbc.sql(INSERT)
+            .param("id", projection.id)
+            .param("workspaceId", projection.workspaceId)
+            .param("accountId", projection.accountId)
+            .param("value", projection.value)
+            .param("externalRef", projection.externalRef)
+            .param("occurredAt", projection.occurredAt)
+            .param("recordedAt", projection.recordedAt)
+            .query(UUID::class.java)
+            .single()
+    } catch (_: DuplicateKeyException) {
+        throw ActionConflictException("Couldn't create balance anchor '${projection.id}': that id is already taken")
+    }
 
     override fun getById(workspaceId: UUID, id: UUID): BalanceAnchorProjection {
         return jdbc.sql(SELECT_BY_ID)

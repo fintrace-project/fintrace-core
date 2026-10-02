@@ -1,9 +1,11 @@
 package com.github.melancholic.fintrace.core.dao.projection
 
 import com.github.melancholic.fintrace.core.domain.projection.AccountProjection
+import com.github.melancholic.fintrace.core.exception.ActionConflictException
 import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.util.*
@@ -28,17 +30,21 @@ class AccountProjectionDAOImpl(
     private val jdbc: JdbcClient
 ) : AccountProjectionDAO {
 
-    override fun create(projection: AccountProjection): UUID = jdbc.sql(INSERT)
-        .param("id", projection.id)
-        .param("workspaceId", projection.workspaceId)
-        .param("name", projection.name)
-        .param("currency", projection.currency)
-        .param("icon", projection.icon)
-        .param("archived", projection.archived)
-        .param("externalRef", projection.externalRef)
-        .param("recordedAt", projection.recordedAt)
-        .query(UUID::class.java)
-        .single()
+    override fun create(projection: AccountProjection): UUID = try {
+        jdbc.sql(INSERT)
+            .param("id", projection.id)
+            .param("workspaceId", projection.workspaceId)
+            .param("name", projection.name)
+            .param("currency", projection.currency)
+            .param("icon", projection.icon)
+            .param("archived", projection.archived)
+            .param("externalRef", projection.externalRef)
+            .param("recordedAt", projection.recordedAt)
+            .query(UUID::class.java)
+            .single()
+    } catch (_: DuplicateKeyException) {
+        throw ActionConflictException("Couldn't create account '${projection.id}': that id is already taken")
+    }
 
     override fun update(projection: AccountProjection): AccountProjection = jdbc.sql(UPDATE)
         .param("id", projection.id)

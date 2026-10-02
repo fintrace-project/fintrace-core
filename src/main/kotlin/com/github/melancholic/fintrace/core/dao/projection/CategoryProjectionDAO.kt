@@ -3,9 +3,11 @@ package com.github.melancholic.fintrace.core.dao.projection
 import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.entity.CategorySystemCode
 import com.github.melancholic.fintrace.core.domain.projection.CategoryProjection
+import com.github.melancholic.fintrace.core.exception.ActionConflictException
 import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.util.*
@@ -31,19 +33,23 @@ interface CategoryProjectionDAO : ProjectionDAO<CategoryProjection> {
 class CategoryProjectionDAOImpl(
     private val jdbc: JdbcClient
 ) : CategoryProjectionDAO {
-    override fun create(projection: CategoryProjection): UUID = jdbc.sql(INSERT)
-        .param("id", projection.id)
-        .param("workspaceId", projection.workspaceId)
-        .param("parentId", projection.parentId)
-        .param("name", projection.name)
-        .param("kind", projection.kind.name)
-        .param("icon", projection.icon)
-        .param("archived", projection.archived)
-        .param("systemCode", projection.systemCode?.name)
-        .param("externalRef", projection.externalRef)
-        .param("recordedAt", projection.recordedAt)
-        .query(UUID::class.java)
-        .single()
+    override fun create(projection: CategoryProjection): UUID = try {
+        jdbc.sql(INSERT)
+            .param("id", projection.id)
+            .param("workspaceId", projection.workspaceId)
+            .param("parentId", projection.parentId)
+            .param("name", projection.name)
+            .param("kind", projection.kind.name)
+            .param("icon", projection.icon)
+            .param("archived", projection.archived)
+            .param("systemCode", projection.systemCode?.name)
+            .param("externalRef", projection.externalRef)
+            .param("recordedAt", projection.recordedAt)
+            .query(UUID::class.java)
+            .single()
+    } catch (_: DuplicateKeyException) {
+        throw ActionConflictException("Couldn't create category '${projection.id}': that id is already taken")
+    }
 
     override fun update(projection: CategoryProjection): CategoryProjection = jdbc.sql(UPDATE)
         .param("id", projection.id)
