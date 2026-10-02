@@ -3,13 +3,7 @@ package com.github.melancholic.fintrace.core.service
 import com.github.melancholic.fintrace.core.config.WorkspaceImportConstants.IMPORT_LEASE_TIME
 import com.github.melancholic.fintrace.core.dao.ImportJobDAO
 import com.github.melancholic.fintrace.core.dao.WorkspaceDAO
-import com.github.melancholic.fintrace.core.domain.entity.ImportDiagnostic
-import com.github.melancholic.fintrace.core.domain.entity.ImportJob
-import com.github.melancholic.fintrace.core.domain.entity.ImportJobStatistics
-import com.github.melancholic.fintrace.core.domain.entity.ImportJobStatus
-import com.github.melancholic.fintrace.core.domain.entity.ImporterDetails
-import com.github.melancholic.fintrace.core.domain.entity.Workspace
-import com.github.melancholic.fintrace.core.domain.entity.WorkspaceStatus
+import com.github.melancholic.fintrace.core.domain.entity.*
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.exception.OperationNotAllowedException
@@ -37,7 +31,14 @@ interface ImportLifecycleService {
         diagnostics: List<ImportDiagnostic>
     ): ImportJob
 
-    fun fail(userId: UUID, workspaceId: UUID, jobId: UUID, message: String?, diagnostics: List<ImportDiagnostic>)
+    fun fail(
+        userId: UUID,
+        workspaceId: UUID,
+        jobId: UUID,
+        message: String?,
+        diagnostics: List<ImportDiagnostic> = emptyList(),
+        problems: List<ImportProblem> = emptyList()
+    ): ImportJob
 
     fun recoverIfAbandoned(workspace: Workspace): Workspace
 
@@ -73,7 +74,8 @@ class ImportLifecycleServiceImpl(
             id = jobId,
             status = ImportJobStatus.SUCCEEDED,
             counts = counts,
-            diagnostics = diagnostics
+            diagnostics = diagnostics,
+            problems = emptyList()
         )
     }
 
@@ -83,18 +85,20 @@ class ImportLifecycleServiceImpl(
         workspaceId: UUID,
         jobId: UUID,
         message: String?,
-        diagnostics: List<ImportDiagnostic>
-    ) {
+        diagnostics: List<ImportDiagnostic>,
+        problems: List<ImportProblem>
+    ) : ImportJob {
         if (!changeStatus(userId, workspaceId, WorkspaceStatus.NEW)) {
             logger.warn { "Import '$jobId' failed, but its workspace was no longer IMPORTING — status left as found" }
         }
-        importJobDAO.complete(
+        return importJobDAO.complete(
             workspaceId = workspaceId,
             id = jobId,
             status = ImportJobStatus.FAILED,
             counts = null,
             diagnostics = diagnostics,
-            message = message
+            message = message,
+            problems = problems
         )
     }
 

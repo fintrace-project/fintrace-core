@@ -3,6 +3,7 @@ package com.github.melancholic.fintrace.core.dao.mapper
 import com.github.melancholic.fintrace.core.domain.entity.ImportDiagnostic
 import com.github.melancholic.fintrace.core.domain.entity.ImportJob
 import com.github.melancholic.fintrace.core.domain.entity.ImportJobStatus
+import com.github.melancholic.fintrace.core.domain.entity.ImportProblem
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.stereotype.Component
 import tools.jackson.core.type.TypeReference
@@ -35,6 +36,9 @@ class ImportJobRowMapper(
         anchors = rs.getInt("anchors"),
         diagnostics = rs.getString("diagnostics")
             ?.let { mapper.readValue(it, object : TypeReference<List<ImportDiagnostic>>() {}) }
-            ?: emptyList()
+            ?: emptyList(),
+        problems = rs.getString("import_problems")
+            ?.let { mapper.readValue(it, object : TypeReference<List<ImportProblem>>() {}) }
+            ?: emptyList(),
     )
 }

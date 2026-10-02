@@ -19,6 +19,7 @@ interface ImportJobDAO {
         status: ImportJobStatus,
         counts: ImportJobStatistics?,
         diagnostics: List<ImportDiagnostic>,
+        problems: List<ImportProblem>,
         message: String? = null
     ): ImportJob
 
@@ -58,6 +59,7 @@ class ImportJobDAOImpl(
         status: ImportJobStatus,
         counts: ImportJobStatistics?,
         diagnostics: List<ImportDiagnostic>,
+        problems: List<ImportProblem>,
         message: String?
     ): ImportJob = jdbc.sql(UPDATE_IMPORT_JOB)
         .param("id", id)
@@ -71,6 +73,7 @@ class ImportJobDAOImpl(
         .param("transfers", counts?.transfers)
         .param("anchors", counts?.anchors)
         .param("diagnostics", mapper.writeValueAsString(diagnostics))
+        .param("importProblems", mapper.writeValueAsString(problems))
         .query(rowMapper)
         .single()
 
@@ -102,7 +105,7 @@ class ImportJobDAOImpl(
         const val ALL_FIELDS = """
             id, workspace_id, status, started_by, started_at, finished_at, importer_name,
             importer_version, message, accounts, categories, operations, 
-            transfers, anchors, diagnostics
+            transfers, anchors, diagnostics, import_problems
         """
 
         const val CREATE_IMPORT_JOB = """
@@ -121,7 +124,8 @@ class ImportJobDAOImpl(
                 operations = :operations,
                 transfers = :transfers,
                 anchors = :anchors,
-                diagnostics = CAST(:diagnostics AS jsonb)
+                diagnostics = CAST(:diagnostics AS jsonb),
+                import_problems = CAST(:importProblems AS jsonb)
             WHERE id = :id and workspace_id = :workspaceId
             RETURNING $ALL_FIELDS
         """

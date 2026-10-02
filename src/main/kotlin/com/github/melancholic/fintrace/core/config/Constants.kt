@@ -2,6 +2,8 @@ package com.github.melancholic.fintrace.core.config
 
 import com.github.melancholic.fintrace.core.config.TimeoutConstants.IMPORT_TIMEOUT_SECONDS
 
+// System Constants
+const val UUID_VERSION = 7
 
 // API Constants
 const val API_V1_BASE_PATH = "/api/v1"
