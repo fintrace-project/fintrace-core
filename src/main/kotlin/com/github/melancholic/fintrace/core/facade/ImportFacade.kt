@@ -8,6 +8,7 @@ import com.github.melancholic.fintrace.core.security.IdentityProvider
 import com.github.melancholic.fintrace.core.service.ImportExecutionService
 import com.github.melancholic.fintrace.core.service.ImportLifecycleService
 import com.github.melancholic.fintrace.core.service.WorkspaceService
+import com.github.melancholic.fintrace.core.validation.ImportValidationService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -24,6 +25,7 @@ class ImportFacadeImpl(
     private val identityProvider: IdentityProvider,
     private val importLifecycleService: ImportLifecycleService,
     private val importExecutionService: ImportExecutionService,
+    private val importValidationService: ImportValidationService,
     private val mapper: ImportMapper,
 ) : ImportFacade {
 
@@ -35,12 +37,23 @@ class ImportFacadeImpl(
 
         val jobId = importLifecycleService.begin(currentUser, workspace.id, importRequest.importer())
         try {
+            val problems = importValidationService.validate(workspaceId, importRequest.payload)
+            if (problems.isNotEmpty()) {
+                logger.error { "Import '$jobId' failed with ${problems.size} validation errors." }
+                return importLifecycleService.fail(
+                    userId = currentUser,
+                    workspaceId = workspace.id,
+                    jobId = jobId,
+                    message = "Import failed with validation errors",
+                    diagnostics = diagnostics,
+                    problems = problems
+                )
+            }
             val counts = importExecutionService.importWorkspaceData(workspace.id, currentUser, jobId, importRequest)
             return importLifecycleService.succeed(currentUser, workspace.id, jobId, counts, diagnostics)
         } catch (e: Exception) {
             logger.error(e) { "Import '$jobId' failed with an exception" }
-            importLifecycleService.fail(currentUser, workspace.id, jobId, e.message, diagnostics)
-            throw e
+            return importLifecycleService.fail(currentUser, workspace.id, jobId, e.message, diagnostics)
         }
     }
 

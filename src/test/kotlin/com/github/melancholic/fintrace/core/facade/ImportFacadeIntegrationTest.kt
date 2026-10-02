@@ -274,6 +274,54 @@ class ImportFacadeIntegrationTest(
         assertEquals(ImportJobStatus.SUCCEEDED, job.status)
     }
 
+    // ---------------------------------------------------------------- the pre-pass
+
+    @Test
+    fun `refuses a payload whose ids are not version 7, and imports nothing`() {
+        val job = importFacade.importWorkspaceData(workspaceId, payloadWithV4Ids())
+
+        assertEquals(ImportJobStatus.FAILED, job.status)
+        assertEquals(0, count("t_accounts"), "a rejected payload reaches no projection")
+        // Four, not zero: the system categories the workspace was seeded with (§4.7).
+        assertEquals(4, count("t_categories"), "nothing from the payload was created")
+        assertEquals("NEW", status(), "the workspace is handed back for a corrected retry")
+    }
+
+    @Test
+    fun `records what was wrong with the payload on the job row`() {
+        val job = importFacade.importWorkspaceData(workspaceId, payloadWithV4Ids())
+
+        val problem = job.problems.single()
+        assertEquals(setOf(BAD_CATEGORY), problem.affectedIDs)
+        assertNotNull(job.message, "the job says it was a validation failure")
+    }
+
+    /**
+     * The problems survive a round trip through `import_problems`, not just the in-memory return —
+     * which is the only thing that makes them retrievable after the 400 has been answered.
+     */
+    @Test
+    fun `reads the recorded problems back from the job row`() {
+        val job = importFacade.importWorkspaceData(workspaceId, payloadWithV4Ids())
+
+        val reread = jdbc.sql("SELECT import_problems FROM t_import_jobs WHERE id = :id")
+            .param("id", job.id)
+            .query(String::class.java)
+            .single()
+
+        assertTrue(reread.contains(BAD_CATEGORY.toString()), "the stored jsonb names the offending id: was '$reread'")
+    }
+
+    @Test
+    fun `a corrected payload imports after a rejection`() {
+        assertEquals(ImportJobStatus.FAILED, importFacade.importWorkspaceData(workspaceId, payloadWithV4Ids()).status)
+
+        val job = importFacade.importWorkspaceData(workspaceId, fullPayload())
+
+        assertEquals(ImportJobStatus.SUCCEEDED, job.status)
+        assertEquals("ACTIVE", status())
+    }
+
     // ---------------------------------------------------------------- abandoned imports
 
     @Test
@@ -408,7 +456,7 @@ class ImportFacadeIntegrationTest(
             ),
             operations = listOf(
                 ImportOperationRequest(
-                    id = UUID.randomUUID(),
+                    id = LUNCH,
                     externalRef = "mok-op:11",
                     occurredAt = OCCURRED_AT,
                     amount = BigDecimal("42.0000"),
@@ -420,7 +468,7 @@ class ImportFacadeIntegrationTest(
             ),
             transfers = listOf(
                 ImportTransferRequest(
-                    id = UUID.randomUUID(),
+                    id = MOVE,
                     externalRef = "mok-transfer:3",
                     occurredAt = OCCURRED_AT,
                     source = ImportTransferLegRequest(accountId = CASH, amount = BigDecimal("30.0000")),
@@ -430,7 +478,7 @@ class ImportFacadeIntegrationTest(
             ),
             balanceAnchors = listOf(
                 ImportBalanceAnchorRequest(
-                    id = UUID.randomUUID(),
+                    id = CLOSING,
                     externalRef = "mok-account:1",
                     accountId = CASH,
                     occurredAt = OCCURRED_AT.plusDays(1),
@@ -456,7 +504,7 @@ class ImportFacadeIntegrationTest(
             ),
             balanceAnchors = listOf(
                 ImportBalanceAnchorRequest(
-                    id = UUID.randomUUID(),
+                    id = ZEROING,
                     externalRef = null,
                     accountId = CARD,
                     occurredAt = OCCURRED_AT,
@@ -482,14 +530,30 @@ class ImportFacadeIntegrationTest(
             ),
             operations = listOf(
                 ImportOperationRequest(
-                    id = UUID.randomUUID(),
+                    id = LUNCH,
                     externalRef = null,
                     occurredAt = OCCURRED_AT,
                     amount = BigDecimal("1.0000"),
                     kind = OperationKind.EXPENSE,
-                    accountId = UUID.randomUUID(),
+                    accountId = NOWHERE,
                     categoryId = null,
                     comment = null,
+                ),
+            ),
+        )
+    )
+
+    /** A version-4 category id — the one thing 2.20 refuses outright. */
+    private fun payloadWithV4Ids() = envelope(
+        ImportPayloadRequest(
+            categories = listOf(
+                ImportCategoryRequest(
+                    id = BAD_CATEGORY,
+                    externalRef = null,
+                    name = "Еда",
+                    kind = CategoryKind.EXPENSE,
+                    parentId = null,
+                    icon = null,
                 ),
             ),
         )
@@ -519,6 +583,18 @@ class ImportFacadeIntegrationTest(
         val CASH: UUID = UUID.fromString("01930000-0000-7000-8000-00000000cca1")
         val CARD: UUID = UUID.fromString("01930000-0000-7000-8000-00000000cca2")
         val FOOD: UUID = UUID.fromString("01930000-0000-7000-8000-0000000000f0")
+
+        // Every payload id must be version 7 (2.20), so none of these can be randomUUID().
+        val LUNCH: UUID = UUID.fromString("01930000-0000-7000-8000-00000000001a")
+        val MOVE: UUID = UUID.fromString("01930000-0000-7000-8000-00000000001b")
+        val CLOSING: UUID = UUID.fromString("01930000-0000-7000-8000-00000000001c")
+        val ZEROING: UUID = UUID.fromString("01930000-0000-7000-8000-00000000001d")
+
+        /** An account id no section defines — the dangling reference 2.21 must catch. */
+        val NOWHERE: UUID = UUID.fromString("01930000-0000-7000-8000-0000000000ff")
+
+        /** Version 4: the nibble after the third dash is what `UUID.version()` reads. */
+        val BAD_CATEGORY: UUID = UUID.fromString("01930000-0000-4000-8000-00000000dead")
         val OPENED_AT: LocalDateTime = LocalDateTime.parse("2023-01-01T09:00:00")
         val OCCURRED_AT: LocalDateTime = LocalDateTime.parse("2025-03-10T12:00:00")
     }
