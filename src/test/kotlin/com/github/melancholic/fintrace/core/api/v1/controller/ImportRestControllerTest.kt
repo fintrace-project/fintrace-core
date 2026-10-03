@@ -73,6 +73,7 @@ class ImportRestControllerTest(
         mvc.perform(importing(V4_ID_PAYLOAD))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.problems.length()").value(1))
+            .andExpect(jsonPath("$.problems[0].code").value("WRONG_UUID_VERSION"))
             .andExpect(jsonPath("$.problems[0].aggregateType").value("ACCOUNT"))
             .andExpect(jsonPath("$.problems[0].affectedIDs[0]").value(V4_ACCOUNT))
             .andExpect(jsonPath("$.problems[0].message").exists())

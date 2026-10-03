@@ -8,6 +8,8 @@ import com.github.melancholic.fintrace.core.api.v1.dto.ImportPayloadRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportTransferLegRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportTransferRequest
 import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
+import com.github.melancholic.fintrace.core.domain.entity.ImportProblem
+import com.github.melancholic.fintrace.core.domain.entity.ImportProblemCode
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.event.EntityType
 import org.junit.jupiter.api.Test
@@ -46,6 +48,7 @@ class ImportValidationServiceTest {
         val problems = validation.validate(WORKSPACE, ImportPayloadRequest(accounts = listOf(account(V4))))
 
         val problem = problems.single()
+        assertEquals(ImportProblemCode.WRONG_UUID_VERSION, problem.code)
         assertEquals(EntityType.ACCOUNT, problem.aggregateType)
         assertEquals(setOf(V4), problem.affectedIDs)
     }
@@ -106,7 +109,139 @@ class ImportValidationServiceTest {
         assertTrue(problem.message.contains("7"), "the message should name the required version: '${problem.message}'")
     }
 
+    // ---------------------------------------------------------------- id uniqueness
+
+    /**
+     * Every section on its own with a distinct v7 id — a uniqueness check that mislabels a section
+     * reports a collision where there is none, and would refuse every real payload.
+     */
+    @Test
+    fun `accepts each section on its own when its ids are distinct`() {
+        val payloads = listOf(
+            ImportPayloadRequest(accounts = listOf(account(CASH), account(CARD))),
+            ImportPayloadRequest(categories = listOf(category(FOOD))),
+            ImportPayloadRequest(operations = listOf(operation(OPERATION))),
+            ImportPayloadRequest(transfers = listOf(transfer(TRANSFER))),
+            ImportPayloadRequest(balanceAnchors = listOf(anchor(ANCHOR))),
+        )
+
+        payloads.forEach { assertEquals(emptyList(), validation.validate(WORKSPACE, it), "for $it") }
+    }
+
+    /**
+     * The case a per-section pass cannot see. Both sections are named, because the importer author
+     * cannot tell from one side alone which of the two entities got the wrong id.
+     */
+    @Test
+    fun `rejects an id shared by two sections, and names both`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(accounts = listOf(account(SHARED)), categories = listOf(category(SHARED)))
+        )
+
+        assertEquals(setOf(EntityType.ACCOUNT, EntityType.CATEGORY), sectionsNaming(problems, SHARED))
+        assertTrue(problems.all { it.code == ImportProblemCode.DUPLICATED_ENTITY_ID_ACROSS_SECTIONS })
+    }
+
+    @Test
+    fun `rejects an id shared by any pair of sections`() {
+        val sections: Map<EntityType, (UUID) -> ImportPayloadRequest> = mapOf(
+            EntityType.ACCOUNT to { id -> ImportPayloadRequest(accounts = listOf(account(id))) },
+            EntityType.CATEGORY to { id -> ImportPayloadRequest(categories = listOf(category(id))) },
+            EntityType.OPERATION to { id -> ImportPayloadRequest(operations = listOf(operation(id))) },
+            EntityType.TRANSFER to { id -> ImportPayloadRequest(transfers = listOf(transfer(id))) },
+            EntityType.BALANCE_ANCHOR to { id -> ImportPayloadRequest(balanceAnchors = listOf(anchor(id))) },
+        )
+
+        sections.keys.forEach { a ->
+            sections.keys.filter { it > a }.forEach { b ->
+                val payload = merge(sections.getValue(a)(SHARED), sections.getValue(b)(SHARED))
+                val problems = validation.validate(WORKSPACE, payload)
+
+                assertEquals(setOf(a, b), sectionsNaming(problems, SHARED), "for $a and $b")
+            }
+        }
+    }
+
+    /**
+     * A repeat inside one section is the same defect: without the pre-pass it surfaces as the
+     * primary key's 409 thousands of commands into the import (2.21).
+     */
+    @Test
+    fun `rejects an id repeated within one section`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(operations = listOf(operation(SHARED), operation(SHARED)))
+        )
+
+        val problem = problems.single()
+        assertEquals(ImportProblemCode.DUPLICATED_ENTITY_ID_WITHIN_SECTION, problem.code)
+        assertEquals(EntityType.OPERATION, problem.aggregateType)
+        assertEquals(setOf(SHARED), problem.affectedIDs)
+    }
+
+    /** The two defects are distinct and an id can have both, so the section reports both. */
+    @Test
+    fun `reports an id repeated within a section and shared with another as two problems`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(
+                operations = listOf(operation(SHARED), operation(SHARED)),
+                balanceAnchors = listOf(anchor(SHARED)),
+            )
+        )
+
+        assertEquals(
+            setOf(ImportProblemCode.DUPLICATED_ENTITY_ID_WITHIN_SECTION, ImportProblemCode.DUPLICATED_ENTITY_ID_ACROSS_SECTIONS),
+            problems.filter { it.aggregateType == EntityType.OPERATION }.map { it.code }.toSet()
+        )
+        assertEquals(
+            listOf(ImportProblemCode.DUPLICATED_ENTITY_ID_ACROSS_SECTIONS),
+            problems.filter { it.aggregateType == EntityType.BALANCE_ANCHOR }.map { it.code }
+        )
+    }
+
+    @Test
+    fun `collects every shared id in a section into one problem`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(
+                accounts = listOf(account(SHARED), account(SHARED_OTHER), account(CASH)),
+                categories = listOf(category(SHARED), category(SHARED_OTHER), category(FOOD)),
+            )
+        )
+
+        val accountProblem = problems.single { it.aggregateType == EntityType.ACCOUNT }
+        assertEquals(setOf(SHARED, SHARED_OTHER), accountProblem.affectedIDs)
+    }
+
+    /** Collect, don't fail fast (2.21): a payload with both defects reports both. */
+    @Test
+    fun `reports a shared id and a bad version together`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(
+                accounts = listOf(account(SHARED), account(V4)),
+                categories = listOf(category(SHARED)),
+            )
+        )
+
+        assertEquals(setOf(EntityType.ACCOUNT, EntityType.CATEGORY), sectionsNaming(problems, SHARED))
+        assertEquals(setOf(EntityType.ACCOUNT), sectionsNaming(problems, V4))
+    }
+
     // ---------------------------------------------------------------- fixtures
+
+    private fun sectionsNaming(problems: List<ImportProblem>, id: UUID): Set<EntityType> =
+        problems.filter { id in it.affectedIDs }.map { it.aggregateType }.toSet()
+
+    private fun merge(a: ImportPayloadRequest, b: ImportPayloadRequest) = ImportPayloadRequest(
+        accounts = a.accounts + b.accounts,
+        categories = a.categories + b.categories,
+        operations = a.operations + b.operations,
+        transfers = a.transfers + b.transfers,
+        balanceAnchors = a.balanceAnchors + b.balanceAnchors,
+    )
 
     private fun fullPayload() = ImportPayloadRequest(
         accounts = listOf(account(CASH)),
@@ -177,6 +312,9 @@ class ImportValidationServiceTest {
         /** Version 4 — the nibble after the third dash is what `UUID.version()` reads. */
         val V4: UUID = UUID.fromString("01930000-0000-4000-8000-00000000dead")
         val V4_OTHER: UUID = UUID.fromString("01930000-0000-4000-8000-00000000beef")
+
+        val SHARED: UUID = UUID.fromString("01930000-0000-7000-8000-0000000005a1")
+        val SHARED_OTHER: UUID = UUID.fromString("01930000-0000-7000-8000-0000000005a2")
 
         val OCCURRED_AT: LocalDateTime = LocalDateTime.parse("2025-03-10T12:00:00")
     }

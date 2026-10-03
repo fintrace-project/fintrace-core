@@ -1,7 +1,5 @@
 package com.github.melancholic.fintrace.core.domain.entity
 
-import com.github.melancholic.fintrace.core.config.UUID_VERSION
-import com.github.melancholic.fintrace.core.domain.event.EntityType
 import java.time.LocalDateTime
 import java.util.*
 
@@ -63,17 +61,3 @@ data class ImporterDetails(
     val name: String,
     val version: String
 )
-
-data class ImportProblem(
-    val message: String,
-    val aggregateType: EntityType,
-    val affectedIDs: Set<UUID>
-) {
-    companion object {
-        fun wrongUUIDVersion(entityType: EntityType, affectedIDs: Set<UUID>) = ImportProblem(
-            message = "Wrong UUID version: should be version $UUID_VERSION",
-            aggregateType = entityType,
-            affectedIDs = affectedIDs
-        )
-    }
-}

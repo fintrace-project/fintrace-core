@@ -11,6 +11,7 @@ import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.entity.ImportJobStatistics
 import com.github.melancholic.fintrace.core.domain.entity.ImportJobStatus
 import com.github.melancholic.fintrace.core.domain.entity.ImporterDetails
+import com.github.melancholic.fintrace.core.domain.entity.ImportProblemCode
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.entity.WorkspaceStatus
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
@@ -292,6 +293,7 @@ class ImportFacadeIntegrationTest(
         val job = importFacade.importWorkspaceData(workspaceId, payloadWithV4Ids())
 
         val problem = job.problems.single()
+        assertEquals(ImportProblemCode.WRONG_UUID_VERSION, problem.code)
         assertEquals(setOf(BAD_CATEGORY), problem.affectedIDs)
         assertNotNull(job.message, "the job says it was a validation failure")
     }

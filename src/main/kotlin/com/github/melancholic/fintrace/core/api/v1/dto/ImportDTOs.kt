@@ -1,6 +1,5 @@
 package com.github.melancholic.fintrace.core.api.v1.dto
 
-import com.github.melancholic.fintrace.core.config.UUID_VERSION
 import com.github.melancholic.fintrace.core.domain.entity.*
 import com.github.melancholic.fintrace.core.domain.event.EntityType
 import com.github.melancholic.fintrace.core.validation.ValidationConstants.ACCOUNT_NAME_PATTERN
@@ -62,7 +61,7 @@ data class ImportAccountRequest(
     val archived: Boolean = false,
     val initialBalance: BigDecimal?,
     val initialBalanceAt: LocalDateTime?
-): ImportIdentifiedEntityRequest
+) : ImportIdentifiedEntityRequest
 
 data class ImportCategoryRequest(
     @NotNull
@@ -78,7 +77,7 @@ data class ImportCategoryRequest(
     val parentId: UUID?,
     @Length(max = MAX_ICON_LENGTH)
     val icon: String?
-): ImportIdentifiedEntityRequest
+) : ImportIdentifiedEntityRequest
 
 data class ImportOperationRequest(
     @NotNull
@@ -97,7 +96,7 @@ data class ImportOperationRequest(
     val categoryId: UUID?,
     @Length(max = 255)
     val comment: String?
-): ImportIdentifiedEntityRequest
+) : ImportIdentifiedEntityRequest
 
 data class ImportTransferRequest(
     @NotNull
@@ -114,7 +113,7 @@ data class ImportTransferRequest(
     val target: ImportTransferLegRequest,
     @Length(max = 255)
     val comment: String?
-): ImportIdentifiedEntityRequest
+) : ImportIdentifiedEntityRequest
 
 data class ImportTransferLegRequest(
     @NotNull
@@ -135,7 +134,7 @@ data class ImportBalanceAnchorRequest(
     val occurredAt: LocalDateTime,
     @NotNull
     val value: BigDecimal
-): ImportIdentifiedEntityRequest
+) : ImportIdentifiedEntityRequest
 
 data class ImportDiagnosticRequest(
     @NotNull
@@ -175,6 +174,7 @@ data class ImportDiagnosticDTO(
 )
 
 data class ImportProblemDTO(
+    val code: ImportProblemCode,
     val message: String,
     val aggregateType: EntityType,
     val affectedIDs: Set<UUID>
