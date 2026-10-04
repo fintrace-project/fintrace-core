@@ -1,10 +1,14 @@
 package com.github.melancholic.fintrace.core.validation
 
+import com.github.melancholic.fintrace.core.api.v1.dto.ImportCategoryRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportIdentifiedEntityRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportPayloadRequest
 import com.github.melancholic.fintrace.core.config.UUID_VERSION
+import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
+import com.github.melancholic.fintrace.core.domain.entity.CategorySystemCode
 import com.github.melancholic.fintrace.core.domain.entity.ImportProblem
 import com.github.melancholic.fintrace.core.domain.event.EntityType
+import com.github.melancholic.fintrace.core.util.CategoriesTreeTraverser.findCycles
 import org.springframework.stereotype.Service
 import java.util.*
 
@@ -13,12 +17,16 @@ interface ImportValidationService {
 }
 
 @Service
-class ImportValidationServiceImpl : ImportValidationService {
+class ImportValidationServiceImpl(
+    private val categoryDAO: CategoryProjectionDAO
+) : ImportValidationService {
     override fun validate(workspaceId: UUID, payload: ImportPayloadRequest): List<ImportProblem> {
         val problems: MutableList<ImportProblem> = mutableListOf()
 
-        validateIDs(payload, problems)
-        validateCategories(payload, problems)
+        val idMap: Map<UUID, List<EntityType>> = buildIdMap(payload)
+
+        validateIDs(payload, idMap, problems)
+        validateCategories(workspaceId, payload, idMap, problems)
         validateAccounts(payload, problems)
         validateOperations(payload, problems)
         validateTransfers(payload, problems)
@@ -29,9 +37,9 @@ class ImportValidationServiceImpl : ImportValidationService {
 
     private fun validateIDs(
         payload: ImportPayloadRequest,
+        idMap: Map<UUID, List<EntityType>>,
         problems: MutableList<ImportProblem>
     ) {
-        val idMap: Map<UUID, List<EntityType>> = buildIdMap(payload)
         validateIdUniqueness(idMap, payload.categories, EntityType.CATEGORY, problems)
         validateIdUniqueness(idMap, payload.accounts, EntityType.ACCOUNT, problems)
         validateIdUniqueness(idMap, payload.operations, EntityType.OPERATION, problems)
@@ -91,22 +99,61 @@ class ImportValidationServiceImpl : ImportValidationService {
         payload.balanceAnchors.asSequence().map { it.id to EntityType.BALANCE_ANCHOR },
     )
         .flatMap { it }
-        .groupBy ({ it.first }, { it.second })
+        .groupBy({ it.first }, { it.second })
 
     private fun validateCategories(
+        workspaceId: UUID,
         request: ImportPayloadRequest,
+        idMap: Map<UUID, List<EntityType>>,
         problems: MutableList<ImportProblem>
     ) {
         val wrongUUIDs: MutableSet<UUID> = mutableSetOf()
+        val unresolvedParentsId: MutableSet<UUID> = mutableSetOf()
+
+        val systemCategories = categoryDAO.getSystemCategories(workspaceId)
+            .asSequence()
+            .associate { (_, v) -> v.id to v.systemCode!! }
+
         request.categories.forEach { entity ->
 
             if (uuidWithWrongVersion(entity.id)) {
                 wrongUUIDs.add(entity.id)
             }
+
+            if (entity.parentId != null) {
+                if (!resolveCategoryParent(entity.parentId, idMap, systemCategories)) {
+                    unresolvedParentsId.add(entity.parentId)
+                }
+            }
         }
 
         if (wrongUUIDs.isNotEmpty()) {
             problems.add(ImportProblem.wrongUUIDVersion(EntityType.CATEGORY, wrongUUIDs))
+        }
+
+        if (unresolvedParentsId.isNotEmpty()) {
+            problems.add(ImportProblem.unresolvedReferences(EntityType.CATEGORY, "parentId", unresolvedParentsId))
+        }
+
+        val cycles = findCycles(
+            request.categories,
+            ImportCategoryRequest::id,
+            ImportCategoryRequest::parentId
+        )
+        cycles.forEach { cycle ->
+            problems.add(ImportProblem.cyclicReferences(EntityType.CATEGORY, cycle))
+        }
+    }
+
+    private fun resolveCategoryParent(
+        parentId: UUID,
+        idMap: Map<UUID, List<EntityType>>,
+        systemCategories: Map<UUID, CategorySystemCode>
+    ): Boolean {
+        return if (idMap.contains(parentId)) {
+            idMap.getValue(parentId).contains(EntityType.CATEGORY)
+        } else {
+            systemCategories.keys.contains(parentId)
         }
     }
 

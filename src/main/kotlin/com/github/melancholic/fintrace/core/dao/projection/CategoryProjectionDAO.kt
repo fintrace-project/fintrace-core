@@ -26,6 +26,7 @@ interface CategoryProjectionDAO : ProjectionDAO<CategoryProjection> {
     fun findSubtreeIds(workspaceId: UUID, categoryId: UUID): List<UUID>
     fun getFallbackCategory(workspaceId: UUID, categoryKind: CategoryKind): CategoryProjection
     fun getBySystemCode(workspaceId: UUID, systemCode: CategorySystemCode): CategoryProjection
+    fun getSystemCategories(workspaceId: UUID): Map<CategorySystemCode, CategoryProjection>
 }
 
 
@@ -123,6 +124,13 @@ class CategoryProjectionDAOImpl(
         .query(CategoryProjection::class.java)
         .single()
 
+    override fun getSystemCategories(workspaceId: UUID): Map<CategorySystemCode, CategoryProjection> = jdbc.sql(SELECT_ALL_SYS)
+        .param("workspaceId", workspaceId)
+        .query(CategoryProjection::class.java)
+        .list()
+        .filterNotNull()
+        .associateBy { it.systemCode!! }
+
     override fun removeAll(workspaceId: UUID) {
         jdbc.sql(DELETE_BY_WORKSPACE).param("workspaceId", workspaceId).update()
     }
@@ -169,6 +177,10 @@ class CategoryProjectionDAOImpl(
 
         const val SELECT_BY_SYS_CODE = SELECT_ALL + """
             AND system_code = :systemCode
+        """
+
+        const val SELECT_ALL_SYS = SELECT_ALL + """
+            AND system_code IS NOT NULL
         """
 
         const val DELETE_BY_WORKSPACE = """

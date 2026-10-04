@@ -7,11 +7,14 @@ import com.github.melancholic.fintrace.core.api.v1.dto.ImportOperationRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportPayloadRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportTransferLegRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportTransferRequest
+import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
 import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
+import com.github.melancholic.fintrace.core.domain.entity.CategorySystemCode
 import com.github.melancholic.fintrace.core.domain.entity.ImportProblem
 import com.github.melancholic.fintrace.core.domain.entity.ImportProblemCode
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.event.EntityType
+import com.github.melancholic.fintrace.core.domain.projection.CategoryProjection
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.LocalDateTime
@@ -29,7 +32,7 @@ import kotlin.test.assertTrue
  */
 class ImportValidationServiceTest {
 
-    private val validation = ImportValidationServiceImpl()
+    private val validation = ImportValidationServiceImpl(FakeSystemCategoriesDAO())
 
     @Test
     fun `accepts a payload whose ids are all version 7`() {
@@ -230,7 +233,212 @@ class ImportValidationServiceTest {
         assertEquals(setOf(EntityType.ACCOUNT), sectionsNaming(problems, V4))
     }
 
+    // ---------------------------------------------------------------- category parent references
+
+    /** The section is flat and Core orders it (2.20), so payload order is not the importer's contract. */
+    @Test
+    fun `accepts a child listed before its parent`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(categories = listOf(category(CHILD, parentId = PARENT), category(PARENT)))
+        )
+
+        assertEquals(emptyList(), problems)
+    }
+
+    @Test
+    fun `accepts a chain listed leaf first`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(
+                categories = listOf(
+                    category(GRANDCHILD, parentId = CHILD),
+                    category(CHILD, parentId = PARENT),
+                    category(PARENT),
+                )
+            )
+        )
+
+        assertEquals(emptyList(), problems)
+    }
+
+    /** The one parent that lives outside the payload: seeded with the workspace (§5.1). */
+    @Test
+    fun `accepts a seeded system category as a parent`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(categories = listOf(category(CHILD, parentId = EXPENSE_ROOT)))
+        )
+
+        assertEquals(emptyList(), problems)
+    }
+
+    /** The missing id is reported, not the referring ones — one absent parent may be named by many children. */
+    @Test
+    fun `rejects a parent no section defines, and names the missing id`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(categories = listOf(category(CHILD, parentId = NOWHERE)))
+        )
+
+        val problem = problems.single()
+        assertEquals(ImportProblemCode.UNRESOLVED_REFERENCE, problem.code)
+        assertEquals(EntityType.CATEGORY, problem.aggregateType)
+        assertEquals(setOf(NOWHERE), problem.affectedIDs)
+    }
+
+    /** An id that exists in the payload but in the wrong section — the wrong-variable bug in a port. */
+    @Test
+    fun `rejects a parent that is another section's id`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(accounts = listOf(account(CASH)), categories = listOf(category(CHILD, parentId = CASH)))
+        )
+
+        val problem = problems.single()
+        assertEquals(ImportProblemCode.UNRESOLVED_REFERENCE, problem.code)
+        assertEquals(setOf(CASH), problem.affectedIDs)
+    }
+
+    @Test
+    fun `rejects a system category of another workspace`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(categories = listOf(category(CHILD, parentId = FOREIGN_ROOT)))
+        )
+
+        assertEquals(ImportProblemCode.UNRESOLVED_REFERENCE, problems.single().code)
+    }
+
+    @Test
+    fun `collects every missing parent into one problem`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(
+                categories = listOf(category(CHILD, parentId = NOWHERE), category(GRANDCHILD, parentId = NOWHERE_OTHER))
+            )
+        )
+
+        assertEquals(setOf(NOWHERE, NOWHERE_OTHER), problems.single().affectedIDs)
+    }
+
+    @Test
+    fun `names a missing parent once, however many categories refer to it`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(
+                categories = listOf(category(CHILD, parentId = NOWHERE), category(GRANDCHILD, parentId = NOWHERE))
+            )
+        )
+
+        assertEquals(setOf(NOWHERE), problems.single().affectedIDs)
+    }
+
+    // ---------------------------------------------------------------- category parent cycles
+
+    @Test
+    fun `rejects a category that is its own parent`() {
+        val problems = validation.validate(WORKSPACE, ImportPayloadRequest(categories = listOf(category(A, parentId = A))))
+
+        val problem = problems.single()
+        assertEquals(ImportProblemCode.CYCLIC_REFERENCES, problem.code)
+        assertEquals(EntityType.CATEGORY, problem.aggregateType)
+        assertEquals(setOf(A), problem.affectedIDs)
+    }
+
+    /** One cycle is one problem, however many of its members a walk could start from. */
+    @Test
+    fun `reports a two-node cycle once`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(categories = listOf(category(A, parentId = B), category(B, parentId = A)))
+        )
+
+        assertEquals(setOf(A, B), problems.single().affectedIDs)
+    }
+
+    /** D cannot be dispatched, but it is not defective — naming it would hide where the cycle is. */
+    @Test
+    fun `reports only the members of a cycle, not a category hanging off it`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(
+                categories = listOf(category(D, parentId = A), category(A, parentId = B), category(B, parentId = A))
+            )
+        )
+
+        assertEquals(setOf(A, B), problems.single().affectedIDs)
+    }
+
+    @Test
+    fun `reports two separate cycles as two problems`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(
+                categories = listOf(
+                    category(A, parentId = B), category(B, parentId = A),
+                    category(C, parentId = E), category(E, parentId = C),
+                )
+            )
+        )
+
+        assertEquals(2, problems.size)
+        assertEquals(setOf(setOf(A, B), setOf(C, E)), problems.map { it.affectedIDs }.toSet())
+        assertTrue(problems.all { it.code == ImportProblemCode.CYCLIC_REFERENCES })
+    }
+
     // ---------------------------------------------------------------- fixtures
+
+    /** Serves the four seeded categories of [WORKSPACE] and one root of another workspace. */
+    private class FakeSystemCategoriesDAO : CategoryProjectionDAO {
+        private val seeded: Map<UUID, Map<CategorySystemCode, UUID>> = mapOf(
+            WORKSPACE to mapOf(
+                CategorySystemCode.INCOME_ROOT to INCOME_ROOT,
+                CategorySystemCode.INCOME_OTHERS to INCOME_OTHERS,
+                CategorySystemCode.EXPENSE_ROOT to EXPENSE_ROOT,
+                CategorySystemCode.EXPENSE_OTHERS to EXPENSE_OTHERS,
+            ),
+            OTHER_WORKSPACE to mapOf(CategorySystemCode.EXPENSE_ROOT to FOREIGN_ROOT),
+        )
+
+        override fun getSystemCategories(workspaceId: UUID): Map<CategorySystemCode, CategoryProjection> =
+            seeded[workspaceId].orEmpty().mapValues { (code, id) -> systemCategory(workspaceId, id, code) }
+
+        private fun systemCategory(workspaceId: UUID, id: UUID, code: CategorySystemCode) = CategoryProjection(
+            id = id,
+            workspaceId = workspaceId,
+            parentId = null,
+            name = code.name,
+            kind = if (code.name.startsWith("INCOME")) CategoryKind.INCOME else CategoryKind.EXPENSE,
+            archived = false,
+            systemCode = code,
+            icon = null,
+            externalRef = null,
+            recordedAt = OCCURRED_AT,
+        )
+
+        override fun getById(workspaceId: UUID, categoryId: UUID): CategoryProjection = unsupported()
+        override fun create(projection: CategoryProjection): UUID = unsupported()
+        override fun update(row: CategoryProjection): CategoryProjection = unsupported()
+        override fun getByIdAsOptional(workspaceId: UUID, categoryId: UUID): Optional<CategoryProjection> =
+            unsupported()
+
+        override fun getAllCategories(workspaceId: UUID, includeArchived: Boolean): List<CategoryProjection> =
+            unsupported()
+
+        override fun findSubtreeIds(workspaceId: UUID, categoryId: UUID): List<UUID> = unsupported()
+        override fun getFallbackCategory(workspaceId: UUID, categoryKind: CategoryKind): CategoryProjection =
+            unsupported()
+
+        override fun getBySystemCode(workspaceId: UUID, systemCode: CategorySystemCode): CategoryProjection =
+            unsupported()
+
+        override fun removeAll(workspaceId: UUID): Unit = unsupported()
+        override fun remove(workspaceId: UUID, categoryId: UUID): Unit = unsupported()
+        override fun remove(workspaceId: UUID, ids: Set<UUID>): Unit = unsupported()
+
+        private fun unsupported(): Nothing = throw UnsupportedOperationException("the pre-pass reads system categories only")
+    }
 
     private fun sectionsNaming(problems: List<ImportProblem>, id: UUID): Set<EntityType> =
         problems.filter { id in it.affectedIDs }.map { it.aggregateType }.toSet()
@@ -262,12 +470,12 @@ class ImportValidationServiceTest {
         initialBalanceAt = null,
     )
 
-    private fun category(id: UUID) = ImportCategoryRequest(
+    private fun category(id: UUID, parentId: UUID? = null) = ImportCategoryRequest(
         id = id,
         externalRef = null,
         name = "Food",
         kind = CategoryKind.EXPENSE,
-        parentId = null,
+        parentId = parentId,
         icon = null,
     )
 
@@ -315,6 +523,26 @@ class ImportValidationServiceTest {
 
         val SHARED: UUID = UUID.fromString("01930000-0000-7000-8000-0000000005a1")
         val SHARED_OTHER: UUID = UUID.fromString("01930000-0000-7000-8000-0000000005a2")
+
+        val OTHER_WORKSPACE: UUID = UUID.fromString("01930000-0000-7000-8000-000000000952")
+        val INCOME_ROOT: UUID = UUID.fromString("01930000-0000-7000-8000-000000005e01")
+        val INCOME_OTHERS: UUID = UUID.fromString("01930000-0000-7000-8000-000000005e02")
+        val EXPENSE_ROOT: UUID = UUID.fromString("01930000-0000-7000-8000-000000005e03")
+        val EXPENSE_OTHERS: UUID = UUID.fromString("01930000-0000-7000-8000-000000005e04")
+        val FOREIGN_ROOT: UUID = UUID.fromString("01930000-0000-7000-8000-000000005e05")
+
+        val PARENT: UUID = UUID.fromString("01930000-0000-7000-8000-00000000ca01")
+        val CHILD: UUID = UUID.fromString("01930000-0000-7000-8000-00000000ca02")
+        val GRANDCHILD: UUID = UUID.fromString("01930000-0000-7000-8000-00000000ca03")
+        val NOWHERE: UUID = UUID.fromString("01930000-0000-7000-8000-0000000000ff")
+        val NOWHERE_OTHER: UUID = UUID.fromString("01930000-0000-7000-8000-0000000000fe")
+
+        // Cycle members
+        val A: UUID = UUID.fromString("01930000-0000-7000-8000-00000000c0a1")
+        val B: UUID = UUID.fromString("01930000-0000-7000-8000-00000000c0a2")
+        val C: UUID = UUID.fromString("01930000-0000-7000-8000-00000000c0a3")
+        val D: UUID = UUID.fromString("01930000-0000-7000-8000-00000000c0a4")
+        val E: UUID = UUID.fromString("01930000-0000-7000-8000-00000000c0a5")
 
         val OCCURRED_AT: LocalDateTime = LocalDateTime.parse("2025-03-10T12:00:00")
     }

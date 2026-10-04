@@ -150,6 +150,9 @@ class OperationValidationServiceTest {
         override fun getBySystemCode(workspaceId: UUID, systemCode: CategorySystemCode): CategoryProjection =
             unsupported()
 
+        override fun getSystemCategories(workspaceId: UUID): Map<CategorySystemCode, CategoryProjection> =
+            unsupported()
+
         override fun removeAll(workspaceId: UUID): Unit = unsupported()
         override fun remove(workspaceId: UUID, categoryId: UUID): Unit = unsupported()
         override fun remove(workspaceId: UUID, ids: Set<UUID>): Unit = unsupported()

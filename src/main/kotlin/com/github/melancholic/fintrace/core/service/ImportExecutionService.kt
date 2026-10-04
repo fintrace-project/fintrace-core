@@ -1,11 +1,13 @@
 package com.github.melancholic.fintrace.core.service
 
+import com.github.melancholic.fintrace.core.api.v1.dto.ImportCategoryRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportEnvelopRequest
 import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
 import com.github.melancholic.fintrace.core.domain.command.*
 import com.github.melancholic.fintrace.core.domain.entity.*
 import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.service.command.CommandDispatcher
+import com.github.melancholic.fintrace.core.util.CategoriesTreeTraverser
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
@@ -70,21 +72,27 @@ class ImportExecutionServiceImpl(
             CategoryKind.INCOME to categoryProjectionDAO.getBySystemCode(workspaceId, CategorySystemCode.INCOME_ROOT).id,
             CategoryKind.EXPENSE to categoryProjectionDAO.getBySystemCode(workspaceId, CategorySystemCode.EXPENSE_ROOT).id
         )
-        val imported = request.payload.categories.asSequence()
-            .map {
-                CreateCategoryCommand.custom(
-                    id = it.id,
-                    externalRef = it.externalRef,
-                    workspaceId = workspaceId,
-                    parentId = it.parentId ?: roots[it.kind]
-                    ?: throw ApplicationException("Couldn't perform category import: parent category couldn't be resolved"),
-                    name = it.name,
-                    kind = it.kind,
-                    icon = it.icon
-                )
-            }
-            .map { dispatch(it, userId, request) }
-            .count()
+
+        val imported = CategoriesTreeTraverser.parentsFirstOrdering(
+            request.payload.categories,
+            ImportCategoryRequest::id,
+            ImportCategoryRequest::parentId
+        ).asSequence()
+        .map {
+            CreateCategoryCommand.custom(
+                id = it.id,
+                externalRef = it.externalRef,
+                workspaceId = workspaceId,
+                parentId = it.parentId ?: roots[it.kind]
+                ?: throw ApplicationException("Couldn't perform category import: parent category couldn't be resolved"),
+                name = it.name,
+                kind = it.kind,
+                icon = it.icon
+            )
+        }
+        .map { dispatch(it, userId, request) }
+        .count()
+
         logger.info { "[importId=$jobId] Imported $imported categories into workspace" }
         return imported
     }

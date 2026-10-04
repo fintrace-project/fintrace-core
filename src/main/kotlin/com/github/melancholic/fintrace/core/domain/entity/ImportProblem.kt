@@ -2,7 +2,7 @@ package com.github.melancholic.fintrace.core.domain.entity
 
 import com.github.melancholic.fintrace.core.config.UUID_VERSION
 import com.github.melancholic.fintrace.core.domain.event.EntityType
-import java.util.UUID
+import java.util.*
 
 data class ImportProblem(
     val code: ImportProblemCode,
@@ -31,6 +31,20 @@ data class ImportProblem(
             aggregateType = entityType,
             affectedIDs = affectedIDs
         )
+
+        fun unresolvedReferences(entityType: EntityType, field: String, affectedIDs: Set<UUID>) = ImportProblem(
+            code = ImportProblemCode.UNRESOLVED_REFERENCE,
+            message = "$entityType '$field' values resolve to nothing: each must name an entity of the referenced kind in the payload or the workspace.",
+            aggregateType = entityType,
+            affectedIDs = affectedIDs
+        )
+
+        fun cyclicReferences(entityType: EntityType, affectedIDs: Set<UUID>) = ImportProblem(
+            code = ImportProblemCode.CYCLIC_REFERENCES,
+            message = "$entityType contains cyclic references '${affectedIDs.joinToString("->")}'.",
+            aggregateType = entityType,
+            affectedIDs = affectedIDs
+        )
     }
 }
 
@@ -38,4 +52,6 @@ enum class ImportProblemCode {
     WRONG_UUID_VERSION,
     DUPLICATED_ENTITY_ID_WITHIN_SECTION,
     DUPLICATED_ENTITY_ID_ACROSS_SECTIONS,
+    UNRESOLVED_REFERENCE,
+    CYCLIC_REFERENCES
 }

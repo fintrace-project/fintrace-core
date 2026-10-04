@@ -314,6 +314,42 @@ class ImportFacadeIntegrationTest(
         assertTrue(reread.contains(BAD_CATEGORY.toString()), "the stored jsonb names the offending id: was '$reread'")
     }
 
+    /** B5: the categories section is flat, so ordering it is Core's job, not the importer's. */
+    @Test
+    fun `imports categories listed child before parent`() {
+        val job = importFacade.importWorkspaceData(workspaceId, payloadWithChildBeforeParent())
+
+        assertEquals(ImportJobStatus.SUCCEEDED, job.status)
+        assertEquals(6, count("t_categories"), "the four seeded categories plus both imported ones")
+        assertEquals(FOOD, parentOf(CAFE))
+        assertEquals(systemCategoryId("EXPENSE_ROOT"), parentOf(FOOD))
+    }
+
+    /** B5: the cyclic commands are never dispatched, so only the pre-pass can see the defect. */
+    @Test
+    fun `refuses a parent cycle in the pre-pass, and dispatches nothing`() {
+        val events = count("t_events")
+
+        val job = importFacade.importWorkspaceData(workspaceId, payloadWithParentCycle())
+
+        assertEquals(ImportJobStatus.FAILED, job.status)
+        assertEquals(ImportProblemCode.CYCLIC_REFERENCES, job.problems.single().code)
+        assertEquals(setOf(FOOD, CAFE), job.problems.single().affectedIDs)
+        assertEquals(events, count("t_events"), "nothing was dispatched")
+        assertEquals("NEW", status())
+    }
+
+    @Test
+    fun `refuses a dangling parent in the pre-pass, naming the missing id`() {
+        val job = importFacade.importWorkspaceData(workspaceId, payloadWithDanglingParent())
+
+        assertEquals(ImportJobStatus.FAILED, job.status)
+        val problem = job.problems.single()
+        assertEquals(ImportProblemCode.UNRESOLVED_REFERENCE, problem.code)
+        assertEquals(setOf(NOWHERE), problem.affectedIDs)
+        assertEquals(4, count("t_categories"))
+    }
+
     @Test
     fun `a corrected payload imports after a rejection`() {
         assertEquals(ImportJobStatus.FAILED, importFacade.importWorkspaceData(workspaceId, payloadWithV4Ids()).status)
@@ -561,6 +597,42 @@ class ImportFacadeIntegrationTest(
         )
     )
 
+    /** A two-level tree under the seeded expense root, listed leaf first. */
+    private fun payloadWithChildBeforeParent() = envelope(
+        ImportPayloadRequest(categories = listOf(category(CAFE, parentId = FOOD), category(FOOD, parentId = null)))
+    )
+
+    private fun payloadWithParentCycle() = envelope(
+        ImportPayloadRequest(categories = listOf(category(CAFE, parentId = FOOD), category(FOOD, parentId = CAFE)))
+    )
+
+    private fun payloadWithDanglingParent() = envelope(
+        ImportPayloadRequest(categories = listOf(category(CAFE, parentId = NOWHERE)))
+    )
+
+    private fun category(id: UUID, parentId: UUID?) = ImportCategoryRequest(
+        id = id,
+        externalRef = null,
+        // Category names are capped at 30 characters, so the id's tail rather than the whole id
+        name = "category ${id.toString().takeLast(4)}",
+        kind = CategoryKind.EXPENSE,
+        parentId = parentId,
+        icon = null,
+    )
+
+    private fun parentOf(categoryId: UUID): UUID? =
+        jdbc.sql("SELECT parent_id FROM t_categories WHERE id = :id")
+            .param("id", categoryId)
+            .query(UUID::class.java)
+            .single()
+
+    private fun systemCategoryId(code: String): UUID =
+        jdbc.sql("SELECT id FROM t_categories WHERE workspace_id = :ws AND system_code = :code")
+            .param("ws", workspaceId)
+            .param("code", code)
+            .query(UUID::class.java)
+            .single()
+
     private fun envelope(payload: ImportPayloadRequest) =
         ImportEnvelopRequest(importerName = IMPORTER_NAME, importerVersion = IMPORTER_VERSION, payload = payload)
 
@@ -585,6 +657,7 @@ class ImportFacadeIntegrationTest(
         val CASH: UUID = UUID.fromString("01930000-0000-7000-8000-00000000cca1")
         val CARD: UUID = UUID.fromString("01930000-0000-7000-8000-00000000cca2")
         val FOOD: UUID = UUID.fromString("01930000-0000-7000-8000-0000000000f0")
+        val CAFE: UUID = UUID.fromString("01930000-0000-7000-8000-0000000000f1")
 
         // Every payload id must be version 7 (2.20), so none of these can be randomUUID().
         val LUNCH: UUID = UUID.fromString("01930000-0000-7000-8000-00000000001a")
