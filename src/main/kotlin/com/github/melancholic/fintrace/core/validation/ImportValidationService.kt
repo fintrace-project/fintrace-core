@@ -20,6 +20,8 @@ interface ImportValidationService {
 class ImportValidationServiceImpl(
     private val categoryDAO: CategoryProjectionDAO
 ) : ImportValidationService {
+
+    // Collects rather than throws, unlike every other validator: one report beats a fix-and-retry per broken record
     override fun validate(workspaceId: UUID, payload: ImportPayloadRequest): List<ImportProblem> {
         val problems: MutableList<ImportProblem> = mutableListOf()
 
