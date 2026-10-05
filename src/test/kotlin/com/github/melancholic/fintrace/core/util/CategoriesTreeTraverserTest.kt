@@ -3,6 +3,7 @@ package com.github.melancholic.fintrace.core.util
 import org.junit.jupiter.api.Test
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 /**
  * The one walk behind both the pre-pass's cycle check and the import's dispatch order (2.20).
@@ -97,6 +98,30 @@ class CategoriesTreeTraverserTest {
             listOf(setOf(A, B), setOf(C, D)),
             cycles(Node(A, parentId = B), Node(B, parentId = A), Node(C, parentId = D), Node(D, parentId = C)),
         )
+    }
+
+    // ---------------------------------------------------------------- ordering a cyclic list
+
+    /**
+     * The validator refuses a cyclic payload before the executor asks for an order, so reaching this
+     * is a defect in Core — and an order missing a parent would fail far from its cause.
+     */
+    @Test
+    fun `refuses to order a list containing a cycle`() {
+        assertFailsWith<IllegalStateException> { order(Node(A, parentId = B), Node(B, parentId = A)) }
+    }
+
+    @Test
+    fun `refuses to order a list whose only cycle is an item that is its own parent`() {
+        assertFailsWith<IllegalStateException> { order(Node(C), Node(A, parentId = A)) }
+    }
+
+    /** An item hanging off a cycle is not in it, but the list as a whole still cannot be ordered. */
+    @Test
+    fun `refuses to order a list with an item hanging off a cycle`() {
+        assertFailsWith<IllegalStateException> {
+            order(Node(D, parentId = A), Node(A, parentId = B), Node(B, parentId = A))
+        }
     }
 
     private companion object {

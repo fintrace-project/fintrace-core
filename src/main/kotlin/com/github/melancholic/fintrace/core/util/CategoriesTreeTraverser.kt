@@ -45,7 +45,11 @@ object CategoriesTreeTraverser {
         items: List<T>,
         id: (T) -> UUID,
         parentId: (T) -> UUID?
-    ): List<T> = traverse(items, id, parentId).ordered
+    ): List<T> {
+        val res = traverse(items, id, parentId)
+        check(res.cycles.isEmpty()) { "Categories tree can't be ordered: cycles among ${res.cycles}" }
+        return res.ordered
+    }
 
     private data class ParentOrdering<T>(val ordered: List<T>, val cycles: List<Set<UUID>>)
 }
