@@ -4,6 +4,7 @@ import com.github.melancholic.fintrace.core.TestWorkspaces
 import com.github.melancholic.fintrace.core.TestcontainersConfiguration
 import com.github.melancholic.fintrace.core.api.v1.dto.*
 import com.github.melancholic.fintrace.core.config.WorkspaceImportConstants.IMPORT_LEASE_TIME
+import com.github.melancholic.fintrace.core.dao.ImportJobDAO
 import com.github.melancholic.fintrace.core.dao.UsersDAO
 import com.github.melancholic.fintrace.core.dao.projection.AccountProjectionDAO
 import com.github.melancholic.fintrace.core.domain.command.CreateAccountCommand
@@ -54,6 +55,7 @@ class ImportFacadeIntegrationTest(
     @Autowired private val importLifecycleService: ImportLifecycleService,
     @Autowired private val usersDAO: UsersDAO,
     @Autowired private val accountDAO: AccountProjectionDAO,
+    @Autowired private val importJobDAO: ImportJobDAO,
     @Autowired private val transactions: TransactionTemplate,
 ) {
 
@@ -312,6 +314,35 @@ class ImportFacadeIntegrationTest(
             .single()
 
         assertTrue(reread.contains(BAD_CATEGORY.toString()), "the stored jsonb names the offending id: was '$reread'")
+    }
+
+    /** `field` and `affectedCount` survive `import_problems`, not just the in-memory return. */
+    @Test
+    fun `reads a problem's field and count back from the job row`() {
+        val job = importFacade.importWorkspaceData(workspaceId, payloadWithDanglingParent())
+
+        val problem = importJobDAO.getById(workspaceId, job.id).problems.single()
+
+        assertEquals("parentId", problem.field)
+        assertEquals(1, problem.affectedCount)
+    }
+
+    /** A row written before `field` and `affectedCount` existed must still deserialise — the pre-code rows lesson. */
+    @Test
+    fun `reads back a problem recorded before field and count existed`() {
+        val job = importFacade.importWorkspaceData(workspaceId, payloadWithV4Ids())
+        jdbc.sql("UPDATE t_import_jobs SET import_problems = CAST(:problems AS jsonb) WHERE id = :id")
+            .param("id", job.id)
+            .param(
+                "problems",
+                """[{"code":"WRONG_UUID_VERSION","message":"m","aggregateType":"CATEGORY","affectedIDs":["$BAD_CATEGORY"]}]"""
+            )
+            .update()
+
+        val problem = importJobDAO.getById(workspaceId, job.id).problems.single()
+
+        assertEquals(null, problem.field)
+        assertEquals(1, problem.affectedCount, "the count defaults to the ids listed")
     }
 
     /** B5: the categories section is flat, so ordering it is Core's job, not the importer's. */

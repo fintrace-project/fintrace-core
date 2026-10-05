@@ -7,6 +7,7 @@ import com.github.melancholic.fintrace.core.api.v1.dto.ImportOperationRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportPayloadRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportTransferLegRequest
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportTransferRequest
+import com.github.melancholic.fintrace.core.config.WorkspaceImportConstants.IMPORT_PROBLEM_ID_LIMIT
 import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
 import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.entity.CategorySystemCode
@@ -513,6 +514,49 @@ class ImportValidationServiceTest {
         assertEquals(setOf(FOOD), problems.single().affectedIDs)
     }
 
+    // ---------------------------------------------------------------- the report's shape (2.21)
+
+    /** A field is named only where one field is at fault; an id problem is about the entity itself. */
+    @Test
+    fun `names no field on a problem about an entity's own id`() {
+        val problem = validation.validate(WORKSPACE, ImportPayloadRequest(accounts = listOf(account(V4)))).single()
+
+        assertEquals(null, problem.field)
+    }
+
+    @Test
+    fun `names the field on a reference problem`() {
+        val problem = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(categories = listOf(category(CHILD, parentId = NOWHERE)))
+        ).single()
+
+        assertEquals("parentId", problem.field)
+    }
+
+    /** One systematic importer bug touches every record; the report lists enough to find it, and counts the rest. */
+    @Test
+    fun `caps the ids a problem lists, and keeps the full count`() {
+        val missing = (1..IMPORT_PROBLEM_ID_LIMIT + 50).map { v7(it) }
+        val operations = missing.mapIndexed { i, accountId -> operation(v7(10_000 + i), accountId = accountId) }
+
+        val problem = validation.validate(WORKSPACE, withReferences(operations = operations)).single()
+
+        assertEquals(IMPORT_PROBLEM_ID_LIMIT, problem.affectedIDs.size)
+        assertEquals(IMPORT_PROBLEM_ID_LIMIT + 50, problem.affectedCount)
+        assertEquals(missing.take(IMPORT_PROBLEM_ID_LIMIT).toSet(), problem.affectedIDs, "the first ids, in payload order")
+    }
+
+    @Test
+    fun `counts every id on a problem under the cap`() {
+        val problem = validation.validate(
+            WORKSPACE,
+            ImportPayloadRequest(accounts = listOf(account(V4), account(V4_OTHER)))
+        ).single()
+
+        assertEquals(2, problem.affectedCount)
+    }
+
     // ---------------------------------------------------------------- category parent cycles
 
     @Test
@@ -619,6 +663,9 @@ class ImportValidationServiceTest {
         private fun unsupported(): Nothing = throw UnsupportedOperationException("the pre-pass reads system categories only")
     }
 
+    /** A distinct version 7 id per [n] — the version nibble is what the validator reads. */
+    private fun v7(n: Int): UUID = UUID.fromString("01930000-0000-7000-8000-%012x".format(0xABC000000L + n))
+
     /** The id rules' problems only — the tests that build one section on its own leave references dangling. */
     private fun idProblems(problems: List<ImportProblem>): List<ImportProblem> =
         problems.filter { it.code in ID_PROBLEM_CODES }
@@ -636,12 +683,11 @@ class ImportValidationServiceTest {
         balanceAnchors = anchors,
     )
 
-    // The field is carried in the message only; the quotes keep "accountId" from matching "source.accountId".
     private fun assertNamesField(problem: ImportProblem, field: String) =
-        assertTrue(problem.message.contains("'$field'"), "the problem should name '$field': '${problem.message}'")
+        assertEquals(field, problem.field, "the problem should name '$field'")
 
     private fun problemNaming(problems: List<ImportProblem>, field: String): ImportProblem =
-        problems.single { it.message.contains("'$field'") }
+        problems.single { it.field == field }
 
     private fun sectionsNaming(problems: List<ImportProblem>, id: UUID): Set<EntityType> =
         problems.filter { id in it.affectedIDs }.map { it.aggregateType }.toSet()

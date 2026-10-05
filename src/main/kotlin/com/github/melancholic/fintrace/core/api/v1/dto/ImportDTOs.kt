@@ -177,5 +177,7 @@ data class ImportProblemDTO(
     val code: ImportProblemCode,
     val message: String,
     val aggregateType: EntityType,
-    val affectedIDs: Set<UUID>
+    val affectedIDs: Set<UUID>,
+    val field: String?,
+    val affectedCount: Int,
 )

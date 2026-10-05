@@ -39,7 +39,15 @@ class ImportFacadeImpl(
         try {
             val problems = importValidationService.validate(workspaceId, importRequest.payload)
             if (problems.isNotEmpty()) {
-                logger.error { "Import '$jobId' failed with ${problems.size} validation errors." }
+                // A refused payload is the importer's error, not ours; the detail is logged because Boot's error body hides it
+                logger.warn { "Import '$jobId' refused with ${problems.size} problem(s) in the payload" }
+                problems.forEach { problem ->
+                    logger.warn {
+                        "Import '$jobId': ${problem.code} in ${problem.aggregateType}" +
+                            (problem.field?.let { " '$it'" } ?: "") +
+                            ", ${problem.affectedCount} id(s): ${problem.affectedIDs}"
+                    }
+                }
                 return importLifecycleService.fail(
                     userId = currentUser,
                     workspaceId = workspace.id,

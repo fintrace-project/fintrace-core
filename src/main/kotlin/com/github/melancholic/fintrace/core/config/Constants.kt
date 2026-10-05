@@ -41,4 +41,5 @@ object TimeoutConstants {
 
 object WorkspaceImportConstants {
     const val IMPORT_LEASE_TIME = IMPORT_TIMEOUT_SECONDS + 60L // + 1min
+    const val IMPORT_PROBLEM_ID_LIMIT = 100
 }
