@@ -85,7 +85,7 @@ class ImportValidationServiceTest {
         )
 
         expected.forEach { (entityType, payload) ->
-            val problem = validation.validate(WORKSPACE, payload).single()
+            val problem = idProblems(validation.validate(WORKSPACE, payload)).single()
             assertEquals(entityType, problem.aggregateType, "the problem should name $entityType")
             assertEquals(setOf(V4), problem.affectedIDs)
         }
@@ -116,7 +116,8 @@ class ImportValidationServiceTest {
 
     /**
      * Every section on its own with a distinct v7 id — a uniqueness check that mislabels a section
-     * reports a collision where there is none, and would refuse every real payload.
+     * reports a collision where there is none, and would refuse every real payload. A section on its
+     * own leaves its references dangling, so only the id problems are asserted on.
      */
     @Test
     fun `accepts each section on its own when its ids are distinct`() {
@@ -128,7 +129,7 @@ class ImportValidationServiceTest {
             ImportPayloadRequest(balanceAnchors = listOf(anchor(ANCHOR))),
         )
 
-        payloads.forEach { assertEquals(emptyList(), validation.validate(WORKSPACE, it), "for $it") }
+        payloads.forEach { assertEquals(emptyList(), idProblems(validation.validate(WORKSPACE, it)), "for $it") }
     }
 
     /**
@@ -177,7 +178,7 @@ class ImportValidationServiceTest {
             ImportPayloadRequest(operations = listOf(operation(SHARED), operation(SHARED)))
         )
 
-        val problem = problems.single()
+        val problem = idProblems(problems).single()
         assertEquals(ImportProblemCode.DUPLICATED_ENTITY_ID_WITHIN_SECTION, problem.code)
         assertEquals(EntityType.OPERATION, problem.aggregateType)
         assertEquals(setOf(SHARED), problem.affectedIDs)
@@ -196,11 +197,11 @@ class ImportValidationServiceTest {
 
         assertEquals(
             setOf(ImportProblemCode.DUPLICATED_ENTITY_ID_WITHIN_SECTION, ImportProblemCode.DUPLICATED_ENTITY_ID_ACROSS_SECTIONS),
-            problems.filter { it.aggregateType == EntityType.OPERATION }.map { it.code }.toSet()
+            idProblems(problems).filter { it.aggregateType == EntityType.OPERATION }.map { it.code }.toSet()
         )
         assertEquals(
             listOf(ImportProblemCode.DUPLICATED_ENTITY_ID_ACROSS_SECTIONS),
-            problems.filter { it.aggregateType == EntityType.BALANCE_ANCHOR }.map { it.code }
+            idProblems(problems).filter { it.aggregateType == EntityType.BALANCE_ANCHOR }.map { it.code }
         )
     }
 
@@ -334,6 +335,184 @@ class ImportValidationServiceTest {
         assertEquals(setOf(NOWHERE), problems.single().affectedIDs)
     }
 
+    // ---------------------------------------------------------------- operation references (2.21b)
+
+    @Test
+    fun `accepts an operation whose account and category are in the payload`() {
+        val problems = validation.validate(WORKSPACE, withReferences(operations = listOf(operation(OPERATION))))
+
+        assertEquals(emptyList(), problems)
+    }
+
+    /** Null stays legal: the command resolves it to that branch's `Others`. */
+    @Test
+    fun `accepts an operation without a category`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(operations = listOf(operation(OPERATION, categoryId = null)))
+        )
+
+        assertEquals(emptyList(), problems)
+    }
+
+    @Test
+    fun `accepts an operation in a seeded system category`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(operations = listOf(operation(OPERATION, categoryId = EXPENSE_OTHERS)))
+        )
+
+        assertEquals(emptyList(), problems)
+    }
+
+    @Test
+    fun `rejects an operation whose account no section defines`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(operations = listOf(operation(OPERATION, accountId = NOWHERE)))
+        )
+
+        val problem = problems.single()
+        assertEquals(ImportProblemCode.UNRESOLVED_REFERENCE, problem.code)
+        assertEquals(EntityType.OPERATION, problem.aggregateType)
+        assertEquals(setOf(NOWHERE), problem.affectedIDs)
+        assertNamesField(problem, "accountId")
+    }
+
+    @Test
+    fun `rejects an operation whose category no section defines`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(operations = listOf(operation(OPERATION, categoryId = NOWHERE)))
+        )
+
+        val problem = problems.single()
+        assertEquals(setOf(NOWHERE), problem.affectedIDs)
+        assertNamesField(problem, "categoryId")
+    }
+
+    /** Each id must be in the section its field refers to — an account is not a category, and back. */
+    @Test
+    fun `rejects references into the wrong section`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(operations = listOf(operation(OPERATION, accountId = FOOD, categoryId = CASH)))
+        )
+
+        assertEquals(setOf(FOOD), problemNaming(problems, "accountId").affectedIDs)
+        assertEquals(setOf(CASH), problemNaming(problems, "categoryId").affectedIDs)
+    }
+
+    @Test
+    fun `rejects a system category of another workspace as an operation's category`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(operations = listOf(operation(OPERATION, categoryId = FOREIGN_ROOT)))
+        )
+
+        assertEquals(setOf(FOREIGN_ROOT), problems.single().affectedIDs)
+    }
+
+    /** The same missing id named by many operations is reported once. */
+    @Test
+    fun `names a missing account once, however many operations refer to it`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(
+                operations = listOf(operation(OPERATION, accountId = NOWHERE), operation(OPERATION_OTHER, accountId = NOWHERE))
+            )
+        )
+
+        assertEquals(setOf(NOWHERE), problems.single().affectedIDs)
+    }
+
+    // ---------------------------------------------------------------- transfer references (2.21c)
+
+    @Test
+    fun `accepts a transfer whose legs are both payload accounts`() {
+        assertEquals(emptyList(), validation.validate(WORKSPACE, withReferences(transfers = listOf(transfer(TRANSFER)))))
+    }
+
+    @Test
+    fun `rejects a transfer whose source account is missing, naming the source leg`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(transfers = listOf(transfer(TRANSFER, source = NOWHERE)))
+        )
+
+        val problem = problems.single()
+        assertEquals(ImportProblemCode.UNRESOLVED_REFERENCE, problem.code)
+        assertEquals(EntityType.TRANSFER, problem.aggregateType)
+        assertEquals(setOf(NOWHERE), problem.affectedIDs)
+        assertNamesField(problem, "source.accountId")
+    }
+
+    /** The case a copy-paste between the two legs gets wrong: only the target is missing. */
+    @Test
+    fun `rejects a transfer whose target account is missing, naming the target leg`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(transfers = listOf(transfer(TRANSFER, target = NOWHERE)))
+        )
+
+        val problem = problems.single()
+        assertEquals(setOf(NOWHERE), problem.affectedIDs)
+        assertNamesField(problem, "target.accountId")
+    }
+
+    @Test
+    fun `reports each leg's missing account under its own leg`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(transfers = listOf(transfer(TRANSFER, source = NOWHERE, target = NOWHERE_OTHER)))
+        )
+
+        assertEquals(2, problems.size)
+        assertEquals(setOf(NOWHERE), problemNaming(problems, "source.accountId").affectedIDs)
+        assertEquals(setOf(NOWHERE_OTHER), problemNaming(problems, "target.accountId").affectedIDs)
+    }
+
+    @Test
+    fun `rejects a transfer leg pointing at a category`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(transfers = listOf(transfer(TRANSFER, target = FOOD)))
+        )
+
+        assertEquals(setOf(FOOD), problems.single().affectedIDs)
+    }
+
+    // ---------------------------------------------------------------- balance anchor references (2.21d)
+
+    @Test
+    fun `accepts an anchor on a payload account`() {
+        assertEquals(emptyList(), validation.validate(WORKSPACE, withReferences(anchors = listOf(anchor(ANCHOR)))))
+    }
+
+    @Test
+    fun `rejects an anchor whose account no section defines`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(anchors = listOf(anchor(ANCHOR, accountId = NOWHERE)))
+        )
+
+        val problem = problems.single()
+        assertEquals(ImportProblemCode.UNRESOLVED_REFERENCE, problem.code)
+        assertEquals(EntityType.BALANCE_ANCHOR, problem.aggregateType)
+        assertEquals(setOf(NOWHERE), problem.affectedIDs)
+        assertNamesField(problem, "accountId")
+    }
+
+    @Test
+    fun `rejects an anchor pointing at a category`() {
+        val problems = validation.validate(
+            WORKSPACE,
+            withReferences(anchors = listOf(anchor(ANCHOR, accountId = FOOD)))
+        )
+
+        assertEquals(setOf(FOOD), problems.single().affectedIDs)
+    }
+
     // ---------------------------------------------------------------- category parent cycles
 
     @Test
@@ -440,6 +619,30 @@ class ImportValidationServiceTest {
         private fun unsupported(): Nothing = throw UnsupportedOperationException("the pre-pass reads system categories only")
     }
 
+    /** The id rules' problems only — the tests that build one section on its own leave references dangling. */
+    private fun idProblems(problems: List<ImportProblem>): List<ImportProblem> =
+        problems.filter { it.code in ID_PROBLEM_CODES }
+
+    /** A payload carrying what the fixtures refer to — the CASH and CARD accounts and the FOOD category. */
+    private fun withReferences(
+        operations: List<ImportOperationRequest> = emptyList(),
+        transfers: List<ImportTransferRequest> = emptyList(),
+        anchors: List<ImportBalanceAnchorRequest> = emptyList(),
+    ) = ImportPayloadRequest(
+        accounts = listOf(account(CASH), account(CARD)),
+        categories = listOf(category(FOOD)),
+        operations = operations,
+        transfers = transfers,
+        balanceAnchors = anchors,
+    )
+
+    // The field is carried in the message only; the quotes keep "accountId" from matching "source.accountId".
+    private fun assertNamesField(problem: ImportProblem, field: String) =
+        assertTrue(problem.message.contains("'$field'"), "the problem should name '$field': '${problem.message}'")
+
+    private fun problemNaming(problems: List<ImportProblem>, field: String): ImportProblem =
+        problems.single { it.message.contains("'$field'") }
+
     private fun sectionsNaming(problems: List<ImportProblem>, id: UUID): Set<EntityType> =
         problems.filter { id in it.affectedIDs }.map { it.aggregateType }.toSet()
 
@@ -452,7 +655,7 @@ class ImportValidationServiceTest {
     )
 
     private fun fullPayload() = ImportPayloadRequest(
-        accounts = listOf(account(CASH)),
+        accounts = listOf(account(CASH), account(CARD)),
         categories = listOf(category(FOOD)),
         operations = listOf(operation(OPERATION)),
         transfers = listOf(transfer(TRANSFER)),
@@ -479,30 +682,30 @@ class ImportValidationServiceTest {
         icon = null,
     )
 
-    private fun operation(id: UUID) = ImportOperationRequest(
+    private fun operation(id: UUID, accountId: UUID = CASH, categoryId: UUID? = FOOD) = ImportOperationRequest(
         id = id,
         externalRef = null,
         occurredAt = OCCURRED_AT,
         amount = BigDecimal("10.0000"),
         kind = OperationKind.EXPENSE,
-        accountId = CASH,
-        categoryId = FOOD,
+        accountId = accountId,
+        categoryId = categoryId,
         comment = null,
     )
 
-    private fun transfer(id: UUID) = ImportTransferRequest(
+    private fun transfer(id: UUID, source: UUID = CASH, target: UUID = CARD) = ImportTransferRequest(
         id = id,
         externalRef = null,
         occurredAt = OCCURRED_AT,
-        source = ImportTransferLegRequest(accountId = CASH, amount = BigDecimal("5.0000")),
-        target = ImportTransferLegRequest(accountId = CARD, amount = BigDecimal("5.0000")),
+        source = ImportTransferLegRequest(accountId = source, amount = BigDecimal("5.0000")),
+        target = ImportTransferLegRequest(accountId = target, amount = BigDecimal("5.0000")),
         comment = null,
     )
 
-    private fun anchor(id: UUID) = ImportBalanceAnchorRequest(
+    private fun anchor(id: UUID, accountId: UUID = CASH) = ImportBalanceAnchorRequest(
         id = id,
         externalRef = null,
-        accountId = CASH,
+        accountId = accountId,
         occurredAt = OCCURRED_AT,
         value = BigDecimal("100.0000"),
     )
@@ -523,6 +726,14 @@ class ImportValidationServiceTest {
 
         val SHARED: UUID = UUID.fromString("01930000-0000-7000-8000-0000000005a1")
         val SHARED_OTHER: UUID = UUID.fromString("01930000-0000-7000-8000-0000000005a2")
+
+        val ID_PROBLEM_CODES = setOf(
+            ImportProblemCode.WRONG_UUID_VERSION,
+            ImportProblemCode.DUPLICATED_ENTITY_ID_WITHIN_SECTION,
+            ImportProblemCode.DUPLICATED_ENTITY_ID_ACROSS_SECTIONS,
+        )
+
+        val OPERATION_OTHER: UUID = UUID.fromString("01930000-0000-7000-8000-00000000001a")
 
         val OTHER_WORKSPACE: UUID = UUID.fromString("01930000-0000-7000-8000-000000000952")
         val INCOME_ROOT: UUID = UUID.fromString("01930000-0000-7000-8000-000000005e01")

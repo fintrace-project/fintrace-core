@@ -24,13 +24,16 @@ class ImportValidationServiceImpl(
         val problems: MutableList<ImportProblem> = mutableListOf()
 
         val idMap: Map<UUID, List<EntityType>> = buildIdMap(payload)
+        val systemCategories = categoryDAO.getSystemCategories(workspaceId)
+            .asSequence()
+            .associate { (_, v) -> v.id to v.systemCode!! }
 
         validateIDs(payload, idMap, problems)
-        validateCategories(workspaceId, payload, idMap, problems)
+        validateCategories(payload, systemCategories, idMap, problems)
         validateAccounts(payload, problems)
-        validateOperations(payload, problems)
-        validateTransfers(payload, problems)
-        validateBalanceAnchors(payload, problems)
+        validateOperations(payload, systemCategories, idMap, problems)
+        validateTransfers(payload, idMap, problems)
+        validateBalanceAnchors(payload, idMap, problems)
 
         return problems
     }
@@ -102,17 +105,13 @@ class ImportValidationServiceImpl(
         .groupBy({ it.first }, { it.second })
 
     private fun validateCategories(
-        workspaceId: UUID,
         request: ImportPayloadRequest,
+        systemCategories: Map<UUID, CategorySystemCode>,
         idMap: Map<UUID, List<EntityType>>,
         problems: MutableList<ImportProblem>
     ) {
         val wrongUUIDs: MutableSet<UUID> = mutableSetOf()
         val unresolvedParentsId: MutableSet<UUID> = mutableSetOf()
-
-        val systemCategories = categoryDAO.getSystemCategories(workspaceId)
-            .asSequence()
-            .associate { (_, v) -> v.id to v.systemCode!! }
 
         request.categories.forEach { entity ->
 
@@ -120,10 +119,10 @@ class ImportValidationServiceImpl(
                 wrongUUIDs.add(entity.id)
             }
 
-            if (entity.parentId != null) {
-                if (!resolveCategoryParent(entity.parentId, idMap, systemCategories)) {
-                    unresolvedParentsId.add(entity.parentId)
-                }
+            if (entity.parentId != null
+                && !resolves(entity.parentId, EntityType.CATEGORY, idMap, systemCategories.keys)
+            ) {
+                unresolvedParentsId.add(entity.parentId)
             }
         }
 
@@ -142,18 +141,6 @@ class ImportValidationServiceImpl(
         )
         cycles.forEach { cycle ->
             problems.add(ImportProblem.cyclicReferences(EntityType.CATEGORY, cycle))
-        }
-    }
-
-    private fun resolveCategoryParent(
-        parentId: UUID,
-        idMap: Map<UUID, List<EntityType>>,
-        systemCategories: Map<UUID, CategorySystemCode>
-    ): Boolean {
-        return if (idMap.contains(parentId)) {
-            idMap.getValue(parentId).contains(EntityType.CATEGORY)
-        } else {
-            systemCategories.keys.contains(parentId)
         }
     }
 
@@ -176,52 +163,116 @@ class ImportValidationServiceImpl(
 
     private fun validateOperations(
         request: ImportPayloadRequest,
+        systemCategories: Map<UUID, CategorySystemCode>,
+        idMap: Map<UUID, List<EntityType>>,
         problems: MutableList<ImportProblem>
     ) {
         val wrongUUIDs: MutableSet<UUID> = mutableSetOf()
+        val unresolvedAccountIds: MutableSet<UUID> = mutableSetOf()
+        val unresolvedCategoryIds: MutableSet<UUID> = mutableSetOf()
+
         request.operations.forEach { entity ->
 
             if (uuidWithWrongVersion(entity.id)) {
                 wrongUUIDs.add(entity.id)
+            }
+
+            if (!resolves(entity.accountId, EntityType.ACCOUNT, idMap)) {
+                unresolvedAccountIds.add(entity.accountId)
+            }
+
+            if (entity.categoryId != null
+                && !resolves(entity.categoryId, EntityType.CATEGORY, idMap, systemCategories.keys)
+            ) {
+                unresolvedCategoryIds.add(entity.categoryId)
             }
         }
 
         if (wrongUUIDs.isNotEmpty()) {
             problems.add(ImportProblem.wrongUUIDVersion(EntityType.OPERATION, wrongUUIDs))
         }
+
+        if (unresolvedAccountIds.isNotEmpty()) {
+            problems.add(ImportProblem.unresolvedReferences(EntityType.OPERATION, "accountId", unresolvedAccountIds))
+        }
+
+        if (unresolvedCategoryIds.isNotEmpty()) {
+            problems.add(ImportProblem.unresolvedReferences(EntityType.OPERATION, "categoryId", unresolvedCategoryIds))
+        }
     }
+
+    private fun resolves(
+        id: UUID,
+        expected: EntityType,
+        idMap: Map<UUID, List<EntityType>>,
+        seeded: Set<UUID> = emptySet()
+    ) = idMap[id]?.contains(expected) == true || id in seeded
 
     private fun validateTransfers(
         request: ImportPayloadRequest,
+        idMap: Map<UUID, List<EntityType>>,
         problems: MutableList<ImportProblem>
     ) {
         val wrongUUIDs: MutableSet<UUID> = mutableSetOf()
-        request.transfers.forEach { entity ->
+        val unresolvedSourceAccountIds: MutableSet<UUID> = mutableSetOf()
+        val unresolvedTargetAccountIds: MutableSet<UUID> = mutableSetOf()
 
+        request.transfers.forEach { entity ->
             if (uuidWithWrongVersion(entity.id)) {
                 wrongUUIDs.add(entity.id)
+            }
+
+            if (!resolves(entity.source.accountId, EntityType.ACCOUNT, idMap)) {
+                unresolvedSourceAccountIds.add(entity.source.accountId)
+            }
+
+            if (!resolves(entity.target.accountId, EntityType.ACCOUNT, idMap)) {
+                unresolvedTargetAccountIds.add(entity.target.accountId)
             }
         }
 
         if (wrongUUIDs.isNotEmpty()) {
             problems.add(ImportProblem.wrongUUIDVersion(EntityType.TRANSFER, wrongUUIDs))
         }
+        if (unresolvedSourceAccountIds.isNotEmpty()) {
+            problems.add(ImportProblem.unresolvedReferences(EntityType.TRANSFER, "source.accountId", unresolvedSourceAccountIds))
+        }
+        if (unresolvedTargetAccountIds.isNotEmpty()) {
+            problems.add(ImportProblem.unresolvedReferences(EntityType.TRANSFER, "target.accountId", unresolvedTargetAccountIds))
+        }
     }
 
     private fun validateBalanceAnchors(
         request: ImportPayloadRequest,
+        idMap: Map<UUID, List<EntityType>>,
         problems: MutableList<ImportProblem>
     ) {
         val wrongUUIDs: MutableSet<UUID> = mutableSetOf()
+        val unresolvedAccountIds: MutableSet<UUID> = mutableSetOf()
+
         request.balanceAnchors.forEach { entity ->
 
             if (uuidWithWrongVersion(entity.id)) {
                 wrongUUIDs.add(entity.id)
             }
+
+            if (!resolves(entity.accountId, EntityType.ACCOUNT, idMap)) {
+                unresolvedAccountIds.add(entity.accountId)
+            }
         }
 
         if (wrongUUIDs.isNotEmpty()) {
             problems.add(ImportProblem.wrongUUIDVersion(EntityType.BALANCE_ANCHOR, wrongUUIDs))
+        }
+
+        if (unresolvedAccountIds.isNotEmpty()) {
+            problems.add(
+                ImportProblem.unresolvedReferences(
+                    EntityType.BALANCE_ANCHOR,
+                    "accountId",
+                    unresolvedAccountIds
+                )
+            )
         }
     }
 

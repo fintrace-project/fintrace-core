@@ -148,7 +148,7 @@ class ImportFacadeIntegrationTest(
     fun `a failed import leaves a genuinely empty NEW workspace and a FAILED job`() {
         // §4.2 and 2.22: the repair for a failed import is to retry it, which only works if
         // nothing survives. The job row must survive anyway — that is decision 10's whole point.
-        assertThrows<Exception> { importFacade.importWorkspaceData(workspaceId, payloadWithDanglingAccount()) }
+        assertThrows<Exception> { importFacade.importWorkspaceData(workspaceId, payloadFailingAtDispatch()) }
 
         assertEquals("NEW", status(), "the workspace must still be importable")
         assertEquals(0, count("t_accounts"))
@@ -164,7 +164,7 @@ class ImportFacadeIntegrationTest(
     fun `the events of a failed import are rolled back`() {
         val before = count("t_events")
 
-        assertThrows<Exception> { importFacade.importWorkspaceData(workspaceId, payloadWithDanglingAccount()) }
+        assertThrows<Exception> { importFacade.importWorkspaceData(workspaceId, payloadFailingAtDispatch()) }
 
         assertEquals(before, count("t_events"), "an import that fails appends nothing to the log")
     }
@@ -263,7 +263,7 @@ class ImportFacadeIntegrationTest(
 
     @Test
     fun `a failed import hands the workspace back`() {
-        assertThrows<Exception> { importFacade.importWorkspaceData(workspaceId, payloadWithDanglingAccount()) }
+        assertThrows<Exception> { importFacade.importWorkspaceData(workspaceId, payloadFailingAtDispatch()) }
 
         // The repair is what makes the retry in §4.2 real; without it the workspace stays
         // IMPORTING and only the lease could release it.
@@ -348,6 +348,22 @@ class ImportFacadeIntegrationTest(
         assertEquals(ImportProblemCode.UNRESOLVED_REFERENCE, problem.code)
         assertEquals(setOf(NOWHERE), problem.affectedIDs)
         assertEquals(4, count("t_categories"))
+    }
+
+    /** Step 1's "done when": a dangling account leaves the workspace NEW, nothing dispatched, a FAILED job. */
+    @Test
+    fun `refuses a dangling account in the pre-pass, and dispatches nothing`() {
+        val events = count("t_events")
+
+        val job = importFacade.importWorkspaceData(workspaceId, payloadWithDanglingAccount())
+
+        assertEquals(ImportJobStatus.FAILED, job.status)
+        val problem = job.problems.single()
+        assertEquals(ImportProblemCode.UNRESOLVED_REFERENCE, problem.code)
+        assertEquals(setOf(NOWHERE), problem.affectedIDs)
+        assertEquals(events, count("t_events"), "nothing was dispatched")
+        assertEquals(0, count("t_accounts"))
+        assertEquals("NEW", status())
     }
 
     @Test
@@ -547,6 +563,40 @@ class ImportFacadeIntegrationTest(
                     accountId = CARD,
                     occurredAt = OCCURRED_AT,
                     value = BigDecimal.ZERO,
+                ),
+            ),
+        )
+    )
+
+    /**
+     * Passes the pre-pass and fails in the middle of dispatch: the account is already written when
+     * the operation's command refuses an income under an expense category. Kind agreement is left
+     * to the command path (2.21), which is what makes this a dispatch failure and not a refusal.
+     */
+    private fun payloadFailingAtDispatch() = envelope(
+        ImportPayloadRequest(
+            accounts = listOf(
+                ImportAccountRequest(
+                    id = CASH,
+                    externalRef = null,
+                    name = "cash",
+                    currency = "EUR",
+                    icon = null,
+                    initialBalance = null,
+                    initialBalanceAt = null,
+                ),
+            ),
+            categories = listOf(category(FOOD, parentId = null)),
+            operations = listOf(
+                ImportOperationRequest(
+                    id = LUNCH,
+                    externalRef = null,
+                    occurredAt = OCCURRED_AT,
+                    amount = BigDecimal("1.0000"),
+                    kind = OperationKind.INCOME,
+                    accountId = CASH,
+                    categoryId = FOOD,
+                    comment = null,
                 ),
             ),
         )
