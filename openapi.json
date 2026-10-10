@@ -1,0 +1,2992 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "security" : [ {
+    "keycloak" : [ ]
+  } ],
+  "paths" : {
+    "/api/v1/workspaces/{workspaceId}" : {
+      "get" : {
+        "tags" : [ "Workspaces" ],
+        "summary" : "Fetch a workspace",
+        "operationId" : "getWorkspace",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Workspaces" ],
+        "summary" : "Replace a workspace's name and currency",
+        "operationId" : "editWorkspace",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EditWorkspaceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Revised; body carries the new version",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed body, or unknown currency",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "`version` is stale",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Workspaces" ],
+        "summary" : "Delete a workspace",
+        "operationId" : "deleteWorkspace",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "version",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Deleted; unrecoverable"
+          },
+          "400" : {
+            "description" : "`version` missing"
+          },
+          "404" : {
+            "description" : "No such workspace for this caller"
+          },
+          "409" : {
+            "description" : "`version` is stale"
+          },
+          "403" : {
+            "description" : "Not authenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/transfers/{transferId}" : {
+      "get" : {
+        "tags" : [ "Transfers" ],
+        "summary" : "Fetch a transfer",
+        "operationId" : "getTransfer",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "transferId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Found; both legs, each in its account's currency",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such transfer in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Transfers" ],
+        "summary" : "Revise a transfer",
+        "operationId" : "reviseTransfer",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "transferId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateTransferRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Revised; body carries the new state",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed body, `occurredAt` in the future, an amount that is not positive, or both legs on one account",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such transfer or account in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "A leg would move onto an archived account, or the workspace is archived",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Transfers" ],
+        "summary" : "Cancel a transfer",
+        "operationId" : "cancelTransfer",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "transferId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Cancelled; both legs removed"
+          },
+          "404" : {
+            "description" : "No such transfer, including one already cancelled"
+          },
+          "409" : {
+            "description" : "Workspace is archived"
+          },
+          "403" : {
+            "description" : "Not authenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/operations/{operationId}" : {
+      "get" : {
+        "tags" : [ "Operations" ],
+        "summary" : "Fetch an operation",
+        "operationId" : "getOperation",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "operationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such operation in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Operations" ],
+        "summary" : "Replace an operation",
+        "operationId" : "reviseOperation",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "operationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateOperationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Revised; body carries the new state",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed body, or `occurredAt` in the future",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such operation in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "The operation is a transfer leg; write it through `/transfers`",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Operations" ],
+        "summary" : "Cancel an operation",
+        "operationId" : "cancelOperation",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "operationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Cancelled"
+          },
+          "404" : {
+            "description" : "No such operation, including one already cancelled"
+          },
+          "409" : {
+            "description" : "The operation is a transfer leg; cancel it through `/transfers`"
+          },
+          "403" : {
+            "description" : "Not authenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/categories/{categoryId}" : {
+      "get" : {
+        "tags" : [ "Categories" ],
+        "summary" : "Fetch a category",
+        "operationId" : "getCategory",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "categoryId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Found, archived or not",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such category in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Categories" ],
+        "summary" : "Replace a category's name, icon and parent",
+        "operationId" : "reviseCategory",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "categoryId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateCategoryRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Revised; a different `parentId` moves it",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed body, or no such parent",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such category in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "System category, archived, cross-branch move, or a cycle",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Categories" ],
+        "summary" : "Archive a category and its subtree",
+        "operationId" : "deleteCategory",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "categoryId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Archived with its descendants; never deleted (§4.7)",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such category in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "System category",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/accounts/{accountId}" : {
+      "get" : {
+        "tags" : [ "Accounts" ],
+        "summary" : "Fetch an account",
+        "operationId" : "getAccount",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "accountId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such account in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Accounts" ],
+        "summary" : "Replace an account's name and icon",
+        "operationId" : "reviseAccount",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "accountId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateAccountRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Revised; currency is immutable and untouched",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed body",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such account in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Accounts" ],
+        "summary" : "Archive an account",
+        "operationId" : "archiveAccount",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "accountId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Archived, or already archived",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such account in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces" : {
+      "get" : {
+        "tags" : [ "Workspaces" ],
+        "summary" : "List the caller's workspaces",
+        "operationId" : "getWorkspaces",
+        "parameters" : [ {
+          "name" : "page",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Pageable"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Sortable by name, status, createdAt",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/WorkspaceResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Sort requested on an unsupported field",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/WorkspaceResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/WorkspaceResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Workspaces" ],
+        "summary" : "Create a workspace",
+        "operationId" : "createNewWorkspace",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateWorkspaceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created; `Location` points at it",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed body, or unknown currency",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/transfers" : {
+      "post" : {
+        "tags" : [ "Transfers" ],
+        "summary" : "Record a transfer",
+        "operationId" : "createTransfer",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateTransferRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created; `Location` points at it",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed body, `occurredAt` in the future, an amount that is not positive, or both legs on one account",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such account in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "An account is archived, or the workspace is",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TransferResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/operations" : {
+      "post" : {
+        "tags" : [ "Operations" ],
+        "summary" : "Record an operation",
+        "operationId" : "createNewOperation",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateOperationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created; `Location` points at it",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed body, or `occurredAt` in the future",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OperationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/import" : {
+      "post" : {
+        "tags" : [ "Import API" ],
+        "summary" : "Import a whole workspace in one request",
+        "operationId" : "importWorkspaceData",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ImportEnvelopRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Imported; body carries the job with its counts",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed body",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "The workspace is not NEW, not empty, or an import is already running",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Missing the required role",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ImportJobResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/categories" : {
+      "get" : {
+        "tags" : [ "Categories" ],
+        "summary" : "List categories",
+        "operationId" : "getAllCategories",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "includeArchived",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Flat; build the tree from `parentId`. Archived excluded unless `includeArchived`",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/CategoryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/CategoryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/CategoryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Categories" ],
+        "summary" : "Create a category",
+        "operationId" : "createNewCategory",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateCategoryRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created; `kind` comes from the parent's branch",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed body, or no such parent",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Parent is archived, or is an Others",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/categories/{categoryId}/restore" : {
+      "post" : {
+        "tags" : [ "Categories" ],
+        "summary" : "Restore an archived category",
+        "operationId" : "restoreCategory",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "categoryId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Restored; descendants stay archived",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such category in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/archive" : {
+      "post" : {
+        "tags" : [ "Workspaces" ],
+        "summary" : "Archive a workspace",
+        "operationId" : "archiveWorkspace",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Archived, or already archived",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Not ACTIVE",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Workspaces" ],
+        "summary" : "Unarchive a workspace",
+        "operationId" : "unarchiveWorkspace",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Active, or already active",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/accounts" : {
+      "get" : {
+        "tags" : [ "Accounts" ],
+        "summary" : "List accounts",
+        "operationId" : "getAccount_1",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "includeArchived",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Archived accounts excluded unless `includeArchived`",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Accounts" ],
+        "summary" : "Create an account",
+        "operationId" : "createNewAccount",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateAccountRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created; `Location` points at it",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed body, or unknown currency",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Workspace is archived",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/accounts/{accountId}/restore" : {
+      "post" : {
+        "tags" : [ "Accounts" ],
+        "summary" : "Restore an archived account",
+        "operationId" : "restoreAccount",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "accountId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Active, or already active",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such account in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AccountResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/accounts/{accountId}/balance-anchors" : {
+      "get" : {
+        "tags" : [ "Balance Anchors" ],
+        "summary" : "List an account's balance anchors",
+        "operationId" : "getAllBalanceAnchors",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "accountId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Newest first; empty when the account has none",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/BalanceAnchorResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such account in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/BalanceAnchorResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/BalanceAnchorResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Balance Anchors" ],
+        "summary" : "Record a balance anchor",
+        "operationId" : "createNewBalanceAnchor",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "accountId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateBalanceAnchorRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created; `Location` points at it",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BalanceAnchorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed body",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BalanceAnchorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such account in this workspace",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BalanceAnchorResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "The account is archived, or the workspace is",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BalanceAnchorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BalanceAnchorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/v1/workspaces/{workspaceId}/replay" : {
+      "post" : {
+        "tags" : [ "Admin" ],
+        "summary" : "Rebuild a workspace's projections from its event log",
+        "operationId" : "replayWorkspace",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Rebuilt; a workspace with no events is a no-op",
+            "content" : { }
+          },
+          "403" : {
+            "description" : "Not authenticated, or not an admin",
+            "content" : { }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/statistics/balances/accounts" : {
+      "get" : {
+        "tags" : [ "Statistics" ],
+        "summary" : "List account balances",
+        "operationId" : "getAllBalancesOf",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "asOf",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "includeArchived",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : true
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "One row per account, in its own currency, as of the end of `asOf`",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountBalanceResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed `asOf` or `includeArchived`",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountBalanceResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountBalanceResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AccountBalanceResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/accounts/{accountId}/balance-anchors/{anchorId}" : {
+      "get" : {
+        "tags" : [ "Balance Anchors" ],
+        "summary" : "Fetch a balance anchor",
+        "operationId" : "getBalanceAnchor",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "accountId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "anchorId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BalanceAnchorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such anchor on this account",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BalanceAnchorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Not authenticated",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BalanceAnchorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Balance Anchors" ],
+        "summary" : "Delete a balance anchor",
+        "operationId" : "deleteBalanceAnchor",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "accountId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "anchorId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Deleted; the row is removed, the event remains"
+          },
+          "404" : {
+            "description" : "No such anchor on this account"
+          },
+          "409" : {
+            "description" : "Not the account's most recent anchor, or the workspace is archived"
+          },
+          "403" : {
+            "description" : "Not authenticated"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "EditWorkspaceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "version" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0
+          },
+          "workspaceName" : {
+            "type" : [ "string", "null" ],
+            "pattern" : "[\\p{L}\\p{N}][\\p{L}\\p{N}\\p{M} \\-_\\[\\]()',’\\&#@№]*"
+          },
+          "defaultCurrency" : {
+            "type" : [ "string", "null" ],
+            "pattern" : "[A-Z]{3}"
+          }
+        },
+        "required" : [ "version" ]
+      },
+      "WorkspaceResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "NEW", "IMPORTING", "ACTIVE", "ARCHIVED", "DELETED" ]
+          },
+          "defaultCurrency" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "deletedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          }
+        }
+      },
+      "TransferLegRequest" : {
+        "type" : "object",
+        "properties" : {
+          "accountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "amount" : {
+            "type" : "number",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "accountId", "amount" ]
+      },
+      "UpdateTransferRequest" : {
+        "type" : "object",
+        "properties" : {
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "source" : {
+            "$ref" : "#/components/schemas/TransferLegRequest"
+          },
+          "target" : {
+            "$ref" : "#/components/schemas/TransferLegRequest"
+          },
+          "comment" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "occurredAt", "source", "target" ]
+      },
+      "TransferLegResponse" : {
+        "type" : "object",
+        "properties" : {
+          "operationId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "accountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "number"
+          }
+        }
+      },
+      "TransferResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "workspaceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "recordedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "comment" : {
+            "type" : [ "string", "null" ]
+          },
+          "source" : {
+            "$ref" : "#/components/schemas/TransferLegResponse"
+          },
+          "target" : {
+            "$ref" : "#/components/schemas/TransferLegResponse"
+          },
+          "rate" : {
+            "type" : "number"
+          }
+        }
+      },
+      "UpdateOperationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "amount" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "INCOME", "EXPENSE", "TRANSFER" ]
+          },
+          "accountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "categoryId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "comment" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "accountId", "kind", "occurredAt" ]
+      },
+      "OperationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "workspaceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "accountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "categoryId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "transferId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "recordedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "INCOME", "EXPENSE", "TRANSFER" ]
+          },
+          "counterpartId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "comment" : {
+            "type" : [ "string", "null" ]
+          },
+          "externalRef" : {
+            "type" : [ "string", "null" ]
+          }
+        }
+      },
+      "UpdateCategoryRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[\\p{L}\\p{N}][\\p{L}\\p{N}\\p{M} \\-_\\[\\]()',’\\&#@№]*"
+          },
+          "parentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "icon" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "name" ]
+      },
+      "CategoryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "workspaceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "parentId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "INCOME", "EXPENSE" ]
+          },
+          "archived" : {
+            "type" : "boolean"
+          },
+          "systemCode" : {
+            "type" : [ "string", "null" ],
+            "enum" : [ "INCOME_ROOT", "INCOME_OTHERS", "EXPENSE_ROOT", "EXPENSE_OTHERS" ]
+          },
+          "icon" : {
+            "type" : [ "string", "null" ]
+          },
+          "recordedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "UpdateAccountRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[\\p{L}\\p{N}][\\p{L}\\p{N}\\p{M} \\-_\\[\\]()',’\\&#@№]*"
+          },
+          "icon" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "name" ]
+      },
+      "AccountResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "workspaceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "archived" : {
+            "type" : "boolean"
+          },
+          "icon" : {
+            "type" : [ "string", "null" ]
+          },
+          "recordedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "CreateWorkspaceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "workspaceName" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[\\p{L}\\p{N}][\\p{L}\\p{N}\\p{M} \\-_\\[\\]()',’\\&#@№]*"
+          },
+          "defaultCurrency" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[A-Z]{3}"
+          }
+        },
+        "required" : [ "defaultCurrency", "workspaceName" ]
+      },
+      "CreateTransferRequest" : {
+        "type" : "object",
+        "properties" : {
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "source" : {
+            "$ref" : "#/components/schemas/TransferLegRequest"
+          },
+          "target" : {
+            "$ref" : "#/components/schemas/TransferLegRequest"
+          },
+          "comment" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "occurredAt", "source", "target" ]
+      },
+      "CreateOperationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "amount" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "INCOME", "EXPENSE", "TRANSFER" ]
+          },
+          "accountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "categoryId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "comment" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "accountId", "amount", "kind", "occurredAt" ]
+      },
+      "ImportAccountRequest" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "externalRef" : {
+            "type" : [ "string", "null" ]
+          },
+          "name" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[\\p{L}\\p{N}][\\p{L}\\p{N}\\p{M} \\-_\\[\\]()',’\\&#@№]*"
+          },
+          "currency" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[A-Z]{3}"
+          },
+          "icon" : {
+            "type" : [ "string", "null" ]
+          },
+          "archived" : {
+            "type" : "boolean"
+          },
+          "initialBalance" : {
+            "type" : [ "number", "null" ]
+          },
+          "initialBalanceAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "currency", "id", "name" ]
+      },
+      "ImportBalanceAnchorRequest" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "externalRef" : {
+            "type" : [ "string", "null" ]
+          },
+          "accountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "value" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "accountId", "id", "occurredAt", "value" ]
+      },
+      "ImportCategoryRequest" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "externalRef" : {
+            "type" : [ "string", "null" ]
+          },
+          "name" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[\\p{L}\\p{N}][\\p{L}\\p{N}\\p{M} \\-_\\[\\]()',’\\&#@№]*"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "INCOME", "EXPENSE" ]
+          },
+          "parentId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "icon" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "id", "kind", "name" ]
+      },
+      "ImportDiagnosticRequest" : {
+        "type" : "object",
+        "properties" : {
+          "severity" : {
+            "type" : "string",
+            "enum" : [ "WARNING", "ERROR" ]
+          },
+          "code" : {
+            "type" : "string",
+            "enum" : [ "UNSUPPORTED_RECORD", "UNKNOWN_CURRENCY", "UNRESOLVED_REFERENCE", "SOURCE_ANOMALY" ]
+          },
+          "count" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0
+          },
+          "detail" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "code", "count", "severity" ]
+      },
+      "ImportEnvelopRequest" : {
+        "type" : "object",
+        "properties" : {
+          "importerName" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "importerVersion" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "payload" : {
+            "$ref" : "#/components/schemas/ImportPayloadRequest"
+          }
+        },
+        "required" : [ "importerName", "importerVersion", "payload" ]
+      },
+      "ImportOperationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "externalRef" : {
+            "type" : [ "string", "null" ]
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "amount" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "INCOME", "EXPENSE", "TRANSFER" ]
+          },
+          "accountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "categoryId" : {
+            "type" : [ "string", "null" ],
+            "format" : "uuid"
+          },
+          "comment" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "accountId", "amount", "id", "kind", "occurredAt" ]
+      },
+      "ImportPayloadRequest" : {
+        "type" : "object",
+        "properties" : {
+          "accounts" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ImportAccountRequest"
+            }
+          },
+          "categories" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ImportCategoryRequest"
+            }
+          },
+          "operations" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ImportOperationRequest"
+            }
+          },
+          "transfers" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ImportTransferRequest"
+            }
+          },
+          "balanceAnchors" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ImportBalanceAnchorRequest"
+            }
+          },
+          "diagnostics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ImportDiagnosticRequest"
+            }
+          }
+        }
+      },
+      "ImportTransferLegRequest" : {
+        "type" : "object",
+        "properties" : {
+          "accountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "amount" : {
+            "type" : "number",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "accountId", "amount" ]
+      },
+      "ImportTransferRequest" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "externalRef" : {
+            "type" : [ "string", "null" ]
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "source" : {
+            "$ref" : "#/components/schemas/ImportTransferLegRequest"
+          },
+          "target" : {
+            "$ref" : "#/components/schemas/ImportTransferLegRequest"
+          },
+          "comment" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "id", "occurredAt", "source", "target" ]
+      },
+      "ImportDiagnosticDTO" : {
+        "type" : "object",
+        "properties" : {
+          "severity" : {
+            "type" : "string",
+            "enum" : [ "WARNING", "ERROR" ]
+          },
+          "code" : {
+            "type" : "string",
+            "enum" : [ "UNSUPPORTED_RECORD", "UNKNOWN_CURRENCY", "UNRESOLVED_REFERENCE", "SOURCE_ANOMALY" ]
+          },
+          "count" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "detail" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "code", "count", "severity" ]
+      },
+      "ImportJobResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "workspaceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "RUNNING", "SUCCEEDED", "FAILED" ]
+          },
+          "startedBy" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "startedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "finishedAt" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time"
+          },
+          "importerName" : {
+            "type" : "string"
+          },
+          "importerVersion" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : [ "string", "null" ]
+          },
+          "accounts" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "categories" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "operations" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "transfers" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "anchors" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "diagnostics" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ImportDiagnosticDTO"
+            }
+          },
+          "problems" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ImportProblemDTO"
+            }
+          }
+        },
+        "required" : [ "accounts", "anchors", "categories", "diagnostics", "id", "importerName", "importerVersion", "operations", "problems", "startedAt", "startedBy", "status", "transfers", "workspaceId" ]
+      },
+      "ImportProblemDTO" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string",
+            "enum" : [ "WRONG_UUID_VERSION", "DUPLICATED_ENTITY_ID_WITHIN_SECTION", "DUPLICATED_ENTITY_ID_ACROSS_SECTIONS", "UNRESOLVED_REFERENCE", "CYCLIC_REFERENCES" ]
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "aggregateType" : {
+            "type" : "string",
+            "enum" : [ "OPERATION", "ACCOUNT", "CATEGORY", "TRANSFER", "BALANCE_ANCHOR" ]
+          },
+          "affectedIDs" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            },
+            "uniqueItems" : true
+          },
+          "field" : {
+            "type" : [ "string", "null" ]
+          },
+          "affectedCount" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "affectedCount", "affectedIDs", "aggregateType", "code", "message" ]
+      },
+      "CreateCategoryRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[\\p{L}\\p{N}][\\p{L}\\p{N}\\p{M} \\-_\\[\\]()',’\\&#@№]*"
+          },
+          "parentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "icon" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "name" ]
+      },
+      "CreateAccountRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[\\p{L}\\p{N}][\\p{L}\\p{N}\\p{M} \\-_\\[\\]()',’\\&#@№]*"
+          },
+          "currency" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[A-Z]{3}"
+          },
+          "icon" : {
+            "type" : [ "string", "null" ]
+          },
+          "initialBalance" : {
+            "type" : [ "number", "null" ]
+          }
+        },
+        "required" : [ "currency", "name" ]
+      },
+      "CreateBalanceAnchorRequest" : {
+        "type" : "object",
+        "properties" : {
+          "value" : {
+            "type" : "number"
+          }
+        }
+      },
+      "BalanceAnchorResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "workspaceId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "accountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "value" : {
+            "type" : "number"
+          },
+          "difference" : {
+            "type" : "number"
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "recordedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "Pageable" : {
+        "type" : "object",
+        "properties" : {
+          "page" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 0
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 1
+          },
+          "sort" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "AccountBalanceResponse" : {
+        "type" : "object",
+        "properties" : {
+          "accountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "balance" : {
+            "type" : "number"
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "keycloak" : {
+        "type" : "oauth2",
+        "flows" : {
+          "authorizationCode" : {
+            "authorizationUrl" : "/protocol/openid-connect/auth",
+            "tokenUrl" : "/protocol/openid-connect/token",
+            "scopes" : {
+              "openid" : "Sign in"
+            }
+          }
+        }
+      }
+    }
+  }
+}

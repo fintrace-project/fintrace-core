@@ -79,11 +79,21 @@ jobs:
         if: steps.decide.outputs.build == 'true'
 
       # The tag is what gets deployed, so it is tested here too rather than trusted from CI.
-      # `bootJar` must run before the image is built: the Dockerfile copies a pre-built jar,
-      # and .dockerignore lets nothing else through.
+      # `build` covers bootJar, which must run before the image is built: the Dockerfile copies a
+      # pre-built jar, and .dockerignore lets nothing else through.
       - name: Test and package
         if: steps.decide.outputs.build == 'true'
-        run: ./gradlew --no-daemon -Pversion=${{ steps.meta.outputs.version }} clean test bootJar
+        run: ./gradlew --no-daemon -Pversion=${{ steps.meta.outputs.version }} clean build
+
+      # The release attaches the committed spec, so it must be what this tag serves.
+      - name: Check openapi.json is committed
+        if: steps.decide.outputs.build == 'true'
+        run: |
+          if [ -n "$(git status --porcelain -- openapi.json)" ]; then
+            git diff -- openapi.json
+            echo "::error::openapi.json differs from the API this tag serves"
+            exit 1
+          fi
 
       - uses: docker/setup-buildx-action@v3
 
@@ -123,7 +133,13 @@ jobs:
     needs: core
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      # The importer pins a Core version and generates its DTOs from this asset; the core job has
+      # checked it is what this tag serves.
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           prerelease: ${{ needs.core.outputs.prerelease == 'true' }}
+          files: openapi.json
+          fail_on_unmatched_files: true

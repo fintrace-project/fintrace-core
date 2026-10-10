@@ -26,8 +26,17 @@ jobs:
 
       # `clean`: an incremental build has twice hidden a compile error in the test sources.
       # Testcontainers needs a Docker daemon, which ubuntu-latest runners provide.
-      - name: Test
-        run: ./gradlew --no-daemon clean test
+      # `build` rather than `test`, so generateOpenApi rewrites openapi.json for the next step.
+      - name: Build
+        run: ./gradlew --no-daemon clean build
+
+      - name: Check openapi.json is committed
+        run: |
+          if [ -n "$(git status --porcelain -- openapi.json)" ]; then
+            git diff -- openapi.json
+            echo "::error::openapi.json differs from the API this commit serves — run ./gradlew build and commit it"
+            exit 1
+          fi
 
       - name: Upload reports
         if: failure()

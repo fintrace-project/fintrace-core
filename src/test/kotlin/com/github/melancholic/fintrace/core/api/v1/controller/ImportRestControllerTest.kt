@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.support.TransactionTemplate
 import java.util.*
+import kotlin.test.assertEquals
 
 /**
  * The HTTP contract for `POST /workspaces/{id}/import` (2.18, 2.20).
@@ -86,6 +87,21 @@ class ImportRestControllerTest(
         mvc.perform(importing(VALID_PAYLOAD))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.status").value("SUCCEEDED"))
+    }
+
+    @Test
+    fun `a section field breaking its constraint is refused before the import starts`() {
+        mvc.perform(importing(VALID_PAYLOAD.replace("\"EUR\"", "\"eur\"")))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").doesNotExist())
+
+        assertEquals(0, jdbc.sql("SELECT count(*) FROM t_import_jobs").query(Int::class.java).single())
+    }
+
+    @Test
+    fun `an envelope without a payload is refused`() {
+        mvc.perform(importing("""{"importerName": "mok", "importerVersion": "1.2.3"}"""))
+            .andExpect(status().isBadRequest)
     }
 
     private fun importing(body: String) = post(importPath)

@@ -8,6 +8,8 @@ import com.github.melancholic.fintrace.core.validation.ValidationConstants.CURRE
 import com.github.melancholic.fintrace.core.validation.ValidationConstants.MAX_EXTERNAL_REF_LENGTH
 import com.github.melancholic.fintrace.core.validation.ValidationConstants.MAX_ICON_LENGTH
 import com.github.melancholic.fintrace.core.validation.ValidationConstants.MAX_NAME_LENGTH
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED
 import jakarta.validation.Valid
 import jakarta.validation.constraints.*
 import org.hibernate.validator.constraints.Length
@@ -20,6 +22,8 @@ data class ImportEnvelopRequest(
     val importerName: String,
     @NotBlank
     val importerVersion: String,
+    @Valid
+    @NotNull
     val payload: ImportPayloadRequest
 ) {
     fun importer() = ImporterDetails(importerName, importerVersion)
@@ -141,6 +145,7 @@ data class ImportDiagnosticRequest(
     val severity: ImportDiagnosticSeverity,
     @NotNull
     val code: ImportDiagnosticCode,
+    @NotNull
     @PositiveOrZero
     val count: Long,
     @Length(max = 255)
@@ -148,36 +153,58 @@ data class ImportDiagnosticRequest(
 )
 
 data class ImportJobResponse(
+    @Schema(requiredMode = REQUIRED)
     val id: UUID,
+    @Schema(requiredMode = REQUIRED)
     val workspaceId: UUID,
+    @Schema(requiredMode = REQUIRED)
     val status: ImportJobStatus,
+    @Schema(requiredMode = REQUIRED)
     val startedBy: UUID,
+    @Schema(requiredMode = REQUIRED)
     val startedAt: LocalDateTime,
     val finishedAt: LocalDateTime?,
+    @Schema(requiredMode = REQUIRED)
     val importerName: String,
+    @Schema(requiredMode = REQUIRED)
     val importerVersion: String,
     val message: String?,
+    @Schema(requiredMode = REQUIRED)
     val accounts: Int = 0,
+    @Schema(requiredMode = REQUIRED)
     val categories: Int = 0,
+    @Schema(requiredMode = REQUIRED)
     val operations: Int = 0,
+    @Schema(requiredMode = REQUIRED)
     val transfers: Int = 0,
+    @Schema(requiredMode = REQUIRED)
     val anchors: Int = 0,
+    @Schema(requiredMode = REQUIRED)
     val diagnostics: List<ImportDiagnosticDTO> = listOf(),
+    @Schema(requiredMode = REQUIRED)
     val problems: List<ImportProblemDTO> = listOf()
 )
 
 data class ImportDiagnosticDTO(
+    @Schema(requiredMode = REQUIRED)
     val severity: ImportDiagnosticSeverity,
+    @Schema(requiredMode = REQUIRED)
     val code: ImportDiagnosticCode,
+    @Schema(requiredMode = REQUIRED)
     val count: Long,
     val detail: String?
 )
 
 data class ImportProblemDTO(
+    @Schema(requiredMode = REQUIRED)
     val code: ImportProblemCode,
+    @Schema(requiredMode = REQUIRED)
     val message: String,
+    @Schema(requiredMode = REQUIRED)
     val aggregateType: EntityType,
+    @Schema(requiredMode = REQUIRED)
     val affectedIDs: Set<UUID>,
     val field: String?,
+    @Schema(requiredMode = REQUIRED)
     val affectedCount: Int,
 )
