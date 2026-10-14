@@ -1569,7 +1569,8 @@
             "type" : [ "string", "null" ],
             "format" : "date-time"
           }
-        }
+        },
+        "required" : [ "createdAt", "defaultCurrency", "id", "name", "status", "updatedAt", "version" ]
       },
       "TransferLegRequest" : {
         "type" : "object",
@@ -1621,7 +1622,8 @@
           "amount" : {
             "type" : "number"
           }
-        }
+        },
+        "required" : [ "accountId", "amount", "currency", "operationId" ]
       },
       "TransferResponse" : {
         "type" : "object",
@@ -1654,7 +1656,8 @@
           "rate" : {
             "type" : "number"
           }
-        }
+        },
+        "required" : [ "id", "occurredAt", "rate", "recordedAt", "source", "target", "workspaceId" ]
       },
       "UpdateOperationRequest" : {
         "type" : "object",
@@ -1733,7 +1736,8 @@
           "externalRef" : {
             "type" : [ "string", "null" ]
           }
-        }
+        },
+        "required" : [ "accountId", "amount", "id", "kind", "occurredAt", "recordedAt", "workspaceId" ]
       },
       "UpdateCategoryRequest" : {
         "type" : "object",
@@ -1789,7 +1793,8 @@
             "type" : "string",
             "format" : "date-time"
           }
-        }
+        },
+        "required" : [ "archived", "id", "kind", "name", "recordedAt", "workspaceId" ]
       },
       "UpdateAccountRequest" : {
         "type" : "object",
@@ -1832,7 +1837,8 @@
             "type" : "string",
             "format" : "date-time"
           }
-        }
+        },
+        "required" : [ "archived", "currency", "id", "name", "recordedAt", "workspaceId" ]
       },
       "CreateWorkspaceRequest" : {
         "type" : "object",
@@ -2344,7 +2350,8 @@
             "type" : "string",
             "format" : "date-time"
           }
-        }
+        },
+        "required" : [ "accountId", "difference", "id", "occurredAt", "recordedAt", "value", "workspaceId" ]
       },
       "Pageable" : {
         "type" : "object",
@@ -2380,7 +2387,8 @@
           "balance" : {
             "type" : "number"
           }
-        }
+        },
+        "required" : [ "accountId", "balance", "currency" ]
       }
     },
     "securitySchemes" : {
