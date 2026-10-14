@@ -2240,7 +2240,7 @@
         "properties" : {
           "code" : {
             "type" : "string",
-            "enum" : [ "WRONG_UUID_VERSION", "DUPLICATED_ENTITY_ID_WITHIN_SECTION", "DUPLICATED_ENTITY_ID_ACROSS_SECTIONS", "UNRESOLVED_REFERENCE", "CYCLIC_REFERENCES" ]
+            "enum" : [ "WRONG_UUID_VERSION", "DUPLICATED_ENTITY_ID_WITHIN_SECTION", "DUPLICATED_ENTITY_ID_ACROSS_SECTIONS", "UNRESOLVED_REFERENCE", "CYCLIC_REFERENCES", "REFUSED_BY_COMMAND" ]
           },
           "message" : {
             "type" : "string"

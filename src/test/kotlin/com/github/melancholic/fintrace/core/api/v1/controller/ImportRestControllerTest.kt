@@ -90,6 +90,16 @@ class ImportRestControllerTest(
     }
 
     @Test
+    fun `answers 422 when the command path refuses the payload, naming the record`() {
+        mvc.perform(importing(COMMAND_REFUSED_PAYLOAD))
+            .andExpect(status().isUnprocessableContent)
+            .andExpect(jsonPath("$.status").value("FAILED"))
+            .andExpect(jsonPath("$.problems[0].code").value("REFUSED_BY_COMMAND"))
+            .andExpect(jsonPath("$.problems[0].aggregateType").value("OPERATION"))
+            .andExpect(jsonPath("$.problems[0].affectedIDs[0]").value(V7_OPERATION))
+    }
+
+    @Test
     fun `a section field breaking its constraint is refused before the import starts`() {
         mvc.perform(importing(VALID_PAYLOAD.replace("\"EUR\"", "\"eur\"")))
             .andExpect(status().isBadRequest)
@@ -139,5 +149,43 @@ class ImportRestControllerTest(
 
         val VALID_PAYLOAD = payloadWithAccount(V7_ACCOUNT)
         val V4_ID_PAYLOAD = payloadWithAccount(V4_ACCOUNT)
+
+        const val V7_CATEGORY = "01930000-0000-7000-8000-0000000000f0"
+        const val V7_OPERATION = "01930000-0000-7000-8000-0000000000a1"
+
+        /** Passes the pre-pass; the command path refuses an INCOME operation under an expense category. */
+        val COMMAND_REFUSED_PAYLOAD = """
+            {
+              "importerName": "mok",
+              "importerVersion": "1.2.3",
+              "payload": {
+                "accounts": [
+                  {
+                    "id": "$V7_ACCOUNT",
+                    "name": "Cash",
+                    "currency": "EUR"
+                  }
+                ],
+                "categories": [
+                  {
+                    "id": "$V7_CATEGORY",
+                    "name": "Food",
+                    "kind": "EXPENSE",
+                    "parentId": null
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "$V7_OPERATION",
+                    "occurredAt": "2024-05-01T12:00:00",
+                    "amount": 1.00,
+                    "kind": "INCOME",
+                    "accountId": "$V7_ACCOUNT",
+                    "categoryId": "$V7_CATEGORY"
+                  }
+                ]
+              }
+            }
+        """
     }
 }

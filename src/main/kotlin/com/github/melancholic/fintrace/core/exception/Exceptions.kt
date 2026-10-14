@@ -1,5 +1,6 @@
 package com.github.melancholic.fintrace.core.exception
 
+import com.github.melancholic.fintrace.core.domain.event.EntityType
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.ResponseStatus
 import java.util.*
@@ -30,8 +31,12 @@ class WorkspaceNotPermitted(userId: String, workspaceId: UUID) :
 
 // SYSTEM ERRORS
 @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
-open class ApplicationException(message: String = "Server error") : RuntimeException(message)
+open class ApplicationException(message: String = "Server error", cause: Throwable? = null) :
+    RuntimeException(message, cause)
 
 class BrokenTransferException(message: String = "Broken transfer") : ApplicationException(message)
 
 class OperationIsNotApplicableException(message: String = "Operation is not applicable") : ApplicationException(message)
+
+class ImportCommandFailedException(val entityType: EntityType, val entityId: UUID?, override val cause: Exception) :
+    ApplicationException("Import of $entityType '$entityId' failed: ${cause.message}", cause)

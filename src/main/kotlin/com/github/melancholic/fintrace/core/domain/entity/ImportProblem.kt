@@ -50,6 +50,13 @@ data class ImportProblem(
             affectedIDs = affectedIDs
         )
 
+        fun refusedByCommand(entityType: EntityType, id: UUID?, message: String?) = ImportProblem(
+            code = ImportProblemCode.REFUSED_BY_COMMAND,
+            message = message ?: "$entityType was refused",
+            aggregateType = entityType,
+            affectedIDs = setOfNotNull(id),
+        )
+
         private fun limited(
             code: ImportProblemCode,
             message: String,
@@ -72,5 +79,6 @@ enum class ImportProblemCode {
     DUPLICATED_ENTITY_ID_WITHIN_SECTION,
     DUPLICATED_ENTITY_ID_ACROSS_SECTIONS,
     UNRESOLVED_REFERENCE,
-    CYCLIC_REFERENCES
+    CYCLIC_REFERENCES,
+    REFUSED_BY_COMMAND,
 }

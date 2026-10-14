@@ -5,7 +5,9 @@ import com.github.melancholic.fintrace.core.api.v1.dto.ImportEnvelopRequest
 import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
 import com.github.melancholic.fintrace.core.domain.command.*
 import com.github.melancholic.fintrace.core.domain.entity.*
+import com.github.melancholic.fintrace.core.domain.event.EntityType
 import com.github.melancholic.fintrace.core.exception.ApplicationException
+import com.github.melancholic.fintrace.core.exception.ImportCommandFailedException
 import com.github.melancholic.fintrace.core.service.command.CommandDispatcher
 import com.github.melancholic.fintrace.core.util.CategoriesTreeTraverser
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -61,7 +63,7 @@ class ImportExecutionServiceImpl(
                     initialBalanceAt = it.initialBalanceAt,
                 )
             }
-            .map { dispatch(it, userId, request) }
+            .map { dispatch(it, EntityType.ACCOUNT, it.id, userId, request) }
             .count()
         logger.info { "[importId=$jobId] Imported $imported accounts into workspace" }
         return imported
@@ -90,7 +92,7 @@ class ImportExecutionServiceImpl(
                 icon = it.icon
             )
         }
-        .map { dispatch(it, userId, request) }
+        .map { dispatch(it, EntityType.CATEGORY, it.id, userId, request) }
         .count()
 
         logger.info { "[importId=$jobId] Imported $imported categories into workspace" }
@@ -112,7 +114,7 @@ class ImportExecutionServiceImpl(
                     comment = it.comment
                 )
             }
-            .map { dispatch(it, userId, request) }
+            .map { dispatch(it, EntityType.OPERATION, it.id, userId, request) }
             .count()
         logger.info { "[importId=$jobId] Imported $imported operations into workspace" }
         return imported
@@ -133,7 +135,7 @@ class ImportExecutionServiceImpl(
                     comment = it.comment,
                 )
             }
-            .map { dispatch(it, userId, request) }
+            .map { dispatch(it, EntityType.TRANSFER, it.id, userId, request) }
             .count()
         logger.info { "[importId=$jobId] Imported $imported transfers into workspace" }
         return imported
@@ -151,7 +153,7 @@ class ImportExecutionServiceImpl(
                     occurredAt = it.occurredAt
                 )
             }
-            .map { dispatch(it, userId, request) }
+            .map { dispatch(it, EntityType.BALANCE_ANCHOR, it.id, userId, request) }
             .count()
         logger.info { "[importId=$jobId] Imported $imported balance anchors into workspace" }
         return imported
@@ -167,13 +169,22 @@ class ImportExecutionServiceImpl(
                     archived = true,
                 )
             }
-            .map { dispatch(it, userId, request) }
+            .map { dispatch(it, EntityType.ACCOUNT, it.accountId, userId, request) }
             .count()
         logger.info { "[importId=$jobId] Archived $archived accounts" }
     }
 
-    private fun <R> dispatch(command: Command<R>, userId: UUID, request: ImportEnvelopRequest): R =
+    private fun <R> dispatch(
+        command: Command<R>,
+        entityType: EntityType,
+        entityId: UUID?,
+        userId: UUID,
+        request: ImportEnvelopRequest
+    ): R = try {
         commandDispatcher.dispatch(command, CommandContext(initiator = userId, importer = request.importer()))
+    } catch (e: Exception) {
+        throw ImportCommandFailedException(entityType, entityId, e)
+    }
 
     companion object {
         private val logger = KotlinLogging.logger {}

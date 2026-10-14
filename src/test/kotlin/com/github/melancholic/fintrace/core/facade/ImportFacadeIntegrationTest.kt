@@ -15,6 +15,7 @@ import com.github.melancholic.fintrace.core.domain.entity.ImporterDetails
 import com.github.melancholic.fintrace.core.domain.entity.ImportProblemCode
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.entity.WorkspaceStatus
+import com.github.melancholic.fintrace.core.domain.event.EntityType
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
 import com.github.melancholic.fintrace.core.exception.OperationNotAllowedException
 import com.github.melancholic.fintrace.core.service.ImportLifecycleService
@@ -150,7 +151,7 @@ class ImportFacadeIntegrationTest(
     fun `a failed import leaves a genuinely empty NEW workspace and a FAILED job`() {
         // §4.2 and 2.22: the repair for a failed import is to retry it, which only works if
         // nothing survives. The job row must survive anyway — that is decision 10's whole point.
-        assertThrows<Exception> { importFacade.importWorkspaceData(workspaceId, payloadFailingAtDispatch()) }
+        importFacade.importWorkspaceData(workspaceId, payloadFailingAtDispatch())
 
         assertEquals("NEW", status(), "the workspace must still be importable")
         assertEquals(0, count("t_accounts"))
@@ -166,9 +167,22 @@ class ImportFacadeIntegrationTest(
     fun `the events of a failed import are rolled back`() {
         val before = count("t_events")
 
-        assertThrows<Exception> { importFacade.importWorkspaceData(workspaceId, payloadFailingAtDispatch()) }
+        importFacade.importWorkspaceData(workspaceId, payloadFailingAtDispatch())
 
         assertEquals(before, count("t_events"), "an import that fails appends nothing to the log")
+    }
+
+    @Test
+    fun `a payload the command path refuses answers with the job, naming what was refused`() {
+        // An INCOME operation filed under an expense category: the pre-pass leaves that to the
+        // command, and the importer must still learn which record it was.
+        val job = importFacade.importWorkspaceData(workspaceId, payloadFailingAtDispatch())
+
+        assertEquals(ImportJobStatus.FAILED, job.status)
+        val problem = job.problems.single()
+        assertEquals(ImportProblemCode.REFUSED_BY_COMMAND, problem.code)
+        assertEquals(EntityType.OPERATION, problem.aggregateType)
+        assertEquals(setOf(LUNCH), problem.affectedIDs)
     }
 
     // ---------------------------------------------------------------- guards
@@ -265,7 +279,7 @@ class ImportFacadeIntegrationTest(
 
     @Test
     fun `a failed import hands the workspace back`() {
-        assertThrows<Exception> { importFacade.importWorkspaceData(workspaceId, payloadFailingAtDispatch()) }
+        importFacade.importWorkspaceData(workspaceId, payloadFailingAtDispatch())
 
         // The repair is what makes the retry in §4.2 real; without it the workspace stays
         // IMPORTING and only the lease could release it.
