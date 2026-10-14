@@ -7,6 +7,8 @@ import com.github.melancholic.fintrace.core.config.IMPORT_AREA_API_PATH
 import com.github.melancholic.fintrace.core.domain.entity.ImportJobStatus
 import com.github.melancholic.fintrace.core.facade.ImportFacade
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -27,8 +29,16 @@ class ImportRestController(
 
     @Operation(summary = "Import a whole workspace in one request")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Imported; body carries the job with its counts"),
-        ApiResponse(responseCode = "400", description = "Malformed body"),
+        ApiResponse(
+            responseCode = "200",
+            description = "Imported; body carries the job with its counts",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = ImportJobResponse::class))],
+        ),
+        ApiResponse(
+            responseCode = "400",
+            description = "Refused: the FAILED job with its problems, or no job if the body is malformed",
+            content = [Content(mediaType = "application/json", schema = Schema(implementation = ImportJobResponse::class))],
+        ),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
         ApiResponse(
             responseCode = "409",

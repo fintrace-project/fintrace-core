@@ -167,6 +167,31 @@ class OpenApiDocumentTest(@Autowired private val mvc: MockMvc) {
             .andExpect(jsonPath("$.components.schemas.ImportJobResponse.properties.accounts").exists())
     }
 
+    @Test
+    fun `promises no body on an error response unless one is declared`() {
+        // Boot's generic error body is not part of the contract until ProblemDetail (M4).
+        val responses = "$.paths['/api/v1/workspaces/{workspaceId}'].get.responses"
+        mvc.perform(get("/v3/api-docs"))
+            .andExpect(jsonPath("$responses.200.content").exists())
+            .andExpect(jsonPath("$responses.404.content").doesNotExist())
+            .andExpect(jsonPath("$responses.403.content").doesNotExist())
+    }
+
+    @Test
+    fun `promises the job only where the import endpoint sends one`() {
+        // The importer's client is generated from this; a job schema on 404 or 409 is a body it will never get.
+        val responses = "$.paths['/api/v1/workspaces/{workspaceId}/import'].post.responses"
+        val job = "#/components/schemas/ImportJobResponse"
+        mvc.perform(get("/v3/api-docs"))
+            .andExpect(jsonPath("$responses.200.content['application/json'].schema['\$ref']").value(job))
+            .andExpect(jsonPath("$responses.400.content['application/json'].schema['\$ref']").value(job))
+            .andExpect(jsonPath("$responses.202").doesNotExist())
+            .andExpect(jsonPath("$responses.404.content").doesNotExist())
+            .andExpect(jsonPath("$responses.409.content").doesNotExist())
+            .andExpect(jsonPath("$responses.401.content").doesNotExist())
+            .andExpect(jsonPath("$responses.403.content").doesNotExist())
+    }
+
 	@Test
 	fun `serves the Swagger UI anonymously`() {
 		mvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk)
