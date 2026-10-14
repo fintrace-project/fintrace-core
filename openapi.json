@@ -871,8 +871,8 @@
               }
             }
           },
-          "400" : {
-            "description" : "Refused: the FAILED job with its problems, or no job if the body is malformed",
+          "422" : {
+            "description" : "Refused; body carries the FAILED job with its problems",
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -880,6 +880,9 @@
                 }
               }
             }
+          },
+          "400" : {
+            "description" : "Malformed body"
           },
           "404" : {
             "description" : "No such workspace for this caller"

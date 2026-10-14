@@ -184,7 +184,8 @@ class OpenApiDocumentTest(@Autowired private val mvc: MockMvc) {
         val job = "#/components/schemas/ImportJobResponse"
         mvc.perform(get("/v3/api-docs"))
             .andExpect(jsonPath("$responses.200.content['application/json'].schema['\$ref']").value(job))
-            .andExpect(jsonPath("$responses.400.content['application/json'].schema['\$ref']").value(job))
+            .andExpect(jsonPath("$responses.422.content['application/json'].schema['\$ref']").value(job))
+            .andExpect(jsonPath("$responses.400.content").doesNotExist())
             .andExpect(jsonPath("$responses.202").doesNotExist())
             .andExpect(jsonPath("$responses.404.content").doesNotExist())
             .andExpect(jsonPath("$responses.409.content").doesNotExist())

@@ -35,10 +35,11 @@ class ImportRestController(
             content = [Content(mediaType = "application/json", schema = Schema(implementation = ImportJobResponse::class))],
         ),
         ApiResponse(
-            responseCode = "400",
-            description = "Refused: the FAILED job with its problems, or no job if the body is malformed",
+            responseCode = "422",
+            description = "Refused; body carries the FAILED job with its problems",
             content = [Content(mediaType = "application/json", schema = Schema(implementation = ImportJobResponse::class))],
         ),
+        ApiResponse(responseCode = "400", description = "Malformed body"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
         ApiResponse(
             responseCode = "409",
@@ -56,7 +57,7 @@ class ImportRestController(
         val status = when (import.status) {
             ImportJobStatus.RUNNING -> HttpStatus.ACCEPTED
             ImportJobStatus.SUCCEEDED -> HttpStatus.OK
-            ImportJobStatus.FAILED -> HttpStatus.BAD_REQUEST
+            ImportJobStatus.FAILED -> HttpStatus.UNPROCESSABLE_CONTENT
         }
 
         val location = MvcUriComponentsBuilder

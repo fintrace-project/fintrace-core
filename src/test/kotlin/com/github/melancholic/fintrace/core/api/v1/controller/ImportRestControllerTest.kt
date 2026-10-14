@@ -62,17 +62,17 @@ class ImportRestControllerTest(
     }
 
     @Test
-    fun `answers 400 when the payload is refused`() {
+    fun `answers 422 when the payload is refused`() {
         mvc.perform(importing(V4_ID_PAYLOAD))
-            .andExpect(status().isBadRequest)
+            .andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.status").value("FAILED"))
     }
 
-    /** The reason has to survive into the body, or a 400 tells the importer author nothing. */
+    /** The reason has to survive into the body, or a 422 tells the importer author nothing. */
     @Test
     fun `the refusal names the offending id and its section`() {
         mvc.perform(importing(V4_ID_PAYLOAD))
-            .andExpect(status().isBadRequest)
+            .andExpect(status().isUnprocessableContent)
             .andExpect(jsonPath("$.problems.length()").value(1))
             .andExpect(jsonPath("$.problems[0].code").value("WRONG_UUID_VERSION"))
             .andExpect(jsonPath("$.problems[0].aggregateType").value("ACCOUNT"))
@@ -82,7 +82,7 @@ class ImportRestControllerTest(
 
     @Test
     fun `a refused payload leaves the workspace importable again`() {
-        mvc.perform(importing(V4_ID_PAYLOAD)).andExpect(status().isBadRequest)
+        mvc.perform(importing(V4_ID_PAYLOAD)).andExpect(status().isUnprocessableContent)
 
         mvc.perform(importing(VALID_PAYLOAD))
             .andExpect(status().isOk)
