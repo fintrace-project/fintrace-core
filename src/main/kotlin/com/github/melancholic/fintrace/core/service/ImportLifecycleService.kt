@@ -54,8 +54,12 @@ class ImportLifecycleServiceImpl(
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     override fun begin(userId: UUID, workspaceId: UUID, importer: ImporterDetails): UUID {
-        takeForImport(userId, workspaceId)
-        return importJobDAO.create(workspaceId = workspaceId, startedBy = userId, importer = importer)
+        val version = checkImportable(userId, workspaceId)
+        val jobId = importJobDAO.create(workspaceId = workspaceId, startedBy = userId, importer = importer)
+        if (!workspaceDAO.startImport(userId, workspaceId, jobId, version)) {
+            throw ActionConflictException("Couldn't start import: concurrent modification of the workspace")
+        }
+        return jobId
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -66,8 +70,8 @@ class ImportLifecycleServiceImpl(
         counts: ImportJobStatistics,
         diagnostics: List<ImportDiagnostic>
     ): ImportJob {
-        if (!changeStatus(userId, workspaceId, WorkspaceStatus.ACTIVE)) {
-            throw ActionConflictException("Couldn't finish import '$jobId': the workspace is no longer importing")
+        if (!workspaceDAO.finishImport(userId, workspaceId, jobId, WorkspaceStatus.ACTIVE)) {
+            throw ActionConflictException("Couldn't finish import '$jobId': the workspace is no longer held by it")
         }
         return importJobDAO.complete(
             workspaceId = workspaceId,
@@ -88,8 +92,8 @@ class ImportLifecycleServiceImpl(
         diagnostics: List<ImportDiagnostic>,
         problems: List<ImportProblem>
     ) : ImportJob {
-        if (!changeStatus(userId, workspaceId, WorkspaceStatus.NEW)) {
-            logger.warn { "Import '$jobId' failed, but its workspace was no longer IMPORTING — status left as found" }
+        if (!workspaceDAO.finishImport(userId, workspaceId, jobId, WorkspaceStatus.NEW)) {
+            logger.warn { "Import '$jobId' failed, but its workspace was no longer held by it - status left as found" }
         }
         return importJobDAO.complete(
             workspaceId = workspaceId,
@@ -121,7 +125,7 @@ class ImportLifecycleServiceImpl(
         workspaceDAO.resetMultipleWorkspacesWithAbandonedImport(chunkSize, staleBefore())
             .onEach { failRunningJob(it) }
 
-    private fun takeForImport(userId: UUID, workspaceId: UUID) {
+    private fun checkImportable(userId: UUID, workspaceId: UUID): Long {
         val workspace = workspaceDAO.get(userId, workspaceId)
             .orElseThrow { NotFoundEntityException("Workspace not found (workspaceId='$workspaceId')") }
 
@@ -131,24 +135,8 @@ class ImportLifecycleServiceImpl(
         if (!workspaceDAO.isEmpty(workspaceId)) {
             throw OperationNotAllowedException("Import not allowed into workspace '$workspaceId': workspace is not empty")
         }
-        if (!workspaceDAO.changeStatus(
-                userId = userId,
-                workspaceId = workspaceId,
-                sourceStatuses = TO_IMPORT_STATUSES,
-                newStatus = WorkspaceStatus.IMPORTING,
-                version = workspace.version
-            )
-        ) {
-            throw ActionConflictException("Couldn't start import: concurrent modification of the workspace")
-        }
+        return workspace.version
     }
-
-    private fun changeStatus(userId: UUID, workspaceId: UUID, newStatus: WorkspaceStatus) = workspaceDAO.changeStatus(
-        userId = userId,
-        workspaceId = workspaceId,
-        sourceStatuses = IMPORTING_ONLY,
-        newStatus = newStatus
-    )
 
     private fun failRunningJob(workspaceId: UUID) = importJobDAO.updateStatus(
         workspaceId = workspaceId,
@@ -168,6 +156,5 @@ class ImportLifecycleServiceImpl(
         private val logger = KotlinLogging.logger {}
 
         val TO_IMPORT_STATUSES = setOf(WorkspaceStatus.NEW)
-        val IMPORTING_ONLY = setOf(WorkspaceStatus.IMPORTING)
     }
 }

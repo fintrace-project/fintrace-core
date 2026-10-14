@@ -481,6 +481,38 @@ class ImportFacadeIntegrationTest(
     }
 
     @Test
+    fun `a stale import cannot commit over the import that replaced it`() {
+        val stale = beginImport()
+        expireLease()
+        transactions.execute { importLifecycleService.recoverAbandoned(10) }
+        val current = beginImport()
+
+        assertThrows<ActionConflictException> {
+            transactions.execute {
+                importLifecycleService.succeed(ownerId(), workspaceId, stale, NO_COUNTS, emptyList())
+            }
+        }
+        assertEquals("IMPORTING", status(), "the current import keeps the workspace")
+        assertEquals("RUNNING", jobStatus(current))
+
+        transactions.execute { importLifecycleService.succeed(ownerId(), workspaceId, current, NO_COUNTS, emptyList()) }
+        assertEquals("ACTIVE", status())
+    }
+
+    @Test
+    fun `a stale import failing does not release the import that replaced it`() {
+        val stale = beginImport()
+        expireLease()
+        transactions.execute { importLifecycleService.recoverAbandoned(10) }
+        val current = beginImport()
+
+        importLifecycleService.fail(ownerId(), workspaceId, stale, "failed late", emptyList())
+
+        assertEquals("IMPORTING", status(), "the current import keeps the workspace")
+        assertEquals("RUNNING", jobStatus(current))
+    }
+
+    @Test
     fun `retries an import after its lease expired`() {
         beginImport()
         expireLease()

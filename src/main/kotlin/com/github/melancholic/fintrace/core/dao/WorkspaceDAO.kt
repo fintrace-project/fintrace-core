@@ -44,6 +44,10 @@ interface WorkspaceDAO {
         version: Long?
     ): Boolean
 
+    fun startImport(userId: UUID, workspaceId: UUID, jobId: UUID, version: Long): Boolean
+
+    fun finishImport(userId: UUID, workspaceId: UUID, jobId: UUID, newStatus: WorkspaceStatus): Boolean
+
     fun isEmpty(workspaceId: UUID): Boolean
 
     fun findDeletedBefore(cutoff: LocalDateTime, limit: Int = 100): List<WorkspacePurgeData>
@@ -157,6 +161,24 @@ class WorkspaceDAOImpl(
         return updated == 1
     }
 
+    override fun startImport(userId: UUID, workspaceId: UUID, jobId: UUID, version: Long): Boolean =
+        jdbc.sql(START_IMPORT)
+            .param("ownerId", userId)
+            .param("id", workspaceId)
+            .param("jobId", jobId)
+            .param("updatedAt", timestampProvider.now())
+            .param("version", version)
+            .update() == 1
+
+    override fun finishImport(userId: UUID, workspaceId: UUID, jobId: UUID, newStatus: WorkspaceStatus): Boolean =
+        jdbc.sql(FINISH_IMPORT)
+            .param("ownerId", userId)
+            .param("id", workspaceId)
+            .param("jobId", jobId)
+            .param("newStatus", newStatus.name)
+            .param("updatedAt", timestampProvider.now())
+            .update() == 1
+
     override fun isEmpty(workspaceId: UUID): Boolean = jdbc.sql("SELECT fn_is_workspace_empty(:workspaceId)")
         .param("workspaceId", workspaceId)
         .query(Boolean::class.java)
@@ -249,11 +271,38 @@ class WorkspaceDAOImpl(
                     WHEN :newStatus = 'NEW'       THEN NULL
                     ELSE import_started_at
                 END,
+                import_job_id = NULL,
                 version = version + 1
             WHERE id = :id
                 AND owner_id = :ownerId
                 AND status <> 'DELETED'
                 AND status in (:sourceStatuses)
+        """
+
+        const val START_IMPORT = """
+            UPDATE $TABLE
+            SET status = 'IMPORTING',
+                import_started_at = :updatedAt,
+                import_job_id = :jobId,
+                updated_at = :updatedAt,
+                version = version + 1
+            WHERE id = :id
+                AND owner_id = :ownerId
+                AND status = 'NEW'
+                AND version = :version
+        """
+
+        const val FINISH_IMPORT = """
+            UPDATE $TABLE
+            SET status = :newStatus,
+                import_started_at = NULL,
+                import_job_id = NULL,
+                updated_at = :updatedAt,
+                version = version + 1
+            WHERE id = :id
+                AND owner_id = :ownerId
+                AND status = 'IMPORTING'
+                AND import_job_id = :jobId
         """
 
         const val FIND_CANDIDATES_FOR_PURGE = """
@@ -283,6 +332,7 @@ class WorkspaceDAOImpl(
             SET
                 status = 'NEW',
                 import_started_at = NULL,
+                import_job_id = NULL,
                 updated_at = :updatedAt,
                 version = version + 1
             WHERE id = :workspaceId AND status = 'IMPORTING' AND import_started_at < :staleBefore
@@ -294,6 +344,7 @@ class WorkspaceDAOImpl(
             SET
                 status = 'NEW',
                 import_started_at = NULL,
+                import_job_id = NULL,
                 updated_at = :updatedAt,
                 version = version + 1
             WHERE id IN (
