@@ -1,6 +1,6 @@
 package com.github.melancholic.fintrace.core
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection
 import org.springframework.context.annotation.Bean
@@ -27,16 +27,12 @@ class TestcontainersConfiguration {
 	 * evaluates its auto-configuration conditions before a `DynamicPropertyRegistrar` runs, so the
 	 * issuer would still look absent and no decoder would be created at all.
 	 *
-	 * Given an issuer (a `bootTestRun` against Keycloak), the sentinel no longer matches and Boot's
-	 * real decoder validates real tokens.
+	 * Given an issuer (a `bootTestRun` against Keycloak), the condition no longer matches and Boot's
+	 * real decoder validates real tokens. `application.yml` maps `FINTRACE_OAUTH2_ISSUER_URI` with an
+	 * empty default, so "no issuer" means an empty property here, not a missing one.
 	 */
 	@Bean
-	@ConditionalOnProperty(
-		prefix = "spring.security.oauth2.resourceserver.jwt",
-		name = ["issuer-uri"],
-		havingValue = "no-issuer-configured",
-		matchIfMissing = true,
-	)
+	@ConditionalOnExpression("'\${spring.security.oauth2.resourceserver.jwt.issuer-uri:}' == ''")
 	fun jwtDecoder(): JwtDecoder = JwtDecoder { throw BadJwtException("Tests carry no real tokens") }
 
 }

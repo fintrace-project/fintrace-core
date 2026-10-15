@@ -5,8 +5,10 @@ spring:
     oauth2:
           resourceserver:
             jwt:
+              # Empty when unset, which Boot treats as absent: a deployment without it fails at startup
+              issuer-uri: ${FINTRACE_OAUTH2_ISSUER_URI:}
               audiences: fintrace-core
-              
+
 springdoc:
   swagger-ui:
     oauth:
