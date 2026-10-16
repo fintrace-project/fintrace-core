@@ -69,7 +69,7 @@ tasks.withType<Test> {
 // openapi.json is committed so contract changes reach review as a diff, and rewritten by every build;
 // CI fails when the build leaves it different from the committed copy.
 val generateOpenApi by tasks.registering(JavaExec::class) {
-	description = "Writes Core's served OpenAPI spec to openapi.json."
+	description = "Writes fintrace-core's served OpenAPI spec to openapi.json."
 	group = "build"
 	classpath = sourceSets.test.get().runtimeClasspath
 	mainClass = "com.github.melancholic.fintrace.core.OpenApiSpecWriterKt"
