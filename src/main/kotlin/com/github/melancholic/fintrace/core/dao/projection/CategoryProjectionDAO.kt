@@ -5,6 +5,7 @@ import com.github.melancholic.fintrace.core.domain.entity.CategorySystemCode
 import com.github.melancholic.fintrace.core.domain.projection.CategoryProjection
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
 import com.github.melancholic.fintrace.core.exception.ApplicationException
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionTarget
 import org.springframework.dao.DuplicateKeyException
@@ -49,7 +50,7 @@ class CategoryProjectionDAOImpl(
             .query(UUID::class.java)
             .single()
     } catch (_: DuplicateKeyException) {
-        throw ActionConflictException("Couldn't create category '${projection.id}': that id is already taken")
+        throw ActionConflictException(CoreErrorCode.ID_TAKEN, "Couldn't create category '${projection.id}': that id is already taken")
     }
 
     override fun update(projection: CategoryProjection): CategoryProjection = jdbc.sql(UPDATE)

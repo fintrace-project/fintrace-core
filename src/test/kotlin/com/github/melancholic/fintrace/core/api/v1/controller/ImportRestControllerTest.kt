@@ -4,6 +4,7 @@ import com.github.melancholic.fintrace.core.TestWorkspaces
 import com.github.melancholic.fintrace.core.TestcontainersConfiguration
 import com.github.melancholic.fintrace.core.dao.UsersDAO
 import com.github.melancholic.fintrace.core.service.WorkspaceService
+import org.hamcrest.Matchers.endsWith
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -103,7 +104,9 @@ class ImportRestControllerTest(
     fun `a section field breaking its constraint is refused before the import starts`() {
         mvc.perform(importing(VALID_PAYLOAD.replace("\"EUR\"", "\"eur\"")))
             .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.status").doesNotExist())
+            .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+            .andExpect(jsonPath("$.errors[0].field").value(endsWith("currency")))
+            .andExpect(jsonPath("$.id").doesNotExist())
 
         assertEquals(0, jdbc.sql("SELECT count(*) FROM t_import_jobs").query(Int::class.java).single())
     }

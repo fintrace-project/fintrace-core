@@ -5,6 +5,7 @@ import com.github.melancholic.fintrace.core.dao.ImportJobDAO
 import com.github.melancholic.fintrace.core.dao.WorkspaceDAO
 import com.github.melancholic.fintrace.core.domain.entity.*
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.exception.OperationNotAllowedException
 import com.github.melancholic.fintrace.core.util.TransactionsUtil.runInNewTransaction
@@ -57,7 +58,10 @@ class ImportLifecycleServiceImpl(
         val version = checkImportable(userId, workspaceId)
         val jobId = importJobDAO.create(workspaceId = workspaceId, startedBy = userId, importer = importer)
         if (!workspaceDAO.startImport(userId, workspaceId, jobId, version)) {
-            throw ActionConflictException("Couldn't start import: concurrent modification of the workspace")
+            throw ActionConflictException(
+                CoreErrorCode.WORKSPACE_NOT_IMPORTABLE,
+                "Couldn't start import: concurrent modification of the workspace"
+            )
         }
         return jobId
     }
@@ -71,7 +75,10 @@ class ImportLifecycleServiceImpl(
         diagnostics: List<ImportDiagnostic>
     ): ImportJob {
         if (!workspaceDAO.finishImport(userId, workspaceId, jobId, WorkspaceStatus.ACTIVE)) {
-            throw ActionConflictException("Couldn't finish import '$jobId': the workspace is no longer held by it")
+            throw ActionConflictException(
+                CoreErrorCode.IMPORT_LEASE_LOST,
+                "Couldn't finish import '$jobId': the workspace is no longer held by it"
+            )
         }
         return importJobDAO.complete(
             workspaceId = workspaceId,
@@ -130,10 +137,16 @@ class ImportLifecycleServiceImpl(
             .orElseThrow { NotFoundEntityException("Workspace not found (workspaceId='$workspaceId')") }
 
         if (!TO_IMPORT_STATUSES.contains(workspace.status)) {
-            throw OperationNotAllowedException("Import not allowed into workspace '$workspaceId': workspace is not new")
+            throw OperationNotAllowedException(
+                CoreErrorCode.WORKSPACE_NOT_IMPORTABLE,
+                "Import not allowed into workspace '$workspaceId': workspace is not new"
+            )
         }
         if (!workspaceDAO.isEmpty(workspaceId)) {
-            throw OperationNotAllowedException("Import not allowed into workspace '$workspaceId': workspace is not empty")
+            throw OperationNotAllowedException(
+                CoreErrorCode.WORKSPACE_NOT_IMPORTABLE,
+                "Import not allowed into workspace '$workspaceId': workspace is not empty"
+            )
         }
         return workspace.version
     }

@@ -7,6 +7,7 @@ import com.github.melancholic.fintrace.core.domain.command.*
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.exception.OperationNotSupported
 import com.github.melancholic.fintrace.core.exception.ValidationError
@@ -75,14 +76,14 @@ class OperationValidationServiceImpl(
     private fun checkAccountOnCreate(command: CreateOperationCommand) {
         val account = accountDAO.getById(command.workspaceId, command.accountId)
         if (account.archived) {
-            throw ActionConflictException("Couldn't create new operation under archived account")
+            throw ActionConflictException(CoreErrorCode.ACCOUNT_ARCHIVED, "Couldn't create new operation under archived account")
         }
     }
 
     private fun checkAccountOnRevise(command: ReviseOperationCommand, currentAccountId: UUID) {
         val account = accountDAO.getById(command.workspaceId, command.accountId)
         if (account.archived && command.accountId != currentAccountId) {
-            throw ActionConflictException("Couldn't move an operation onto an archived account")
+            throw ActionConflictException(CoreErrorCode.ACCOUNT_ARCHIVED, "Couldn't move an operation onto an archived account")
         }
     }
 
@@ -93,11 +94,14 @@ class OperationValidationServiceImpl(
         val category = categoryDAO.getById(command.workspaceId, command.categoryId)
 
         if (category.archived) {
-            throw ActionConflictException("Couldn't create new operation under archived category")
+            throw ActionConflictException(CoreErrorCode.CATEGORY_ARCHIVED, "Couldn't create new operation under archived category")
         }
 
         if (category.kind != command.kind.asCategoryKind()) {
-            throw ActionConflictException("Operation with kind=`${command.kind}` couldn't be under a category with kind='${category.kind}'")
+            throw ActionConflictException(
+                CoreErrorCode.CATEGORY_KIND_MISMATCH,
+                "Operation with kind=`${command.kind}` couldn't be under a category with kind='${category.kind}'"
+            )
         }
     }
 
@@ -105,7 +109,10 @@ class OperationValidationServiceImpl(
         val category = categoryDAO.getById(command.workspaceId, command.categoryId)
 
         if (category.kind != command.kind.asCategoryKind()) {
-            throw ActionConflictException("Operation with kind=`${command.kind}` couldn't be under a category with kind='${category.kind}'")
+            throw ActionConflictException(
+                CoreErrorCode.CATEGORY_KIND_MISMATCH,
+                "Operation with kind=`${command.kind}` couldn't be under a category with kind='${category.kind}'"
+            )
         }
     }
 
@@ -120,7 +127,7 @@ class OperationValidationServiceImpl(
     }
 
     class TransferOperationNotSupportedException(message: String = "Transfer couldn't be processed as an ordinary operation") :
-        OperationNotSupported(message)
+        OperationNotSupported(CoreErrorCode.TRANSFER_VIA_OPERATIONS, message)
 
     class NotFoundOperationException(operationId: UUID) :
         NotFoundEntityException("Operation with id='${operationId}' not found")

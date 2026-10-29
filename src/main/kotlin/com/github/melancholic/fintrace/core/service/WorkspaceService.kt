@@ -17,6 +17,7 @@ import com.github.melancholic.fintrace.core.domain.entity.Workspace
 import com.github.melancholic.fintrace.core.domain.entity.WorkspaceStatus
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
 import com.github.melancholic.fintrace.core.exception.ApplicationException
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.exception.OperationNotAllowedException
 import com.github.melancholic.fintrace.core.service.command.CommandDispatcher
@@ -88,7 +89,10 @@ class WorkspaceServiceImpl(
             updated > 1 -> throw ApplicationException("Couldn't update workspace: unexpected number of updated records: $updated, operation was canceled")
             updated < 1 -> {
                 val workspace = getWorkspace(userId, workspaceId)
-                throw ActionConflictException("Couldn't update workspace: ${workspace.name}, operation was canceled")
+                throw ActionConflictException(
+                    CoreErrorCode.VERSION_CONFLICT,
+                    "Couldn't update workspace: ${workspace.name}, operation was canceled"
+                )
             }
         }
     }
@@ -104,7 +108,7 @@ class WorkspaceServiceImpl(
         ) {
             val workspace = getWorkspace(userId, workspaceId)
             if (workspace.status != WorkspaceStatus.ARCHIVED) {
-                throw ActionConflictException(STATUS_CONFLICT_MSG)
+                throw ActionConflictException(CoreErrorCode.WORKSPACE_STATUS_CONFLICT, STATUS_CONFLICT_MSG)
             }
         }
 
@@ -120,7 +124,7 @@ class WorkspaceServiceImpl(
         ) {
             val workspace = getWorkspace(userId, workspaceId)
             if (workspace.status != WorkspaceStatus.ACTIVE) {
-                throw ActionConflictException(STATUS_CONFLICT_MSG)
+                throw ActionConflictException(CoreErrorCode.WORKSPACE_STATUS_CONFLICT, STATUS_CONFLICT_MSG)
             }
         }
     }
@@ -135,10 +139,13 @@ class WorkspaceServiceImpl(
             )
         ) {
             val workspace = getWorkspace(userId, workspaceId)
-            throw ActionConflictException(
-                if (workspace.version != version) "Workspace changed since it was read"
-                else "Cannot delete a workspace in status ${workspace.status}"
-            )
+            throw if (workspace.version != version)
+                ActionConflictException(CoreErrorCode.VERSION_CONFLICT, "Workspace changed since it was read")
+            else
+                ActionConflictException(
+                    CoreErrorCode.WORKSPACE_STATUS_CONFLICT,
+                    "Cannot delete a workspace in status ${workspace.status}"
+                )
         }
     }
 
@@ -152,7 +159,10 @@ class WorkspaceServiceImpl(
     ): Workspace {
         val workspace = importLifecycleService.recoverIfAbandoned(getWorkspace(userId, workspaceId))
         if (!WRITABLE_STATUSES.contains(workspace.status)) {
-            throw OperationNotAllowedException("Operations from workspace '${workspace.id}' not allowed to write")
+            throw OperationNotAllowedException(
+                CoreErrorCode.WORKSPACE_READ_ONLY,
+                "Operations from workspace '${workspace.id}' not allowed to write"
+            )
         }
 
         return workspace
@@ -161,7 +171,10 @@ class WorkspaceServiceImpl(
     override fun requireReadable(userId: UUID, workspaceId: UUID): Workspace {
         val workspace = getWorkspace(userId, workspaceId)
         if (!READABLE_STATUSES.contains(workspace.status)) {
-            throw OperationNotAllowedException("Operations from workspace '${workspace.id}' not allowed to read")
+            throw OperationNotAllowedException(
+                CoreErrorCode.WORKSPACE_STATUS_CONFLICT,
+                "Operations from workspace '${workspace.id}' not allowed to read"
+            )
         }
         return workspace
     }

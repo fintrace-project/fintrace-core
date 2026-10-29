@@ -5,6 +5,7 @@ import com.github.melancholic.fintrace.core.dao.projection.OperationProjectionDA
 import com.github.melancholic.fintrace.core.domain.command.*
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.exception.ValidationError
 import com.github.melancholic.fintrace.core.util.TimestampProvider
@@ -55,14 +56,14 @@ class TransferValidationServiceImpl(
     private fun checkAccountOnCreate(workspaceId: UUID, accountId: UUID) {
         val account = accountDAO.getById(workspaceId, accountId)
         if (account.archived) {
-            throw ActionConflictException("Archived account couldn't be used for new transfer")
+            throw ActionConflictException(CoreErrorCode.ACCOUNT_ARCHIVED, "Archived account couldn't be used for new transfer")
         }
     }
 
     private fun checkAccountOnRevise(workspaceId: UUID, accountId: UUID, currentAccountId: UUID) {
         val account = accountDAO.getById(workspaceId, accountId)
         if (account.archived && accountId != currentAccountId) {
-            throw ActionConflictException("Archived account couldn't receive a transfer leg")
+            throw ActionConflictException(CoreErrorCode.ACCOUNT_ARCHIVED, "Archived account couldn't receive a transfer leg")
         }
     }
 

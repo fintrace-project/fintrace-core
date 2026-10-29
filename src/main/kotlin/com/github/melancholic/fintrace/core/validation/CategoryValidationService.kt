@@ -9,6 +9,7 @@ import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.entity.CategorySystemCode
 import com.github.melancholic.fintrace.core.domain.projection.CategoryProjection
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.exception.ValidationError
 import com.github.melancholic.fintrace.core.validation.ValidationConstants.CATEGORY_NAME_PATTERN
@@ -48,7 +49,7 @@ class CategoryValidationServiceImpl(
 
     private fun checkArchived(category: CategoryProjection) {
         if (category.archived) {
-            throw ActionConflictException("Can't modify archived category")
+            throw ActionConflictException(CoreErrorCode.CATEGORY_ARCHIVED, "Can't modify archived category")
         }
     }
 
@@ -58,7 +59,7 @@ class CategoryValidationServiceImpl(
     }
 
     private fun checkSystem(category: CategoryProjection) {
-        if (category.systemCode != null) throw ActionConflictException("Can't modify system category")
+        if (category.systemCode != null) throw ActionConflictException(CoreErrorCode.SYSTEM_CATEGORY, "Can't modify system category")
     }
 
     private fun requireExists(workspaceId: UUID, categoryId: UUID): CategoryProjection {
@@ -94,11 +95,11 @@ class CategoryValidationServiceImpl(
             .orElseThrow { NotFoundCategoryException(workspaceId, newParentId) }
 
         if (parent.archived) {
-            throw ActionConflictException("Can't move under archived category")
+            throw ActionConflictException(CoreErrorCode.CATEGORY_ARCHIVED, "Can't move under archived category")
         }
 
         if (newParentId in categoryDAO.findSubtreeIds(workspaceId, category.id)) {
-            throw ActionConflictException("Can't move under current category")
+            throw ActionConflictException(CoreErrorCode.CATEGORY_PARENT_REFUSED, "Can't move under current category")
         }
 
         if (category.kind != parent.kind) {
@@ -121,7 +122,7 @@ class CategoryValidationServiceImpl(
             .orElseThrow { NotFoundCategoryException(workspaceId, parentId) }
 
         if (parent.archived) {
-            throw ActionConflictException("Can't create category under archived category")
+            throw ActionConflictException(CoreErrorCode.CATEGORY_ARCHIVED, "Can't create category under archived category")
         }
 
         if (kind != parent.kind) {
@@ -138,10 +139,10 @@ class CategoryValidationServiceImpl(
         NotFoundEntityException("Category not found (workspaceId='${workspaceId}', categoryId='${categoryId}')")
 
     private class CategoryKindConflictException :
-        ActionConflictException("Category kind should be the same as the parent id")
+        ActionConflictException(CoreErrorCode.CATEGORY_KIND_MISMATCH, "Category kind should be the same as the parent id")
 
     private class CantNestCategoryUnderOthersException :
-        ActionConflictException("Can't nest a category under an $ROOT_OTHERS_CAT_NAME category")
+        ActionConflictException(CoreErrorCode.CATEGORY_PARENT_REFUSED, "Can't nest a category under an $ROOT_OTHERS_CAT_NAME category")
 
     private companion object {
         val NAME_REGEX = Regex(CATEGORY_NAME_PATTERN)

@@ -6,6 +6,7 @@ import com.github.melancholic.fintrace.core.domain.command.BalanceAnchorCommand
 import com.github.melancholic.fintrace.core.domain.command.CancelBalanceAnchorCommand
 import com.github.melancholic.fintrace.core.domain.command.CreateBalanceAnchorCommand
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import com.github.melancholic.fintrace.core.exception.ValidationError
 import com.github.melancholic.fintrace.core.util.TimestampProvider
 import org.springframework.stereotype.Service
@@ -35,6 +36,7 @@ class BalanceAnchorValidationServiceImpl(
             .filter { command.occurredAt.isBefore(it) }
             .ifPresent {
                 throw ActionConflictException(
+                    CoreErrorCode.ANCHOR_ORDER,
                     "Couldn't record balance anchor: it precedes the account's newest anchor ($it)"
                 )
             }
@@ -48,14 +50,14 @@ class BalanceAnchorValidationServiceImpl(
     private fun checkAnchorId(command: CancelBalanceAnchorCommand) {
         val requested = projectionDAO.getById(command.workspaceId, command.accountId, command.anchorId)
         if (!projectionDAO.isLast(requested)) {
-            throw ActionConflictException("Couldn't remove balance anchor: only last anchor may be deleted.")
+            throw ActionConflictException(CoreErrorCode.ANCHOR_ORDER, "Couldn't remove balance anchor: only last anchor may be deleted.")
         }
     }
 
     private fun checkAccount(command: BalanceAnchorCommand<*>) {
         val account = accountDAO.getById(command.workspaceId, command.accountId)
         if (account.archived) {
-            throw ActionConflictException("Couldn't manage balance anchor: account shouldn't be archived")
+            throw ActionConflictException(CoreErrorCode.ACCOUNT_ARCHIVED, "Couldn't manage balance anchor: account shouldn't be archived")
         }
     }
 

@@ -1,5 +1,6 @@
 package com.github.melancholic.fintrace.core.domain.entity
 
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import com.github.melancholic.fintrace.core.exception.OperationNotAllowedException
 import java.math.BigDecimal
 
@@ -9,12 +10,12 @@ enum class OperationKind {
     fun signedAmount(amount: BigDecimal): BigDecimal = when (this) {
         INCOME -> return amount
         EXPENSE -> return amount.negate()
-        TRANSFER -> throw OperationNotAllowedException()
+        TRANSFER -> throw OperationNotAllowedException(CoreErrorCode.TRANSFER_VIA_OPERATIONS)
     }
 
     fun asCategoryKind() = when (this) {
         INCOME -> CategoryKind.INCOME
         EXPENSE -> CategoryKind.EXPENSE
-        TRANSFER -> throw OperationNotAllowedException()
+        TRANSFER -> throw OperationNotAllowedException(CoreErrorCode.TRANSFER_VIA_OPERATIONS)
     }
 }
