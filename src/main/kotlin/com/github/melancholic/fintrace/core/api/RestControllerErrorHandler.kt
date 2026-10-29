@@ -21,7 +21,11 @@ class RestControllerErrorHandler : ResponseEntityExceptionHandler() {
     @ExceptionHandler(FintraceCoreException::class)
     fun handleCoreException(e: FintraceCoreException): ProblemDetail {
         val status = statusOf(e)
-        return problem(status, e.code, if (status.is5xxServerError) DEF_MESSAGE else e.message)
+        return problem(status, e.code, if (status.is5xxServerError) DEF_MESSAGE else e.message).apply {
+            if (e is ValidationError && e.field != null) {
+                setProperty("errors", listOf(mapOf("field" to e.field, "message" to e.message)))
+            }
+        }
     }
 
     @ExceptionHandler(Exception::class)

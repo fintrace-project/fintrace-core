@@ -26,7 +26,7 @@ class AccountValidationServiceImpl(
     override fun validate(account: CreateAccountCommand) {
         checkName(account.name)
         checkIcon(account.icon)
-        CurrencyValidator.requireKnown(account.currency)
+        CurrencyValidator.requireKnown(account.currency, "currency")
     }
 
     override fun validate(account: ReviseAccountCommand) {
@@ -47,19 +47,19 @@ class AccountValidationServiceImpl(
 
     private fun checkName(name: String) {
         if (name.isBlank()) {
-            throw ValidationError("Account name must not be blank")
+            throw ValidationError("Account name must not be blank", "name")
         }
         if (name.length > MAX_NAME_LENGTH) {
-            throw ValidationError("Account name must be at most $MAX_NAME_LENGTH characters, was ${name.length}")
+            throw ValidationError("Account name must be at most $MAX_NAME_LENGTH characters, was ${name.length}", "name")
         }
         if (!NAME_REGEX.matches(name)) {
-            throw ValidationError("Account name '$name' contains characters that are not permitted")
+            throw ValidationError("Account name '$name' contains characters that are not permitted", "name")
         }
     }
 
     private fun checkIcon(icon: String?) {
         if (icon != null && icon.length > MAX_ICON_LENGTH) {
-            throw ValidationError("Account icon must be at most $MAX_ICON_LENGTH characters, was ${icon.length}")
+            throw ValidationError("Account icon must be at most $MAX_ICON_LENGTH characters, was ${icon.length}", "icon")
         }
     }
 

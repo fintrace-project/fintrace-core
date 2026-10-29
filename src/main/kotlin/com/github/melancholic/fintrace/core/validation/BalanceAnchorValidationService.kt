@@ -29,7 +29,7 @@ class BalanceAnchorValidationServiceImpl(
 
     private fun checkOccurredAt(command: CreateBalanceAnchorCommand) {
         if (timestampProvider.now().isBefore(command.occurredAt)) {
-            throw ValidationError("Couldn't record balance anchor: 'occurredAt' is in the future")
+            throw ValidationError("A balance anchor cannot be dated in the future", "occurredAt")
         }
 
         projectionDAO.latestOccurredAt(command.workspaceId, command.accountId)

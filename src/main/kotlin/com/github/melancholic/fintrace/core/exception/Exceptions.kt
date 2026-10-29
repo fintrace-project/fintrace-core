@@ -13,7 +13,7 @@ open class NotFoundEntityException(message: String = "Entity not found") : Fintr
     override val code = CoreErrorCode.NOT_FOUND
 }
 
-class ValidationError(message: String = "Validation error") : FintraceCoreException(message) {
+class ValidationError(message: String = "Validation error", val field: String? = null) : FintraceCoreException(message) {
     override val code = CoreErrorCode.VALIDATION_FAILED
 }
 

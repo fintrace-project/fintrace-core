@@ -8,11 +8,11 @@ object CurrencyValidator {
 
     private val CURRENCY_REGEX = Regex(CURRENCY_PATTERN)
 
-    fun requireKnown(code: String) {
+    fun requireKnown(code: String, field: String) {
         if (!CURRENCY_REGEX.matches(code)) {
-            throw ValidationError("Currency must be a three-letter uppercase ISO-4217 code, was '$code'")
+            throw ValidationError("Currency must be a three-letter uppercase ISO-4217 code, was '$code'", field)
         }
         runCatching { Currency.getInstance(code) }
-            .onFailure { throw ValidationError("Unknown currency code '$code'") }
+            .onFailure { throw ValidationError("Unknown currency code '$code'", field) }
     }
 }

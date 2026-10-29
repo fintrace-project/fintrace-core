@@ -59,7 +59,7 @@ class OperationValidationServiceImpl(
 
     private fun checkOccurredAt(command: TemporalCommand<*>) {
         if (timestampProvider.now().isBefore(command.occurredAt)) {
-            throw ValidationError("`occuredAt` has an incorrect value")
+            throw ValidationError("An operation cannot be dated in the future", "occurredAt")
         }
     }
 
@@ -69,7 +69,7 @@ class OperationValidationServiceImpl(
 
     private fun checkAmount(command: OperationStateCommand<*>) {
         if (command.amount <= BigDecimal.ZERO) {
-            throw ValidationError("`amount` should be positive")
+            throw ValidationError("An operation's amount must be positive", "amount")
         }
     }
 

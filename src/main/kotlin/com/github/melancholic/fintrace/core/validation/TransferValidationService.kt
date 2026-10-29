@@ -49,7 +49,7 @@ class TransferValidationServiceImpl(
 
     private fun checkOccurredAt(command: TemporalCommand<*>) {
         if (timestampProvider.now().isBefore(command.occurredAt)) {
-            throw ValidationError("`occuredAt' has an incorrect value")
+            throw ValidationError("A transfer cannot be dated in the future", "occurredAt")
         }
     }
 
@@ -83,14 +83,17 @@ class TransferValidationServiceImpl(
     }
 
     private fun checkAmounts(command: TransferStateCommand<*>) {
-        if (command.sourceAmount <= BigDecimal.ZERO || command.targetAmount <= BigDecimal.ZERO) {
-            throw ValidationError("`amount` should be positive")
+        if (command.sourceAmount <= BigDecimal.ZERO) {
+            throw ValidationError("A transfer's source amount must be positive", "source.amount")
+        }
+        if (command.targetAmount <= BigDecimal.ZERO) {
+            throw ValidationError("A transfer's target amount must be positive", "target.amount")
         }
     }
 
     private fun checkAccounts(command: TransferStateCommand<*>) {
         if (command.sourceAccountId == command.targetAccountId) {
-            throw ValidationError("`targetAccountId` should be different from `sourceAccountId`")
+            throw ValidationError("A transfer's source and target accounts must differ", "target.accountId")
         }
     }
 

@@ -25,23 +25,23 @@ class WorkspaceValidationServiceImpl : WorkspaceValidationService {
         request.defaultCurrency?.let { checkCurrency(it) }
 
         if (request.version < 0) {
-            throw ValidationError("Workspace version must not be negative, was ${request.version}")
+            throw ValidationError("Workspace version must not be negative, was ${request.version}", "version")
         }
     }
 
     private fun checkName(name: String) {
         if (name.isBlank()) {
-            throw ValidationError("Workspace name must not be blank")
+            throw ValidationError("Workspace name must not be blank", "workspaceName")
         }
         if (name.length > MAX_NAME_LENGTH) {
-            throw ValidationError("Workspace name must be at most $MAX_NAME_LENGTH characters, was ${name.length}")
+            throw ValidationError("Workspace name must be at most $MAX_NAME_LENGTH characters, was ${name.length}", "workspaceName")
         }
         if (!NAME_REGEX.matches(name)) {
-            throw ValidationError("Workspace name '$name' contains characters that are not permitted")
+            throw ValidationError("Workspace name '$name' contains characters that are not permitted", "workspaceName")
         }
     }
 
-    private fun checkCurrency(code: String) = CurrencyValidator.requireKnown(code)
+    private fun checkCurrency(code: String) = CurrencyValidator.requireKnown(code, "defaultCurrency")
 
     companion object {
         private val NAME_REGEX = Regex(WORKSPACE_NAME_PATTERN)

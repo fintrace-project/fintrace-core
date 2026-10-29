@@ -69,27 +69,27 @@ class CategoryValidationServiceImpl(
 
     private fun checkName(name: String) {
         if (name.isBlank()) {
-            throw ValidationError("Category name must not be blank")
+            throw ValidationError("Category name must not be blank", "name")
         }
         if (name.length > MAX_NAME_LENGTH) {
-            throw ValidationError("Category name must be at most $MAX_NAME_LENGTH characters, was ${name.length}")
+            throw ValidationError("Category name must be at most $MAX_NAME_LENGTH characters, was ${name.length}", "name")
         }
         if (!NAME_REGEX.matches(name)) {
-            throw ValidationError("Category name '$name' contains characters that are not permitted")
+            throw ValidationError("Category name '$name' contains characters that are not permitted", "name")
         }
     }
 
     private fun checkIcon(icon: String?) {
         if (icon != null && icon.length > MAX_ICON_LENGTH) {
-            throw ValidationError("Category icon must be at most $MAX_ICON_LENGTH characters, was ${icon.length}")
+            throw ValidationError("Category icon must be at most $MAX_ICON_LENGTH characters, was ${icon.length}", "icon")
         }
     }
 
     private fun checkParent(workspaceId: UUID, category: CategoryProjection, newParentId: UUID?) {
-        newParentId ?: throw ValidationError("Category parent must not be null")
+        newParentId ?: throw ValidationError("Category parent must not be null", "parentId")
 
         if (category.id == newParentId) {
-            throw ValidationError("Category id cannot be the same as the parent id")
+            throw ValidationError("Category id cannot be the same as the parent id", "parentId")
         }
         val parent = categoryDAO.getByIdAsOptional(workspaceId, newParentId)
             .orElseThrow { NotFoundCategoryException(workspaceId, newParentId) }
@@ -116,7 +116,7 @@ class CategoryValidationServiceImpl(
         parentId: UUID?,
         kind: CategoryKind
     ) {
-        parentId ?: throw ValidationError("Category parent must not be null")
+        parentId ?: throw ValidationError("Category parent must not be null", "parentId")
 
         val parent = categoryDAO.getByIdAsOptional(workspaceId, parentId)
             .orElseThrow { NotFoundCategoryException(workspaceId, parentId) }
