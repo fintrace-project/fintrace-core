@@ -1,6 +1,11 @@
 package com.github.melancholic.fintrace.core.config
 
 import com.github.melancholic.fintrace.core.exception.CoreErrorCode
+import io.swagger.v3.core.converter.AnnotatedType
+import io.swagger.v3.core.converter.ModelConverter
+import io.swagger.v3.core.converter.ModelConverterContext
+import io.swagger.v3.core.jackson.ModelResolver
+import io.swagger.v3.core.util.Json
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.models.Components
@@ -14,11 +19,38 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.annotation.AnnotatedElementUtils
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import kotlin.reflect.full.primaryConstructor
 
 @Configuration
 class OpenApiConfiguration(
     @Value("\${spring.security.oauth2.resourceserver.jwt.issuer-uri:}") private val issuer: String
 ) {
+
+    init {
+        ModelResolver.enumsAsRef = true
+    }
+
+    @Bean
+    fun kotlinRequiredProperties(): ModelConverter = object : ModelConverter {
+        override fun resolve(
+            type: AnnotatedType,
+            context: ModelConverterContext,
+            chain: Iterator<ModelConverter>
+        ): Schema<*>? {
+            val schema = if (chain.hasNext()) chain.next().resolve(type, context, chain) else null
+            val cls = Json.mapper().constructType(type.type).rawClass
+            if (!cls.name.startsWith(CORE_PACKAGE)) return schema
+
+            val model = schema?.`$ref`?.substringAfterLast('/')?.let { context.definedModels[it] } ?: schema
+            val properties = model?.properties ?: return schema
+            val required = cls.kotlin.primaryConstructor?.parameters.orEmpty()
+                .filter { !it.type.isMarkedNullable && !it.isOptional }
+                .mapNotNull { it.name }
+                .filter { it in properties }
+            if (required.isNotEmpty()) model.required = (model.required.orEmpty() + required).distinct()
+            return schema
+        }
+    }
 
     @Bean
     fun openApi(): OpenAPI = OpenAPI()
@@ -92,6 +124,7 @@ class OpenApiConfiguration(
 
     private companion object {
         const val SCHEME = "keycloak"
+        const val CORE_PACKAGE = "com.github.melancholic.fintrace."
         const val PROBLEM = "CoreProblem"
         const val ERROR_CODE = "CoreErrorCode"
         const val FIELD_ERROR = "FieldError"

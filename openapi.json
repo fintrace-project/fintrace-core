@@ -2116,8 +2116,7 @@
             "type" : "string"
           },
           "status" : {
-            "type" : "string",
-            "enum" : [ "NEW", "IMPORTING", "ACTIVE", "ARCHIVED", "DELETED" ]
+            "$ref" : "#/components/schemas/WorkspaceStatus"
           },
           "defaultCurrency" : {
             "type" : "string"
@@ -2140,6 +2139,10 @@
           }
         },
         "required" : [ "createdAt", "defaultCurrency", "id", "name", "status", "updatedAt", "version" ]
+      },
+      "WorkspaceStatus" : {
+        "type" : "string",
+        "enum" : [ "NEW", "IMPORTING", "ACTIVE", "ARCHIVED", "DELETED" ]
       },
       "TransferLegRequest" : {
         "type" : "object",
@@ -2228,6 +2231,10 @@
         },
         "required" : [ "id", "occurredAt", "rate", "recordedAt", "source", "target", "workspaceId" ]
       },
+      "OperationKind" : {
+        "type" : "string",
+        "enum" : [ "INCOME", "EXPENSE", "TRANSFER" ]
+      },
       "UpdateOperationRequest" : {
         "type" : "object",
         "properties" : {
@@ -2240,8 +2247,7 @@
             "format" : "date-time"
           },
           "kind" : {
-            "type" : "string",
-            "enum" : [ "INCOME", "EXPENSE", "TRANSFER" ]
+            "$ref" : "#/components/schemas/OperationKind"
           },
           "accountId" : {
             "type" : "string",
@@ -2255,7 +2261,7 @@
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "accountId", "kind", "occurredAt" ]
+        "required" : [ "accountId", "amount", "categoryId", "kind", "occurredAt" ]
       },
       "OperationResponse" : {
         "type" : "object",
@@ -2292,8 +2298,7 @@
             "format" : "date-time"
           },
           "kind" : {
-            "type" : "string",
-            "enum" : [ "INCOME", "EXPENSE", "TRANSFER" ]
+            "$ref" : "#/components/schemas/OperationKind"
           },
           "counterpartId" : {
             "type" : [ "string", "null" ],
@@ -2324,7 +2329,11 @@
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "name" ]
+        "required" : [ "name", "parentId" ]
+      },
+      "CategoryKind" : {
+        "type" : "string",
+        "enum" : [ "INCOME", "EXPENSE" ]
       },
       "CategoryResponse" : {
         "type" : "object",
@@ -2345,15 +2354,17 @@
             "type" : "string"
           },
           "kind" : {
-            "type" : "string",
-            "enum" : [ "INCOME", "EXPENSE" ]
+            "$ref" : "#/components/schemas/CategoryKind"
           },
           "archived" : {
             "type" : "boolean"
           },
           "systemCode" : {
-            "type" : [ "string", "null" ],
-            "enum" : [ "INCOME_ROOT", "INCOME_OTHERS", "EXPENSE_ROOT", "EXPENSE_OTHERS" ]
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/CategorySystemCode"
+            }, {
+              "type" : "null"
+            } ]
           },
           "icon" : {
             "type" : [ "string", "null" ]
@@ -2364,6 +2375,10 @@
           }
         },
         "required" : [ "archived", "id", "kind", "name", "recordedAt", "workspaceId" ]
+      },
+      "CategorySystemCode" : {
+        "type" : "string",
+        "enum" : [ "INCOME_ROOT", "INCOME_OTHERS", "EXPENSE_ROOT", "EXPENSE_OTHERS" ]
       },
       "UpdateAccountRequest" : {
         "type" : "object",
@@ -2456,8 +2471,7 @@
             "format" : "date-time"
           },
           "kind" : {
-            "type" : "string",
-            "enum" : [ "INCOME", "EXPENSE", "TRANSFER" ]
+            "$ref" : "#/components/schemas/OperationKind"
           },
           "accountId" : {
             "type" : "string",
@@ -2549,8 +2563,7 @@
             "pattern" : "[\\p{L}\\p{N}][\\p{L}\\p{N}\\p{M} \\-_\\[\\]()',’\\&#@№]*"
           },
           "kind" : {
-            "type" : "string",
-            "enum" : [ "INCOME", "EXPENSE" ]
+            "$ref" : "#/components/schemas/CategoryKind"
           },
           "parentId" : {
             "type" : [ "string", "null" ],
@@ -2562,16 +2575,18 @@
         },
         "required" : [ "id", "kind", "name" ]
       },
+      "ImportDiagnosticCode" : {
+        "type" : "string",
+        "enum" : [ "UNSUPPORTED_RECORD", "UNKNOWN_CURRENCY", "UNRESOLVED_REFERENCE", "SOURCE_ANOMALY" ]
+      },
       "ImportDiagnosticRequest" : {
         "type" : "object",
         "properties" : {
           "severity" : {
-            "type" : "string",
-            "enum" : [ "WARNING", "ERROR" ]
+            "$ref" : "#/components/schemas/ImportDiagnosticSeverity"
           },
           "code" : {
-            "type" : "string",
-            "enum" : [ "UNSUPPORTED_RECORD", "UNKNOWN_CURRENCY", "UNRESOLVED_REFERENCE", "SOURCE_ANOMALY" ]
+            "$ref" : "#/components/schemas/ImportDiagnosticCode"
           },
           "count" : {
             "type" : "integer",
@@ -2583,6 +2598,10 @@
           }
         },
         "required" : [ "code", "count", "severity" ]
+      },
+      "ImportDiagnosticSeverity" : {
+        "type" : "string",
+        "enum" : [ "WARNING", "ERROR" ]
       },
       "ImportEnvelopRequest" : {
         "type" : "object",
@@ -2620,8 +2639,7 @@
             "minimum" : 0
           },
           "kind" : {
-            "type" : "string",
-            "enum" : [ "INCOME", "EXPENSE", "TRANSFER" ]
+            "$ref" : "#/components/schemas/OperationKind"
           },
           "accountId" : {
             "type" : "string",
@@ -2718,16 +2736,18 @@
         },
         "required" : [ "id", "occurredAt", "source", "target" ]
       },
+      "EntityType" : {
+        "type" : "string",
+        "enum" : [ "OPERATION", "ACCOUNT", "CATEGORY", "TRANSFER", "BALANCE_ANCHOR" ]
+      },
       "ImportDiagnosticDTO" : {
         "type" : "object",
         "properties" : {
           "severity" : {
-            "type" : "string",
-            "enum" : [ "WARNING", "ERROR" ]
+            "$ref" : "#/components/schemas/ImportDiagnosticSeverity"
           },
           "code" : {
-            "type" : "string",
-            "enum" : [ "UNSUPPORTED_RECORD", "UNKNOWN_CURRENCY", "UNRESOLVED_REFERENCE", "SOURCE_ANOMALY" ]
+            "$ref" : "#/components/schemas/ImportDiagnosticCode"
           },
           "count" : {
             "type" : "integer",
@@ -2751,8 +2771,7 @@
             "format" : "uuid"
           },
           "status" : {
-            "type" : "string",
-            "enum" : [ "RUNNING", "SUCCEEDED", "FAILED" ]
+            "$ref" : "#/components/schemas/ImportJobStatus"
           },
           "startedBy" : {
             "type" : "string",
@@ -2810,19 +2829,25 @@
         },
         "required" : [ "accounts", "anchors", "categories", "diagnostics", "id", "importerName", "importerVersion", "operations", "problems", "startedAt", "startedBy", "status", "transfers", "workspaceId" ]
       },
+      "ImportJobStatus" : {
+        "type" : "string",
+        "enum" : [ "RUNNING", "SUCCEEDED", "FAILED" ]
+      },
+      "ImportProblemCode" : {
+        "type" : "string",
+        "enum" : [ "WRONG_UUID_VERSION", "DUPLICATED_ENTITY_ID_WITHIN_SECTION", "DUPLICATED_ENTITY_ID_ACROSS_SECTIONS", "UNRESOLVED_REFERENCE", "CYCLIC_REFERENCES", "REFUSED_BY_COMMAND" ]
+      },
       "ImportProblemDTO" : {
         "type" : "object",
         "properties" : {
           "code" : {
-            "type" : "string",
-            "enum" : [ "WRONG_UUID_VERSION", "DUPLICATED_ENTITY_ID_WITHIN_SECTION", "DUPLICATED_ENTITY_ID_ACROSS_SECTIONS", "UNRESOLVED_REFERENCE", "CYCLIC_REFERENCES", "REFUSED_BY_COMMAND" ]
+            "$ref" : "#/components/schemas/ImportProblemCode"
           },
           "message" : {
             "type" : "string"
           },
           "aggregateType" : {
-            "type" : "string",
-            "enum" : [ "OPERATION", "ACCOUNT", "CATEGORY", "TRANSFER", "BALANCE_ANCHOR" ]
+            "$ref" : "#/components/schemas/EntityType"
           },
           "affectedIDs" : {
             "type" : "array",
@@ -2858,7 +2883,7 @@
             "type" : [ "string", "null" ]
           }
         },
-        "required" : [ "name" ]
+        "required" : [ "name", "parentId" ]
       },
       "CreateAccountRequest" : {
         "type" : "object",
@@ -2888,7 +2913,8 @@
           "value" : {
             "type" : "number"
           }
-        }
+        },
+        "required" : [ "value" ]
       },
       "BalanceAnchorResponse" : {
         "type" : "object",

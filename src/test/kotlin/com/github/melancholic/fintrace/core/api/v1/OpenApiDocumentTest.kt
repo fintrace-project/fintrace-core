@@ -11,6 +11,9 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import com.github.melancholic.fintrace.core.exception.CoreErrorCode
+import org.hamcrest.Matchers.hasItem
+import org.hamcrest.Matchers.hasItems
+import org.hamcrest.Matchers.not
 import tools.jackson.databind.ObjectMapper
 import kotlin.test.assertEquals
 
@@ -201,6 +204,33 @@ class OpenApiDocumentTest(
                 .value(CoreErrorCode.entries.size))
             .andExpect(jsonPath("$.components.schemas.CoreProblem.properties.errors.items['\$ref']")
                 .value("#/components/schemas/FieldError"))
+    }
+
+    @Test
+    fun `requires what Kotlin requires`() {
+        val schemas = "$.components.schemas"
+        mvc.perform(get("/v3/api-docs"))
+            // Non-null with no default: a client must send it, and Core always sends it back.
+            .andExpect(jsonPath("$schemas.CreateBalanceAnchorRequest.required").value(hasItem("value")))
+            .andExpect(jsonPath("$schemas.UpdateOperationRequest.required").value(hasItems("amount", "categoryId")))
+            .andExpect(jsonPath("$schemas.ImportJobResponse.required").value(hasItems("accounts", "problems")))
+            // Nullable, or defaulted on a request: the sender may leave it out.
+            .andExpect(jsonPath("$schemas.CreateOperationRequest.required").value(not(hasItem("comment"))))
+            .andExpect(jsonPath("$schemas.ImportAccountRequest.required").value(not(hasItem("archived"))))
+    }
+
+    @Test
+    fun `names every enum instead of inlining it`() {
+        val body = mvc.perform(get("/v3/api-docs")).andReturn().response.contentAsString
+        val schemas = mapper.readTree(body).get("components").get("schemas")
+        val inlined = schemas.properties().flatMap { (name, schema) ->
+            schema.path("properties").properties()
+                .filter { (_, property) -> property.has("enum") || property.path("items").has("enum") }
+                .map { (property, _) -> "$name.$property" }
+        }
+        assertEquals(emptyList(), inlined)
+        assertEquals("#/components/schemas/OperationKind",
+            schemas.at("/CreateOperationRequest/properties/kind/\$ref").asText())
     }
 
     @Test

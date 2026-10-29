@@ -4,8 +4,6 @@ import com.github.melancholic.fintrace.core.domain.entity.WorkspaceStatus
 import com.github.melancholic.fintrace.core.validation.ValidationConstants.CURRENCY_PATTERN
 import com.github.melancholic.fintrace.core.validation.ValidationConstants.MAX_NAME_LENGTH
 import com.github.melancholic.fintrace.core.validation.ValidationConstants.WORKSPACE_NAME_PATTERN
-import io.swagger.v3.oas.annotations.media.Schema
-import io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Pattern
@@ -39,19 +37,12 @@ data class EditWorkspaceRequest(
 )
 
 data class WorkspaceResponse(
-    @Schema(requiredMode = REQUIRED)
     val id: UUID,
-    @Schema(requiredMode = REQUIRED)
     val name: String,
-    @Schema(requiredMode = REQUIRED)
     val status: WorkspaceStatus,
-    @Schema(requiredMode = REQUIRED)
     val defaultCurrency: String,
-    @Schema(requiredMode = REQUIRED)
     val version: Long,
-    @Schema(requiredMode = REQUIRED)
     val createdAt: LocalDateTime,
-    @Schema(requiredMode = REQUIRED)
     val updatedAt: LocalDateTime,
     val deletedAt: LocalDateTime?
 )
