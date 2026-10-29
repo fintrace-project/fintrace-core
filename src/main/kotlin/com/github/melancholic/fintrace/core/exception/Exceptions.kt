@@ -44,3 +44,6 @@ class OperationIsNotApplicableException(message: String = "Operation is not appl
 
 class ImportCommandFailedException(val entityType: EntityType, val entityId: UUID?, override val cause: Exception) :
     ApplicationException("Import of $entityType '$entityId' failed: ${cause.message}", cause)
+
+class UserNotFoundException(message: String) : ApplicationException(message)
+

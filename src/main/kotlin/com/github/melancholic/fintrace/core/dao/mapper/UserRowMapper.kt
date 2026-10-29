@@ -14,7 +14,7 @@ class UserRowMapper : RowMapper<User> {
         rowNum: Int
     ): User = User(
         id = rs.getObject("id", UUID::class.java),
-        userName = rs.getString("username"),
+        username = rs.getString("username"),
         externalId = rs.getString("external_id"),
         createdAt = rs.getObject("created_at", LocalDateTime::class.java),
     )

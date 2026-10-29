@@ -2032,6 +2032,56 @@
           }
         }
       }
+    },
+    "/api/v1/users/current" : {
+      "get" : {
+        "tags" : [ "Users" ],
+        "summary" : "Fetch the caller's profile",
+        "operationId" : "getCurrentProfile",
+        "responses" : {
+          "200" : {
+            "description" : "Found; created on the caller's first request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserProfileResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
+          }
+        }
+      }
+    },
+    "/api/v1/users/current/id" : {
+      "get" : {
+        "tags" : [ "Users" ],
+        "summary" : "Resolve the caller's id",
+        "operationId" : "getCurrentUserId",
+        "responses" : {
+          "200" : {
+            "description" : "Found; created on the caller's first request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserIdResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
+          }
+        }
+      }
     }
   },
   "components" : {
@@ -2984,6 +3034,45 @@
           }
         },
         "required" : [ "accountId", "balance", "currency" ]
+      },
+      "UserProfileResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "username" : {
+            "type" : "string"
+          },
+          "firstName" : {
+            "type" : [ "string", "null" ]
+          },
+          "lastName" : {
+            "type" : [ "string", "null" ]
+          },
+          "email" : {
+            "type" : [ "string", "null" ]
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "avatar" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "createdAt", "id", "username" ]
+      },
+      "UserIdResponse" : {
+        "type" : "object",
+        "properties" : {
+          "userId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        },
+        "required" : [ "userId" ]
       }
     },
     "securitySchemes" : {

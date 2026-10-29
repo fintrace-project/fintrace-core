@@ -41,8 +41,8 @@ class UserProvisioningTest(
     fun `creates a user on first sight and returns the same one afterwards`() {
         val subject = subject()
 
-        val first = userService.provision(subject, "alice")
-        val again = userService.provision(subject, "alice-renamed")
+        val first = userService.registerUser(subject, "alice")
+        val again = userService.registerUser(subject, "alice-renamed")
 
         assertEquals(first, again)
         assertEquals(listOf("alice"), usernamesOf(subject), "one row; a repeat creates nothing")
@@ -53,7 +53,7 @@ class UserProvisioningTest(
         val subject = subject()
         assertNull(userService.getUserIdBySub(subject), "sanity: unknown before")
 
-        val id = userService.provision(subject, "bob")
+        val id = userService.registerUser(subject, "bob")
 
         // Caching the first miss would keep this null for the cache's whole lifetime
         assertEquals(id, userService.getUserIdBySub(subject))
@@ -65,15 +65,15 @@ class UserProvisioningTest(
         val subject = subject()
         val readOnly = TransactionTemplate(transactionManager).apply { isReadOnly = true }
 
-        readOnly.execute { userService.provision(subject, "carol") }
+        readOnly.execute { userService.registerUser(subject, "carol") }
 
         assertEquals(listOf("carol"), usernamesOf(subject), "committed despite the read-only caller")
     }
 
     @Test
     fun `usernames may repeat across users`() {
-        val one = userService.provision(subject(), "same-name")
-        val other = userService.provision(subject(), "same-name")
+        val one = userService.registerUser(subject(), "same-name")
+        val other = userService.registerUser(subject(), "same-name")
 
         assertNotEquals(one, other)
     }

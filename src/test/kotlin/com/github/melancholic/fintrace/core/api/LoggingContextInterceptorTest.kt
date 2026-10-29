@@ -2,6 +2,7 @@ package com.github.melancholic.fintrace.core.api
 
 import com.github.melancholic.fintrace.core.config.MDCConstants.MDC_USER_ID
 import com.github.melancholic.fintrace.core.config.MDCConstants.MDC_WORKSPACE_ID
+import com.github.melancholic.fintrace.core.domain.entity.IUserClaims
 import com.github.melancholic.fintrace.core.exception.NotAuthenticatedException
 import com.github.melancholic.fintrace.core.security.IdentityProvider
 import org.junit.jupiter.api.AfterEach
@@ -70,5 +71,6 @@ class LoggingContextInterceptorTest {
     private fun interceptorFor(currentUserId: () -> UUID) = LoggingContextInterceptor(object : IdentityProvider {
         override fun currentSubject(): String = throw UnsupportedOperationException()
         override fun currentUserId(): UUID = currentUserId()
+        override fun currentUserClaims(): IUserClaims = throw UnsupportedOperationException()
     })
 }
