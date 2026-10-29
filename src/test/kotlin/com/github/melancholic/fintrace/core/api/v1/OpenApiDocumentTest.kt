@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import tools.jackson.databind.ObjectMapper
 import kotlin.test.assertEquals
 
@@ -173,13 +174,33 @@ class OpenApiDocumentTest(
     }
 
     @Test
-    fun `promises no body on an error response unless one is declared`() {
-        // Boot's generic error body is not part of the contract until ProblemDetail (M4).
-        val responses = "$.paths['/api/v1/workspaces/{workspaceId}'].get.responses"
+    fun `promises a CoreProblem on every error but the filter chain's`() {
+        // The filter chain answers 401 and 403 before the error handler, with no body.
+        val body = mvc.perform(get("/v3/api-docs")).andReturn().response.contentAsString
+        val paths = mapper.readTree(body).get("paths")
+        val wrong = paths.properties().flatMap { (path, operations) ->
+            operations.properties().flatMap { (method, operation) ->
+                operation.get("responses").properties()
+                    .filter { (code, _) -> code.first() in "45" && code != "422" }
+                    .filter { (code, response) ->
+                        val ref = response.at("/content/application~1problem+json/schema/\$ref").asText("")
+                        if (code in setOf("401", "403")) response.has("content") else ref != PROBLEM
+                    }
+                    .map { (code, _) -> "$code $method $path" }
+            }
+        }
+        assertEquals(emptyList(), wrong)
+    }
+
+    @Test
+    fun `describes the problem's code as a named enum of every CoreErrorCode`() {
         mvc.perform(get("/v3/api-docs"))
-            .andExpect(jsonPath("$responses.200.content").exists())
-            .andExpect(jsonPath("$responses.404.content").doesNotExist())
-            .andExpect(jsonPath("$responses.401.content").doesNotExist())
+            .andExpect(jsonPath("$.components.schemas.CoreProblem.properties.code['\$ref']")
+                .value("#/components/schemas/CoreErrorCode"))
+            .andExpect(jsonPath("$.components.schemas.CoreErrorCode.enum.length()")
+                .value(CoreErrorCode.entries.size))
+            .andExpect(jsonPath("$.components.schemas.CoreProblem.properties.errors.items['\$ref']")
+                .value("#/components/schemas/FieldError"))
     }
 
     @Test
@@ -202,13 +223,14 @@ class OpenApiDocumentTest(
         // The importer's client is generated from this; a job schema on 404 or 409 is a body it will never get.
         val responses = "$.paths['/api/v1/workspaces/{workspaceId}/import'].post.responses"
         val job = "#/components/schemas/ImportJobResponse"
+        val problem = "content['application/problem+json'].schema['\$ref']"
         mvc.perform(get("/v3/api-docs"))
             .andExpect(jsonPath("$responses.200.content['application/json'].schema['\$ref']").value(job))
             .andExpect(jsonPath("$responses.422.content['application/json'].schema['\$ref']").value(job))
-            .andExpect(jsonPath("$responses.400.content").doesNotExist())
+            .andExpect(jsonPath("$responses.400.$problem").value(PROBLEM))
             .andExpect(jsonPath("$responses.202").doesNotExist())
-            .andExpect(jsonPath("$responses.404.content").doesNotExist())
-            .andExpect(jsonPath("$responses.409.content").doesNotExist())
+            .andExpect(jsonPath("$responses.404.$problem").value(PROBLEM))
+            .andExpect(jsonPath("$responses.409.$problem").value(PROBLEM))
             .andExpect(jsonPath("$responses.401.content").doesNotExist())
             .andExpect(jsonPath("$responses.403.content").doesNotExist())
     }
@@ -216,5 +238,9 @@ class OpenApiDocumentTest(
 	@Test
 	fun `serves the Swagger UI anonymously`() {
 		mvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk)
+	}
+
+	private companion object {
+		const val PROBLEM = "#/components/schemas/CoreProblem"
 	}
 }

@@ -34,7 +34,14 @@
             }
           },
           "404" : {
-            "description" : "No such workspace for this caller"
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -79,13 +86,34 @@
             }
           },
           "400" : {
-            "description" : "Malformed body, or unknown currency"
+            "description" : "Malformed body, or unknown currency",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "404" : {
-            "description" : "No such workspace for this caller"
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "`version` is stale"
+            "description" : "`version` is stale",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -121,13 +149,34 @@
             "description" : "Deleted; unrecoverable"
           },
           "400" : {
-            "description" : "`version` missing"
+            "description" : "`version` missing",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "404" : {
-            "description" : "No such workspace for this caller"
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "`version` is stale"
+            "description" : "`version` is stale",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -172,7 +221,14 @@
             }
           },
           "404" : {
-            "description" : "No such transfer in this workspace"
+            "description" : "No such transfer in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -225,13 +281,34 @@
             }
           },
           "400" : {
-            "description" : "Malformed body, `occurredAt` in the future, an amount that is not positive, or both legs on one account"
+            "description" : "Malformed body, `occurredAt` in the future, an amount that is not positive, or both legs on one account",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "404" : {
-            "description" : "No such transfer or account in this workspace"
+            "description" : "No such transfer or account in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "A leg would move onto an archived account, or the workspace is archived"
+            "description" : "A leg would move onto an archived account, or the workspace is archived",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -267,10 +344,24 @@
             "description" : "Cancelled; both legs removed"
           },
           "404" : {
-            "description" : "No such transfer, including one already cancelled"
+            "description" : "No such transfer, including one already cancelled",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "Workspace is archived"
+            "description" : "Workspace is archived",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -315,7 +406,14 @@
             }
           },
           "404" : {
-            "description" : "No such operation in this workspace"
+            "description" : "No such operation in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -368,13 +466,34 @@
             }
           },
           "400" : {
-            "description" : "Malformed body, or `occurredAt` in the future"
+            "description" : "Malformed body, or `occurredAt` in the future",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "404" : {
-            "description" : "No such operation in this workspace"
+            "description" : "No such operation in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "The operation is a transfer leg; write it through `/transfers`"
+            "description" : "The operation is a transfer leg; write it through `/transfers`",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -410,10 +529,24 @@
             "description" : "Cancelled"
           },
           "404" : {
-            "description" : "No such operation, including one already cancelled"
+            "description" : "No such operation, including one already cancelled",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "The operation is a transfer leg; cancel it through `/transfers`"
+            "description" : "The operation is a transfer leg; cancel it through `/transfers`",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -458,7 +591,14 @@
             }
           },
           "404" : {
-            "description" : "No such category in this workspace"
+            "description" : "No such category in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -511,13 +651,34 @@
             }
           },
           "400" : {
-            "description" : "Malformed body, or no such parent"
+            "description" : "Malformed body, or no such parent",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "404" : {
-            "description" : "No such category in this workspace"
+            "description" : "No such category in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "System category, archived, cross-branch move, or a cycle"
+            "description" : "System category, archived, cross-branch move, or a cycle",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -560,10 +721,24 @@
             }
           },
           "404" : {
-            "description" : "No such category in this workspace"
+            "description" : "No such category in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "System category"
+            "description" : "System category",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -608,7 +783,14 @@
             }
           },
           "404" : {
-            "description" : "No such account in this workspace"
+            "description" : "No such account in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -661,10 +843,24 @@
             }
           },
           "400" : {
-            "description" : "Malformed body"
+            "description" : "Malformed body",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "404" : {
-            "description" : "No such account in this workspace"
+            "description" : "No such account in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -707,7 +903,14 @@
             }
           },
           "404" : {
-            "description" : "No such account in this workspace"
+            "description" : "No such account in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -746,7 +949,14 @@
             }
           },
           "400" : {
-            "description" : "Sort requested on an unsupported field"
+            "description" : "Sort requested on an unsupported field",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -782,7 +992,14 @@
             }
           },
           "400" : {
-            "description" : "Malformed body, or unknown currency"
+            "description" : "Malformed body, or unknown currency",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -829,13 +1046,34 @@
             }
           },
           "400" : {
-            "description" : "Malformed body, `occurredAt` in the future, an amount that is not positive, or both legs on one account"
+            "description" : "Malformed body, `occurredAt` in the future, an amount that is not positive, or both legs on one account",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "404" : {
-            "description" : "No such account in this workspace"
+            "description" : "No such account in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "An account is archived, or the workspace is"
+            "description" : "An account is archived, or the workspace is",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -882,7 +1120,14 @@
             }
           },
           "400" : {
-            "description" : "Malformed body, or `occurredAt` in the future"
+            "description" : "Malformed body, or `occurredAt` in the future",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -939,13 +1184,34 @@
             }
           },
           "400" : {
-            "description" : "Malformed body"
+            "description" : "Malformed body",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "404" : {
-            "description" : "No such workspace for this caller"
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "The workspace is not NEW, not empty, or an import is already running"
+            "description" : "The workspace is not NEW, not empty, or an import is already running",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -993,7 +1259,14 @@
             }
           },
           "404" : {
-            "description" : "No such workspace for this caller"
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1038,13 +1311,34 @@
             }
           },
           "400" : {
-            "description" : "Malformed body, or no such parent"
+            "description" : "Malformed body, or no such parent",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "404" : {
-            "description" : "No such workspace for this caller"
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "Parent is archived, or is an Others"
+            "description" : "Parent is archived, or is an Others",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1089,7 +1383,14 @@
             }
           },
           "404" : {
-            "description" : "No such category in this workspace"
+            "description" : "No such category in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1126,10 +1427,24 @@
             }
           },
           "404" : {
-            "description" : "No such workspace for this caller"
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "Not ACTIVE"
+            "description" : "Not ACTIVE",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1164,7 +1479,14 @@
             }
           },
           "404" : {
-            "description" : "No such workspace for this caller"
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1212,7 +1534,14 @@
             }
           },
           "404" : {
-            "description" : "No such workspace for this caller"
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1257,13 +1586,34 @@
             }
           },
           "400" : {
-            "description" : "Malformed body, or unknown currency"
+            "description" : "Malformed body, or unknown currency",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "404" : {
-            "description" : "No such workspace for this caller"
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "Workspace is archived"
+            "description" : "Workspace is archived",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1308,7 +1658,14 @@
             }
           },
           "404" : {
-            "description" : "No such account in this workspace"
+            "description" : "No such account in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1356,7 +1713,14 @@
             }
           },
           "404" : {
-            "description" : "No such account in this workspace"
+            "description" : "No such account in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1409,13 +1773,34 @@
             }
           },
           "400" : {
-            "description" : "Malformed body"
+            "description" : "Malformed body",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "404" : {
-            "description" : "No such account in this workspace"
+            "description" : "No such account in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "The account is archived, or the workspace is"
+            "description" : "The account is archived, or the workspace is",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1499,10 +1884,24 @@
             }
           },
           "400" : {
-            "description" : "Malformed `asOf` or `includeArchived`"
+            "description" : "Malformed `asOf` or `includeArchived`",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "404" : {
-            "description" : "No such workspace for this caller"
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1555,7 +1954,14 @@
             }
           },
           "404" : {
-            "description" : "No such anchor on this account"
+            "description" : "No such anchor on this account",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1599,10 +2005,24 @@
             "description" : "Deleted; the row is removed, the event remains"
           },
           "404" : {
-            "description" : "No such anchor on this account"
+            "description" : "No such anchor on this account",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "409" : {
-            "description" : "Not the account's most recent anchor, or the workspace is archived"
+            "description" : "Not the account's most recent anchor, or the workspace is archived",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
           },
           "401" : {
             "description" : "Not authenticated"
@@ -1616,6 +2036,56 @@
   },
   "components" : {
     "schemas" : {
+      "CoreErrorCode" : {
+        "type" : "string",
+        "enum" : [ "VALIDATION_FAILED", "MALFORMED_REQUEST", "NOT_AUTHENTICATED", "NOT_FOUND", "VERSION_CONFLICT", "WORKSPACE_STATUS_CONFLICT", "WORKSPACE_READ_ONLY", "WORKSPACE_NOT_IMPORTABLE", "IMPORT_LEASE_LOST", "ID_TAKEN", "ACCOUNT_ARCHIVED", "CATEGORY_ARCHIVED", "SYSTEM_CATEGORY", "CATEGORY_KIND_MISMATCH", "CATEGORY_PARENT_REFUSED", "TRANSFER_VIA_OPERATIONS", "ANCHOR_ORDER", "INTERNAL" ]
+      },
+      "FieldError" : {
+        "type" : "object",
+        "properties" : {
+          "field" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "field", "message" ]
+      },
+      "CoreProblem" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "instance" : {
+            "type" : "string"
+          },
+          "code" : {
+            "$ref" : "#/components/schemas/CoreErrorCode"
+          },
+          "traceId" : {
+            "type" : "string"
+          },
+          "errors" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FieldError"
+            }
+          }
+        },
+        "required" : [ "code", "status" ]
+      },
       "EditWorkspaceRequest" : {
         "type" : "object",
         "properties" : {
