@@ -124,7 +124,9 @@ class BalanceAnchorsRestControllerTest(
     fun `refuses an anchor on an archived account`() {
         archive(accountId)
 
-        mvc.perform(createRequest()).andExpect(status().isConflict)
+        mvc.perform(createRequest())
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("ACCOUNT_ARCHIVED"))
 
         assertEquals(0, count(), "a rejected command writes nothing")
     }
@@ -157,6 +159,7 @@ class BalanceAnchorsRestControllerTest(
         // §10.4: removing one from the middle would shift every balance after it.
         mvc.perform(delete("$anchorsPath/$older").with(user(USER)).with(csrf()))
             .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("ANCHOR_ORDER"))
 
         assertEquals(2, count())
     }

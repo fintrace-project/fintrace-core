@@ -208,6 +208,7 @@ class OperationsRestControllerTest(
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body().replace("\"EXPENSE\"", "\"TRANSFER\""))
         ).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("TRANSFER_VIA_OPERATIONS"))
 
         assertEquals(0, count(), "a rejected command writes nothing")
         assertEquals(0, eventCount())
@@ -307,6 +308,7 @@ class OperationsRestControllerTest(
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body().replace(accountId.toString(), closed.toString()))
         ).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("ACCOUNT_ARCHIVED"))
 
         assertEquals(1, eventCount(), "a rejected command writes nothing")
     }
@@ -369,6 +371,7 @@ class OperationsRestControllerTest(
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(body().replace("\"EXPENSE\"", "\"TRANSFER\""))
 		).andExpect(status().isConflict)
+			.andExpect(jsonPath("$.code").value("TRANSFER_VIA_OPERATIONS"))
 
 		assertEquals(1, eventCount(), "a rejected command writes nothing")
 	}
@@ -380,7 +383,9 @@ class OperationsRestControllerTest(
 		// §10.3: a leg is readable through /operations but not writable there. A PUT with an
 		// ordinary kind would turn one half of the pair into a normal operation while the other
 		// half still points at it — a half-transfer no rebuild can repair.
-		mvc.perform(reviseRequest(leg)).andExpect(status().isConflict)
+		mvc.perform(reviseRequest(leg))
+			.andExpect(status().isConflict)
+			.andExpect(jsonPath("$.code").value("TRANSFER_VIA_OPERATIONS"))
 
 		assertEquals(2, count(), "both legs stay")
 		assertEquals(0, eventCount(), "a rejected command writes nothing")
@@ -392,7 +397,9 @@ class OperationsRestControllerTest(
 
 		// The same guard on DELETE (1.19): cancelling one leg would leave the other pointing at a
 		// row that no longer exists. The pair is cancelled through /transfers or not at all.
-		mvc.perform(cancelRequest(leg)).andExpect(status().isConflict)
+		mvc.perform(cancelRequest(leg))
+			.andExpect(status().isConflict)
+			.andExpect(jsonPath("$.code").value("TRANSFER_VIA_OPERATIONS"))
 
 		assertEquals(2, count())
 		assertEquals(0, eventCount())

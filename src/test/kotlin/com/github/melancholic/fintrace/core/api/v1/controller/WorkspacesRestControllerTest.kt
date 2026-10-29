@@ -164,6 +164,7 @@ class WorkspacesRestControllerTest(
 
 		mvc.perform(editRequest(id, body = """{"version":0}"""))
 			.andExpect(status().isConflict)
+			.andExpect(jsonPath("$.code").value("VERSION_CONFLICT"))
 	}
 
 	@Test
@@ -175,6 +176,7 @@ class WorkspacesRestControllerTest(
 		// The losing write is refused as a conflict, and the winning value stays.
 		mvc.perform(editRequest(id, body = """{"version":0,"workspaceName":"second"}"""))
 			.andExpect(status().isConflict)
+			.andExpect(jsonPath("$.code").value("VERSION_CONFLICT"))
 
 		mvc.perform(get("$WORKSPACES_PATH/$id").with(user(USER)))
 			.andExpect(jsonPath("$.name").value("first"), )
@@ -258,6 +260,7 @@ class WorkspacesRestControllerTest(
 
 		mvc.perform(delete("$WORKSPACES_PATH/$id?version=0").with(user(USER)).with(csrf()))
 			.andExpect(status().isConflict)
+			.andExpect(jsonPath("$.code").value("VERSION_CONFLICT"))
 
 		mvc.perform(get("$WORKSPACES_PATH/$id").with(user(USER))).andExpect(status().isOk)
 	}
