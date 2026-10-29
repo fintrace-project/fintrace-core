@@ -8,6 +8,8 @@ import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
 import org.aspectj.lang.annotation.Pointcut
 import org.aspectj.lang.reflect.MethodSignature
+import org.springframework.aop.support.AopUtils
+import org.springframework.core.annotation.AnnotatedElementUtils
 import org.springframework.stereotype.Component
 import org.springframework.transaction.interceptor.TransactionAttributeSource
 
@@ -37,10 +39,14 @@ class RestFacadeLoggingAspect(
         }
     }
 
-    private fun isRead(pjp: ProceedingJoinPoint): Boolean =
-        transactionAttributes
-            .getTransactionAttribute((pjp.signature as MethodSignature).method, pjp.target?.javaClass)
-            ?.isReadOnly == true
+    private fun isRead(pjp: ProceedingJoinPoint): Boolean {
+        val method = (pjp.signature as MethodSignature).method
+        val targetClass = pjp.target?.javaClass
+        if (AnnotatedElementUtils.hasAnnotation(AopUtils.getMostSpecificMethod(method, targetClass), LoggedAsRead::class.java)) {
+            return true
+        }
+        return transactionAttributes.getTransactionAttribute(method, targetClass)?.isReadOnly == true
+    }
 
     private fun log(read: Boolean, message: () -> String) =
         if (read) logger.debug(message) else logger.info(message)

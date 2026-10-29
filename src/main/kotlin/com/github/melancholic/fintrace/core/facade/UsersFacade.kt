@@ -1,5 +1,6 @@
 package com.github.melancholic.fintrace.core.facade
 
+import com.github.melancholic.fintrace.core.aop.LoggedAsRead
 import com.github.melancholic.fintrace.core.domain.entity.UserProfile
 import com.github.melancholic.fintrace.core.security.IdentityProvider
 import com.github.melancholic.fintrace.core.service.UserService
@@ -33,6 +34,7 @@ class UsersFacadeImpl(
         )
     }
 
+    @LoggedAsRead
     override fun getCurrentUserId(): UUID = identityProvider.currentUserId()
 
 }

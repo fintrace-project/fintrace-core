@@ -15,6 +15,7 @@ import com.github.melancholic.fintrace.core.exception.BrokenTransferException
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.facade.AdminFacade
 import com.github.melancholic.fintrace.core.facade.ProjectionFacade
+import com.github.melancholic.fintrace.core.facade.UsersFacade
 import com.github.melancholic.fintrace.core.facade.WorkspaceFacade
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -43,6 +44,7 @@ class RestFacadeLoggingAspectTest(
     @Autowired private val workspaceFacade: WorkspaceFacade,
     @Autowired private val projectionFacade: ProjectionFacade,
     @Autowired private val adminFacade: AdminFacade,
+    @Autowired private val usersFacade: UsersFacade,
     @Autowired private val jdbc: JdbcClient,
     @Autowired private val workspaceDAO: WorkspaceDAO,
     @Autowired private val usersDAO: UsersDAO,
@@ -78,6 +80,26 @@ class RestFacadeLoggingAspectTest(
         assertEquals("[IN] WorkspaceFacadeImpl.createWorkspace(CreateWorkspaceRequest)", messages[0])
         assertTrue(messages[1].startsWith("[OUT] WorkspaceFacadeImpl.createWorkspace(CreateWorkspaceRequest): "), messages[1])
         assertTrue(messages.none { "secret-budget" in it }, messages.toString())
+    }
+
+    @Test
+    fun `logs a method marked LoggedAsRead at DEBUG though it has no transaction`() {
+        usersFacade.getCurrentUserId()
+
+        val messages = appender.list.map { it.formattedMessage }
+        assertEquals(2, messages.size, messages.toString())
+        assertTrue(appender.list.all { it.level == Level.DEBUG })
+        assertTrue(messages[0].startsWith("[IN] UsersFacadeImpl.getCurrentUserId()"), messages[0])
+    }
+
+    @Test
+    fun `logs a method with neither the mark nor a read-only transaction at INFO`() {
+        usersFacade.getCurrentUserProfile()
+
+        val messages = appender.list.map { it.formattedMessage }
+        assertEquals(2, messages.size, messages.toString())
+        assertTrue(appender.list.all { it.level == Level.INFO })
+        assertTrue(messages[0].startsWith("[IN] UsersFacadeImpl.getCurrentUserProfile()"), messages[0])
     }
 
     @Test
