@@ -10,6 +10,8 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import tools.jackson.databind.ObjectMapper
+import kotlin.test.assertEquals
 
 /**
  * The generated contract, which M4 will use for frontend type generation (task 3.14).
@@ -18,7 +20,10 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 @Import(TestcontainersConfiguration::class)
 @SpringBootTest
 @AutoConfigureMockMvc
-class OpenApiDocumentTest(@Autowired private val mvc: MockMvc) {
+class OpenApiDocumentTest(
+	@Autowired private val mvc: MockMvc,
+	@Autowired private val mapper: ObjectMapper,
+) {
 
 	@Test
 	fun `serves the OpenAPI document anonymously`() {
@@ -174,7 +179,20 @@ class OpenApiDocumentTest(@Autowired private val mvc: MockMvc) {
         mvc.perform(get("/v3/api-docs"))
             .andExpect(jsonPath("$responses.200.content").exists())
             .andExpect(jsonPath("$responses.404.content").doesNotExist())
-            .andExpect(jsonPath("$responses.403.content").doesNotExist())
+            .andExpect(jsonPath("$responses.401.content").doesNotExist())
+    }
+
+    @Test
+    fun `documents 401 for a missing token on every operation`() {
+        // The filter chain answers an unauthenticated call with 401, never 403 (§7.4).
+        val body = mvc.perform(get("/v3/api-docs")).andReturn().response.contentAsString
+        val paths = mapper.readTree(body).get("paths")
+        val missing = paths.properties().flatMap { (path, operations) ->
+            operations.properties()
+                .filter { (_, operation) -> !operation.get("responses").has("401") }
+                .map { (method, _) -> "$method $path" }
+        }
+        assertEquals(emptyList(), missing)
     }
 
     @Test

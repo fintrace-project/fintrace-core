@@ -36,7 +36,7 @@
           "404" : {
             "description" : "No such workspace for this caller"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -84,7 +84,7 @@
           "409" : {
             "description" : "`version` is stale"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -123,7 +123,7 @@
           "409" : {
             "description" : "`version` is stale"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -165,7 +165,7 @@
           "404" : {
             "description" : "No such transfer in this workspace"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -221,7 +221,7 @@
           "409" : {
             "description" : "A leg would move onto an archived account, or the workspace is archived"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -257,7 +257,7 @@
           "409" : {
             "description" : "Workspace is archived"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -299,7 +299,7 @@
           "404" : {
             "description" : "No such operation in this workspace"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -355,7 +355,7 @@
           "409" : {
             "description" : "The operation is a transfer leg; write it through `/transfers`"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -391,7 +391,7 @@
           "409" : {
             "description" : "The operation is a transfer leg; cancel it through `/transfers`"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -433,7 +433,7 @@
           "404" : {
             "description" : "No such category in this workspace"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -489,7 +489,7 @@
           "409" : {
             "description" : "System category, archived, cross-branch move, or a cycle"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -532,7 +532,7 @@
           "409" : {
             "description" : "System category"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -574,7 +574,7 @@
           "404" : {
             "description" : "No such account in this workspace"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -627,7 +627,7 @@
           "404" : {
             "description" : "No such account in this workspace"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -667,7 +667,7 @@
           "404" : {
             "description" : "No such account in this workspace"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -703,7 +703,7 @@
           "400" : {
             "description" : "Sort requested on an unsupported field"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -736,7 +736,7 @@
           "400" : {
             "description" : "Malformed body, or unknown currency"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -786,7 +786,7 @@
           "409" : {
             "description" : "An account is archived, or the workspace is"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -830,7 +830,7 @@
           "400" : {
             "description" : "Malformed body, or `occurredAt` in the future"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -938,7 +938,7 @@
           "404" : {
             "description" : "No such workspace for this caller"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -986,8 +986,11 @@
           "409" : {
             "description" : "Parent is archived, or is an Others"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Missing the required role"
           }
         }
       }
@@ -1028,7 +1031,7 @@
           "404" : {
             "description" : "No such category in this workspace"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -1065,7 +1068,7 @@
           "409" : {
             "description" : "Not ACTIVE"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -1097,7 +1100,7 @@
           "404" : {
             "description" : "No such workspace for this caller"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -1142,7 +1145,7 @@
           "404" : {
             "description" : "No such workspace for this caller"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -1190,7 +1193,7 @@
           "409" : {
             "description" : "Workspace is archived"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -1232,7 +1235,7 @@
           "404" : {
             "description" : "No such account in this workspace"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -1277,7 +1280,7 @@
           "404" : {
             "description" : "No such account in this workspace"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -1333,7 +1336,7 @@
           "409" : {
             "description" : "The account is archived, or the workspace is"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -1358,8 +1361,8 @@
             "description" : "Rebuilt; a workspace with no events is a no-op",
             "content" : { }
           },
-          "403" : {
-            "description" : "Not authenticated, or not an admin"
+          "401" : {
+            "description" : "Not authenticated"
           }
         }
       }
@@ -1414,7 +1417,7 @@
           "404" : {
             "description" : "No such workspace for this caller"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -1464,7 +1467,7 @@
           "404" : {
             "description" : "No such anchor on this account"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }
@@ -1508,7 +1511,7 @@
           "409" : {
             "description" : "Not the account's most recent anchor, or the workspace is archived"
           },
-          "403" : {
+          "401" : {
             "description" : "Not authenticated"
           }
         }

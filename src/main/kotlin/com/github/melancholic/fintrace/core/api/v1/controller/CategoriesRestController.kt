@@ -36,8 +36,9 @@ class CategoriesRestController(
         ApiResponse(responseCode = "400", description = "Malformed body, or no such parent"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
         ApiResponse(responseCode = "409", description = "Parent is archived, or is an Others"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
-    )
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
+        ApiResponse(responseCode = "403", description = "Missing the required role"),
+        )
     @PostMapping
     fun createNewCategory(
         @PathVariable("workspaceId") workspaceId: UUID,
@@ -60,7 +61,7 @@ class CategoriesRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Found, archived or not"),
         ApiResponse(responseCode = "404", description = "No such category in this workspace"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @GetMapping("/{categoryId}")
     fun getCategory(
@@ -79,7 +80,7 @@ class CategoriesRestController(
             description = "Flat; build the tree from `parentId`. Archived excluded unless `includeArchived`"
         ),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @GetMapping
     fun getAllCategories(
@@ -97,7 +98,7 @@ class CategoriesRestController(
         ApiResponse(responseCode = "400", description = "Malformed body, or no such parent"),
         ApiResponse(responseCode = "404", description = "No such category in this workspace"),
         ApiResponse(responseCode = "409", description = "System category, archived, cross-branch move, or a cycle"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PutMapping("/{categoryId}")
     fun reviseCategory(
@@ -114,7 +115,7 @@ class CategoriesRestController(
         ApiResponse(responseCode = "200", description = "Archived with its descendants; never deleted (§4.7)"),
         ApiResponse(responseCode = "404", description = "No such category in this workspace"),
         ApiResponse(responseCode = "409", description = "System category"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @DeleteMapping("/{categoryId}")
     fun deleteCategory(
@@ -135,7 +136,7 @@ class CategoriesRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Restored; descendants stay archived"),
         ApiResponse(responseCode = "404", description = "No such category in this workspace"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PostMapping("/{categoryId}/restore")
     fun restoreCategory(

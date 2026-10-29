@@ -34,7 +34,7 @@ class OperationsRestController(
     @ApiResponses(
         ApiResponse(responseCode = "201", description = "Created; `Location` points at it"),
         ApiResponse(responseCode = "400", description = "Malformed body, or `occurredAt` in the future"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PostMapping
     fun createNewOperation(
@@ -68,7 +68,7 @@ class OperationsRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Found"),
         ApiResponse(responseCode = "404", description = "No such operation in this workspace"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @GetMapping("/{operationId}")
     fun getOperation(
@@ -90,7 +90,7 @@ class OperationsRestController(
             responseCode = "409",
             description = "The operation is a transfer leg; write it through `/transfers`"
         ),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PutMapping("/{operationId}")
     fun reviseOperation(
@@ -122,7 +122,7 @@ class OperationsRestController(
             responseCode = "409",
             description = "The operation is a transfer leg; cancel it through `/transfers`"
         ),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @DeleteMapping("/{operationId}")
     fun cancelOperation(

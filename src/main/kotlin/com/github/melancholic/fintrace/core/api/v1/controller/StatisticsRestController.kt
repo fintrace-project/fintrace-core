@@ -30,7 +30,7 @@ class StatisticsRestController(
         ),
         ApiResponse(responseCode = "400", description = "Malformed `asOf` or `includeArchived`"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @GetMapping("/balances/accounts")
     fun getAllBalancesOf(

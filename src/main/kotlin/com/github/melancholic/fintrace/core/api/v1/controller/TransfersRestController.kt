@@ -37,7 +37,7 @@ class TransfersRestController(
         ),
         ApiResponse(responseCode = "404", description = "No such account in this workspace"),
         ApiResponse(responseCode = "409", description = "An account is archived, or the workspace is"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PostMapping
     fun createTransfer(
@@ -61,7 +61,7 @@ class TransfersRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Found; both legs, each in its account's currency"),
         ApiResponse(responseCode = "404", description = "No such transfer in this workspace"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @GetMapping("/{transferId}")
     fun getTransfer(
@@ -86,7 +86,7 @@ class TransfersRestController(
             responseCode = "409",
             description = "A leg would move onto an archived account, or the workspace is archived"
         ),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PutMapping("/{transferId}")
     fun reviseTransfer(
@@ -104,7 +104,7 @@ class TransfersRestController(
         ApiResponse(responseCode = "204", description = "Cancelled; both legs removed"),
         ApiResponse(responseCode = "404", description = "No such transfer, including one already cancelled"),
         ApiResponse(responseCode = "409", description = "Workspace is archived"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @DeleteMapping("/{transferId}")
     fun cancelTransfer(

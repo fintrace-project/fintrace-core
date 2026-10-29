@@ -36,7 +36,7 @@ class AccountsRestController(
         ApiResponse(responseCode = "400", description = "Malformed body, or unknown currency"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
         ApiResponse(responseCode = "409", description = "Workspace is archived"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PostMapping
     fun createNewAccount(
@@ -68,7 +68,7 @@ class AccountsRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Found"),
         ApiResponse(responseCode = "404", description = "No such account in this workspace"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @GetMapping("/{accountId}")
     fun getAccount(
@@ -84,7 +84,7 @@ class AccountsRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Archived accounts excluded unless `includeArchived`"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @GetMapping
     fun getAccount(
@@ -101,7 +101,7 @@ class AccountsRestController(
         ApiResponse(responseCode = "200", description = "Revised; currency is immutable and untouched"),
         ApiResponse(responseCode = "400", description = "Malformed body"),
         ApiResponse(responseCode = "404", description = "No such account in this workspace"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PutMapping("/{accountId}")
     fun reviseAccount(
@@ -125,7 +125,7 @@ class AccountsRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Archived, or already archived"),
         ApiResponse(responseCode = "404", description = "No such account in this workspace"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @DeleteMapping("/{accountId}")
     fun archiveAccount(
@@ -146,7 +146,7 @@ class AccountsRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Active, or already active"),
         ApiResponse(responseCode = "404", description = "No such account in this workspace"),
-        ApiResponse(responseCode = "403", description = "Not authenticated"),
+        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PostMapping("/{accountId}/restore")
     fun restoreAccount(
