@@ -4,7 +4,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
+import io.swagger.v3.oas.models.responses.ApiResponse as ResponseModel
 import io.swagger.v3.oas.models.security.*
+import org.springdoc.core.customizers.OpenApiCustomizer
 import org.springdoc.core.customizers.OperationCustomizer
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.annotation.AnnotatedElementUtils
@@ -46,6 +48,17 @@ class OpenApiConfiguration(
             if (code.first() in "45" && code !in declared) response.content = null
         }
         operation
+    }
+
+    @Bean
+    fun securityResponses(): OpenApiCustomizer = OpenApiCustomizer { openApi ->
+        openApi.paths?.forEach { (_, item) ->
+            item.readOperations().forEach { operation ->
+                operation.responses
+                    .addApiResponse("401", ResponseModel().description("Not authenticated"))
+                    .addApiResponse("403", ResponseModel().description("Not authorized"))
+            }
+        }
     }
 
     private companion object {

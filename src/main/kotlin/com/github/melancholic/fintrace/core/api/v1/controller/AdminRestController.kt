@@ -23,8 +23,6 @@ class AdminRestController(
     @Operation(summary = "Rebuild a workspace's projections from its event log")
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Rebuilt; a workspace with no events is a no-op"),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
-
     )
     @PostMapping("/workspaces/{workspaceId}/replay")
     fun replayWorkspace(@PathVariable("workspaceId") workspaceId: UUID): ResponseEntity<Unit> {

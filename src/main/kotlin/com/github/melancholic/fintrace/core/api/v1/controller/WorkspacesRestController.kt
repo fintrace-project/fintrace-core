@@ -32,7 +32,6 @@ class WorkspacesRestController(
     @ApiResponses(
         ApiResponse(responseCode = "201", description = "Created; `Location` points at it"),
         ApiResponse(responseCode = "400", description = "Malformed body, or unknown currency"),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PostMapping
     fun createNewWorkspace(
@@ -55,7 +54,6 @@ class WorkspacesRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Found"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @GetMapping("/{workspaceId}")
     fun getWorkspace(
@@ -71,7 +69,6 @@ class WorkspacesRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Sortable by name, status, createdAt"),
         ApiResponse(responseCode = "400", description = "Sort requested on an unsupported field"),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @GetMapping
     fun getWorkspaces(
@@ -89,7 +86,6 @@ class WorkspacesRestController(
         ApiResponse(responseCode = "400", description = "Malformed body, or unknown currency"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
         ApiResponse(responseCode = "409", description = "`version` is stale"),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PutMapping("/{workspaceId}")
     fun editWorkspace(
@@ -105,7 +101,6 @@ class WorkspacesRestController(
         ApiResponse(responseCode = "200", description = "Archived, or already archived"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
         ApiResponse(responseCode = "409", description = "Not ACTIVE"),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PostMapping("/{workspaceId}/archive")
     fun archiveWorkspace(
@@ -119,7 +114,6 @@ class WorkspacesRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Active, or already active"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @DeleteMapping("/{workspaceId}/archive")
     fun unarchiveWorkspace(
@@ -136,7 +130,6 @@ class WorkspacesRestController(
         ApiResponse(responseCode = "400", description = "`version` missing"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
         ApiResponse(responseCode = "409", description = "`version` is stale"),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @DeleteMapping("/{workspaceId}")
     fun deleteWorkspace(

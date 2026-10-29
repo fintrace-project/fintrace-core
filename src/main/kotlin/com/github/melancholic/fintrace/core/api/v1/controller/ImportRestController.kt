@@ -45,8 +45,6 @@ class ImportRestController(
             responseCode = "409",
             description = "The workspace is not NEW, not empty, or an import is already running",
         ),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
-        ApiResponse(responseCode = "403", description = "Missing the required role"),
     )
     @PostMapping
     fun importWorkspaceData(

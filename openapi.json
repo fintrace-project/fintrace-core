@@ -38,6 +38,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -86,6 +89,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -125,6 +131,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -167,6 +176,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -223,6 +235,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -259,6 +274,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -301,6 +319,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -357,6 +378,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -393,6 +417,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -435,6 +462,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -491,6 +521,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -534,6 +567,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -576,6 +612,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -629,6 +668,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -669,6 +711,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -705,6 +750,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -738,6 +786,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -788,6 +839,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -832,6 +886,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -894,7 +951,7 @@
             "description" : "Not authenticated"
           },
           "403" : {
-            "description" : "Missing the required role"
+            "description" : "Not authorized"
           }
         }
       }
@@ -940,6 +997,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -990,7 +1050,7 @@
             "description" : "Not authenticated"
           },
           "403" : {
-            "description" : "Missing the required role"
+            "description" : "Not authorized"
           }
         }
       }
@@ -1033,6 +1093,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -1070,6 +1133,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -1102,6 +1168,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -1147,6 +1216,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -1195,6 +1267,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -1237,6 +1312,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -1282,6 +1360,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -1338,6 +1419,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -1363,6 +1447,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -1419,6 +1506,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }
@@ -1469,6 +1559,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       },
@@ -1513,6 +1606,9 @@
           },
           "401" : {
             "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
           }
         }
       }

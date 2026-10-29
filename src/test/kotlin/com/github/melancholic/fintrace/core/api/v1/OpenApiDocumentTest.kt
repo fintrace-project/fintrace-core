@@ -183,14 +183,16 @@ class OpenApiDocumentTest(
     }
 
     @Test
-    fun `documents 401 for a missing token on every operation`() {
-        // The filter chain answers an unauthenticated call with 401, never 403 (§7.4).
+    fun `documents 401 and 403 on every operation`() {
+        // The filter chain answers no token with 401 and a missing role with 403 (§7.4).
         val body = mvc.perform(get("/v3/api-docs")).andReturn().response.contentAsString
         val paths = mapper.readTree(body).get("paths")
         val missing = paths.properties().flatMap { (path, operations) ->
-            operations.properties()
-                .filter { (_, operation) -> !operation.get("responses").has("401") }
-                .map { (method, _) -> "$method $path" }
+            operations.properties().flatMap { (method, operation) ->
+                listOf("401", "403")
+                    .filter { !operation.get("responses").has(it) }
+                    .map { "$it $method $path" }
+            }
         }
         assertEquals(emptyList(), missing)
     }

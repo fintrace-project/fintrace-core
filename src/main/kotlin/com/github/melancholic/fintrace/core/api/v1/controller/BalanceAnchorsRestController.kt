@@ -36,7 +36,6 @@ class BalanceAnchorsRestController(
         ApiResponse(responseCode = "400", description = "Malformed body"),
         ApiResponse(responseCode = "404", description = "No such account in this workspace"),
         ApiResponse(responseCode = "409", description = "The account is archived, or the workspace is"),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @PostMapping
     fun createNewBalanceAnchor(
@@ -68,7 +67,6 @@ class BalanceAnchorsRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Newest first; empty when the account has none"),
         ApiResponse(responseCode = "404", description = "No such account in this workspace"),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @GetMapping
     fun getAllBalanceAnchors(
@@ -85,7 +83,6 @@ class BalanceAnchorsRestController(
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Found"),
         ApiResponse(responseCode = "404", description = "No such anchor on this account"),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @GetMapping("/{anchorId}")
     fun getBalanceAnchor(
@@ -107,7 +104,6 @@ class BalanceAnchorsRestController(
             responseCode = "409",
             description = "Not the account's most recent anchor, or the workspace is archived"
         ),
-        ApiResponse(responseCode = "401", description = "Not authenticated"),
     )
     @DeleteMapping("/{anchorId}")
     fun deleteBalanceAnchor(
