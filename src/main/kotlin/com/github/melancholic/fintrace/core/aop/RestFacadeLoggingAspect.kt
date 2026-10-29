@@ -1,15 +1,15 @@
 package com.github.melancholic.fintrace.core.aop
 
+import com.github.melancholic.fintrace.core.api.statusOf
+import com.github.melancholic.fintrace.core.exception.FintraceCoreException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
 import org.aspectj.lang.annotation.Pointcut
 import org.aspectj.lang.reflect.MethodSignature
-import org.springframework.core.annotation.AnnotatedElementUtils
 import org.springframework.stereotype.Component
 import org.springframework.transaction.interceptor.TransactionAttributeSource
-import org.springframework.web.bind.annotation.ResponseStatus
 
 @Aspect
 @Component
@@ -28,7 +28,7 @@ class RestFacadeLoggingAspect(
         try {
             return pjp.proceed()
         } catch (e: Exception) {
-            val status = statusOf(e)
+            val status = httpStatusOf(e)
             val line = "[ERR] ${methodName(pjp)}: $status ${e.javaClass.simpleName}${messageOf(e)}"
             if (status >= 500) logger.error(e) { line } else logger.warn { line }
             throw e
@@ -45,8 +45,8 @@ class RestFacadeLoggingAspect(
     private fun log(read: Boolean, message: () -> String) =
         if (read) logger.debug(message) else logger.info(message)
 
-    private fun statusOf(e: Exception): Int =
-        AnnotatedElementUtils.findMergedAnnotation(e.javaClass, ResponseStatus::class.java)?.code?.value() ?: 500
+    private fun httpStatusOf(e: Exception): Int =
+        if (e is FintraceCoreException) statusOf(e).value() else 500
 
     private fun messageOf(e: Exception): String =
         if (e.javaClass.name.startsWith(CORE_PACKAGE)) ": ${e.message}" else ""

@@ -1,10 +1,12 @@
 package com.github.melancholic.fintrace.core.facade
 
+import com.github.melancholic.fintrace.core.api.statusOf
 import com.github.melancholic.fintrace.core.api.v1.dto.ImportEnvelopRequest
 import com.github.melancholic.fintrace.core.api.v1.mapper.ImportMapper
 import com.github.melancholic.fintrace.core.config.TimeoutConstants.IMPORT_TIMEOUT_SECONDS
 import com.github.melancholic.fintrace.core.domain.entity.ImportJob
 import com.github.melancholic.fintrace.core.domain.entity.ImportProblem
+import com.github.melancholic.fintrace.core.exception.FintraceCoreException
 import com.github.melancholic.fintrace.core.exception.ImportCommandFailedException
 import com.github.melancholic.fintrace.core.security.IdentityProvider
 import com.github.melancholic.fintrace.core.service.ImportExecutionService
@@ -13,10 +15,8 @@ import com.github.melancholic.fintrace.core.service.WorkspaceService
 import com.github.melancholic.fintrace.core.util.TransactionsUtil.runInNewTransaction
 import com.github.melancholic.fintrace.core.validation.ImportValidationService
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.springframework.core.annotation.AnnotatedElementUtils
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.web.bind.annotation.ResponseStatus
 import java.util.*
 
 sealed interface ImportFacade : RestFacade {
@@ -93,8 +93,7 @@ class ImportFacadeImpl(
     }
 
     private fun isRefusal(e: Exception): Boolean =
-        AnnotatedElementUtils.findMergedAnnotation(e.javaClass, ResponseStatus::class.java)
-            ?.code?.is4xxClientError == true
+        e is FintraceCoreException && statusOf(e).is4xxClientError
 
     companion object {
         private val logger = KotlinLogging.logger {}
