@@ -10,6 +10,7 @@ spring:
               audiences: fintrace-core
 
 springdoc:
+  default-flat-param-object: true
   swagger-ui:
     oauth:
       client-id: fintrace-swagger

@@ -234,6 +234,31 @@ class OpenApiDocumentTest(
     }
 
     @Test
+    fun `documents paging as the optional page, size and sort Spring reads`() {
+        val parameters = "$.paths['/api/v1/workspaces'].get.parameters"
+        mvc.perform(get("/v3/api-docs"))
+            .andExpect(jsonPath("$parameters[*].name").value(hasItems("page", "size", "sort")))
+            .andExpect(jsonPath("$parameters[?(@.required == true)]").isEmpty)
+            .andExpect(jsonPath("$parameters[?(@.name == 'page')].schema.type").value(hasItem("integer")))
+    }
+
+    @Test
+    fun `documents no query parameter as an object`() {
+        // Spring binds an object such as Pageable from separate parameters; one object-valued parameter is
+        // a request no generated client can make (springdoc.default-flat-param-object)
+        val body = mvc.perform(get("/v3/api-docs")).andReturn().response.contentAsString
+        val paths = mapper.readTree(body).get("paths")
+        val objects = paths.properties().flatMap { (path, operations) ->
+            operations.properties().flatMap { (method, operation) ->
+                operation.path("parameters")
+                    .filter { it.path("in").asText() == "query" && it.path("schema").has("\$ref") }
+                    .map { "${it.path("name").asText()} on $method $path" }
+            }
+        }
+        assertEquals(emptyList(), objects)
+    }
+
+    @Test
     fun `documents 401 and 403 on every operation`() {
         // The filter chain answers no token with 401 and a missing role with 403 (§7.4).
         val body = mvc.perform(get("/v3/api-docs")).andReturn().response.contentAsString
