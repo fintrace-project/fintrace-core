@@ -22,6 +22,7 @@ import java.time.LocalDateTime
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 /**
  * The balance formula (1.24, 1.25), which lives in `fn_balance_of` and
@@ -142,6 +143,7 @@ class BalanceDAOIntegrationTest(
 
     @Test
     fun `the difference is what the anchor absorbed`() {
+        anchor(FEBRUARY_01, "0.0000")
         operation(MARCH_01, "-300.0000")
         val id = anchor(MARCH_15, "1500.0000")
 
@@ -161,8 +163,9 @@ class BalanceDAOIntegrationTest(
 
     @Test
     fun `a back-dated operation shrinks the difference it explains`() {
+        anchor(FEBRUARY_01, "0.0000")
         val id = anchor(MARCH_15, "1500.0000")
-        val before = balanceDAO.getUnexplainedDifference(workspaceId, id)
+        val before = balanceDAO.getUnexplainedDifference(workspaceId, id)!!
 
         operation(MARCH_10, "200.0000")
 
@@ -175,6 +178,7 @@ class BalanceDAOIntegrationTest(
 
     @Test
     fun `an operation at the anchor's own instant is not counted as explaining it`() {
+        anchor(FEBRUARY_01, "0.0000")
         val at = MARCH_15
         operation(at, "-50.0000")
         val id = anchor(at, "1500.0000")
@@ -270,11 +274,25 @@ class BalanceDAOIntegrationTest(
 
         val differences = balanceDAO.getUnexplainedDifference(workspaceId, setOf(first, second))
 
-        // Keyed per anchor, not collapsed: 1000 − (−300), then 1500 − (1000 − 100).
+        // Keyed per anchor, not collapsed: nothing before the first, then 1500 − (1000 − 100).
         assertEquals(
-            mapOf(first to BigDecimal("1300.0000"), second to BigDecimal("600.0000")),
+            mapOf(first to null, second to BigDecimal("600.0000")),
             differences,
         )
+    }
+
+    @Test
+    fun `an account's first anchor has no difference, not its whole value`() {
+        operation(MARCH_01, "-300.0000")
+        val id = anchor(MARCH_15, "1500.0000")
+
+        // §4.6: zero would claim the books were checked and agreed. Null is not "no such anchor" either.
+        assertNull(balanceDAO.getUnexplainedDifference(workspaceId, id))
+    }
+
+    @Test
+    fun `an unknown anchor is not found, unlike a first one`() {
+        assertFailsWith<NotFoundEntityException> { balanceDAO.getUnexplainedDifference(workspaceId, UUID.randomUUID()) }
     }
 
     @Test
@@ -346,6 +364,7 @@ class BalanceDAOIntegrationTest(
     )
 
     private companion object {
+        val FEBRUARY_01: LocalDateTime = LocalDateTime.parse("2026-02-01T10:00:00")
         val MARCH_01: LocalDateTime = LocalDateTime.parse("2026-03-01T10:00:00")
         val MARCH_05: LocalDateTime = LocalDateTime.parse("2026-03-05T10:00:00")
         val MARCH_10: LocalDateTime = LocalDateTime.parse("2026-03-10T10:00:00")

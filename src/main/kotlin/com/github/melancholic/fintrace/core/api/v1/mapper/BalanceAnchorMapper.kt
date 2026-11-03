@@ -10,7 +10,7 @@ import java.math.BigDecimal
 @Mapper(componentModel = "spring")
 interface BalanceAnchorMapper {
     @Mapping(source = "difference", target = "difference")
-    fun toResponse(projection: BalanceAnchorProjection, difference: BigDecimal): BalanceAnchorResponse
+    fun toResponse(projection: BalanceAnchorProjection, difference: BigDecimal?): BalanceAnchorResponse
 
     fun toResponseList(containers: List<BalanceAnchorContainer>): List<BalanceAnchorResponse> =
         containers.map { toResponse(it.projection, it.difference) }

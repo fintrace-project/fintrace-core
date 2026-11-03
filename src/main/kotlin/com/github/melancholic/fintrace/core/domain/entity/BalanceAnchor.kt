@@ -5,5 +5,5 @@ import java.math.BigDecimal
 
 data class BalanceAnchorContainer(
     val projection: BalanceAnchorProjection,
-    val difference: BigDecimal
+    val difference: BigDecimal?
 )

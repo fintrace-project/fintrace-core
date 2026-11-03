@@ -21,6 +21,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
+import org.hamcrest.Matchers.nullValue
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.math.BigDecimal
@@ -179,11 +180,25 @@ class BalanceAnchorsRestControllerTest(
     // ------------------------------------------------------------------ difference (1.25)
 
     @Test
-    fun `a created anchor carries its difference`() {
-        // Nothing on the account explains any of it, so the whole value is unexplained.
-        mvc.perform(createRequest("1500.0000"))
+    fun `an account's first anchor answers a null difference`() {
+        // §4.6: the opening balance, with no earlier observation to be measured against.
+        val response = mvc.perform(createRequest("1500.0000"))
             .andExpect(status().isCreated)
-            .andExpect(jsonPath("$.difference").value(1500.0000))
+            .andExpect(jsonPath("$.difference").value(nullValue()))
+            .andReturn().response.contentAsString
+
+        mvc.perform(get("$anchorsPath/${idOf(response)}").with(user(USER)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.difference").value(nullValue()))
+    }
+
+    @Test
+    fun `a later anchor carries its difference`() {
+        mvc.perform(createRequest("1500.0000")).andExpect(status().isCreated)
+
+        mvc.perform(createRequest("1400.0000"))
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.difference").value(-100.0000))
     }
 
     @Test
@@ -196,24 +211,27 @@ class BalanceAnchorsRestControllerTest(
             .andExpect(jsonPath("$[0].value").value(1400.0000))
             .andExpect(jsonPath("$[0].difference").value(-100.0000))
             .andExpect(jsonPath("$[1].value").value(1500.0000))
-            .andExpect(jsonPath("$[1].difference").value(1500.0000))
+            .andExpect(jsonPath("$[1].difference").value(nullValue()))
     }
 
     @Test
     fun `the single read agrees with its row in the list`() {
-        val id = createdId()
+        createdId(value = "100.0000")
+        val id = createdId(value = "250.0000")
 
         mvc.perform(get("$anchorsPath/$id").with(user(USER)))
-            .andExpect(jsonPath("$.difference").value(100.0000))
+            .andExpect(jsonPath("$.difference").value(150.0000))
         mvc.perform(get(anchorsPath).with(user(USER)))
-            .andExpect(jsonPath("$[0].difference").value(100.0000))
+            .andExpect(jsonPath("$[0].difference").value(150.0000))
     }
 
     @Test
     fun `a back-dated operation moves the difference, never the value`() {
+        createdId(value = "0.0000")
+        val betweenTheAnchors = LocalDateTime.now()
         val id = createdId(value = "1500.0000")
 
-        operation(LocalDateTime.now().minusDays(1), "-200.0000")
+        operation(betweenTheAnchors, "-200.0000")
 
         // §4.6: remembering a forgotten expense explains part of the gap — the observation itself
         // stands, and only what it is measured against changes.

@@ -1,5 +1,6 @@
 -- What an anchor absorbed: its observed value minus the balance the operations explain at that
--- moment (§4.6). Takes the anchor's id, so it cannot be counted as its own baseline.
+-- moment (§4.6). Takes the anchor's id, so it cannot be counted as its own baseline. An account's
+-- first anchor has nothing to be measured against, so the subtraction answers NULL.
 DROP FUNCTION IF EXISTS fn_unexplained_difference_of(uuid, uuid);
 
 CREATE
@@ -26,7 +27,7 @@ WITH this AS (SELECT account_id, value, occurred_at
                   LIMIT 1)
 SELECT (
            (SELECT value FROM this)
-               - COALESCE((SELECT value FROM previous), 0)
+               - (SELECT value FROM previous)
                - COALESCE((SELECT SUM(o.amount)
                            FROM t_operations o,
                                 this

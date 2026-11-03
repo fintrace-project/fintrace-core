@@ -101,7 +101,7 @@ class ProjectionFacadeImpl(
 
         return projections.entries
             .map { (id, projection) ->
-                BalanceAnchorContainer(projection, differences[id]!!)
+                BalanceAnchorContainer(projection, differences[id])
             }
     }
 

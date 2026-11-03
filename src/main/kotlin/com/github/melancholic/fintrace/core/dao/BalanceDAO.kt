@@ -15,8 +15,8 @@ interface BalanceDAO {
     fun getAllBalancesOf(workspaceId: UUID, asOf: LocalDate, includeArchived: Boolean): List<AccountBalance>
     fun getAllBalancesOf(workspaceId: UUID, asOf: LocalDateTime, includeArchived: Boolean): List<AccountBalance>
 
-    fun getUnexplainedDifference(workspaceId: UUID, anchorId: UUID): BigDecimal
-    fun getUnexplainedDifference(workspaceId: UUID, anchorIds: Set<UUID>): Map<UUID, BigDecimal>
+    fun getUnexplainedDifference(workspaceId: UUID, anchorId: UUID): BigDecimal?
+    fun getUnexplainedDifference(workspaceId: UUID, anchorIds: Set<UUID>): Map<UUID, BigDecimal?>
 }
 
 @Repository
@@ -41,14 +41,18 @@ class BalanceDAOImpl(
         .query(BigDecimal::class.java)
         .single()
 
-    override fun getUnexplainedDifference(workspaceId: UUID, anchorId: UUID): BigDecimal =
-        getUnexplainedDifference(workspaceId, setOf(anchorId))[anchorId]
-            ?: throw NotFoundEntityException("Could not find correspondent balance anchor (workspaceId=$workspaceId, anchorId=$anchorId)")
+    override fun getUnexplainedDifference(workspaceId: UUID, anchorId: UUID): BigDecimal? {
+        val differences = getUnexplainedDifference(workspaceId, setOf(anchorId))
+        if (anchorId !in differences) {
+            throw NotFoundEntityException("Could not find correspondent balance anchor (workspaceId=$workspaceId, anchorId=$anchorId)")
+        }
+        return differences[anchorId]
+    }
 
     override fun getUnexplainedDifference(
         workspaceId: UUID,
         anchorIds: Set<UUID>
-    ): Map<UUID, BigDecimal> {
+    ): Map<UUID, BigDecimal?> {
         if (anchorIds.isEmpty()) return emptyMap()
         return jdbc.sql(CALL_UNEXPLAINED_DIFF_FUNC)
             .param("workspaceId", workspaceId)

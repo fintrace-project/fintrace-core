@@ -3251,7 +3251,7 @@
             "type" : "number"
           },
           "difference" : {
-            "type" : "number"
+            "type" : [ "number", "null" ]
           },
           "occurredAt" : {
             "type" : "string",
@@ -3262,7 +3262,7 @@
             "format" : "date-time"
           }
         },
-        "required" : [ "accountId", "difference", "id", "occurredAt", "recordedAt", "value", "workspaceId" ]
+        "required" : [ "accountId", "id", "occurredAt", "recordedAt", "value", "workspaceId" ]
       },
       "AccountBalanceResponse" : {
         "type" : "object",
