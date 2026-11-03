@@ -1937,6 +1937,247 @@
         }
       }
     },
+    "/api/v1/workspaces/{workspaceId}/feed" : {
+      "get" : {
+        "tags" : [ "Workspaces" ],
+        "summary" : "Feed of workspace's operations, across all accounts",
+        "operationId" : "getWorkspaceFeed",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        }, {
+          "name" : "older",
+          "in" : "query",
+          "description" : "Page after this cursor; at most one of `older`, `newer`, `at`",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "newer",
+          "in" : "query",
+          "description" : "Page before this cursor; at most one of `older`, `newer`, `at`",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "at",
+          "in" : "query",
+          "description" : "Page opening at this cursor; at most one of `older`, `newer`, `at`",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "from",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "name" : "to",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "name" : "kinds",
+          "in" : "query",
+          "description" : "`OPERATION` and `TRANSFER` only",
+          "required" : false,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FeedItemType"
+            },
+            "uniqueItems" : true
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Newest first",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PagedListResponseWorkspaceFeedItemDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed cursor, more than one cursor, `size` out of range, `from` not before `to`, or a kind this feed never has",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/accounts/{accountId}/feed" : {
+      "get" : {
+        "tags" : [ "Accounts" ],
+        "summary" : "Feed of an account's operations, transfers and balance anchors",
+        "operationId" : "getAccountFeed",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "accountId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50,
+            "maximum" : 100,
+            "minimum" : 1
+          }
+        }, {
+          "name" : "older",
+          "in" : "query",
+          "description" : "Page after this cursor; at most one of `older`, `newer`, `at`",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "newer",
+          "in" : "query",
+          "description" : "Page before this cursor; at most one of `older`, `newer`, `at`",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "at",
+          "in" : "query",
+          "description" : "Page opening at this cursor; at most one of `older`, `newer`, `at`",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "from",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "name" : "to",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }, {
+          "name" : "kinds",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FeedItemType"
+            },
+            "uniqueItems" : true
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Newest first",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PagedListResponseAccountFeedItemDTO"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed cursor, more than one cursor, `size` out of range, or `from` not before `to`",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such account in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/accounts/{accountId}/balance-anchors/{anchorId}" : {
       "get" : {
         "tags" : [ "Balance Anchors" ],
@@ -3038,6 +3279,279 @@
           }
         },
         "required" : [ "accountId", "balance", "currency" ]
+      },
+      "FeedItemType" : {
+        "type" : "string",
+        "enum" : [ "OPERATION", "TRANSFER", "BALANCE_ANCHOR", "DIFFERENCE" ]
+      },
+      "OperationFeedItemDTO" : {
+        "type" : "object",
+        "properties" : {
+          "cursor" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "accountId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "categoryId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "kind" : {
+            "$ref" : "#/components/schemas/OperationKind"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "recordedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "comment" : {
+            "type" : [ "string", "null" ]
+          },
+          "type" : {
+            "$ref" : "#/components/schemas/FeedItemType"
+          }
+        },
+        "required" : [ "accountId", "amount", "categoryId", "currency", "cursor", "id", "kind", "occurredAt", "recordedAt", "type" ]
+      },
+      "PageCursors" : {
+        "type" : "object",
+        "properties" : {
+          "older" : {
+            "type" : [ "string", "null" ]
+          },
+          "newer" : {
+            "type" : [ "string", "null" ]
+          }
+        }
+      },
+      "PagedListResponseWorkspaceFeedItemDTO" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/WorkspaceFeedItemDTO"
+            }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageCursors"
+          }
+        },
+        "required" : [ "items", "page" ]
+      },
+      "WorkspaceFeedItemDTO" : {
+        "type" : "object",
+        "discriminator" : {
+          "propertyName" : "type",
+          "mapping" : {
+            "OPERATION" : "#/components/schemas/OperationFeedItemDTO",
+            "TRANSFER" : "#/components/schemas/WorkspaceTransferFeedItemDTO"
+          }
+        },
+        "oneOf" : [ {
+          "$ref" : "#/components/schemas/OperationFeedItemDTO"
+        }, {
+          "$ref" : "#/components/schemas/WorkspaceTransferFeedItemDTO"
+        } ],
+        "properties" : {
+          "type" : {
+            "$ref" : "#/components/schemas/FeedItemType"
+          },
+          "cursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "WorkspaceTransferFeedItemDTO" : {
+        "type" : "object",
+        "properties" : {
+          "cursor" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "recordedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "comment" : {
+            "type" : [ "string", "null" ]
+          },
+          "source" : {
+            "$ref" : "#/components/schemas/TransferLegResponse"
+          },
+          "target" : {
+            "$ref" : "#/components/schemas/TransferLegResponse"
+          },
+          "rate" : {
+            "type" : "number"
+          },
+          "type" : {
+            "$ref" : "#/components/schemas/FeedItemType"
+          }
+        },
+        "required" : [ "cursor", "id", "occurredAt", "rate", "recordedAt", "source", "target", "type" ]
+      },
+      "AccountFeedItemDTO" : {
+        "type" : "object",
+        "discriminator" : {
+          "propertyName" : "type",
+          "mapping" : {
+            "OPERATION" : "#/components/schemas/OperationFeedItemDTO",
+            "TRANSFER" : "#/components/schemas/AccountTransferFeedItemDTO",
+            "BALANCE_ANCHOR" : "#/components/schemas/BalanceAnchorFeedItemDTO",
+            "DIFFERENCE" : "#/components/schemas/DifferenceFeedItemDTO"
+          }
+        },
+        "oneOf" : [ {
+          "$ref" : "#/components/schemas/OperationFeedItemDTO"
+        }, {
+          "$ref" : "#/components/schemas/AccountTransferFeedItemDTO"
+        }, {
+          "$ref" : "#/components/schemas/BalanceAnchorFeedItemDTO"
+        }, {
+          "$ref" : "#/components/schemas/DifferenceFeedItemDTO"
+        } ],
+        "properties" : {
+          "type" : {
+            "$ref" : "#/components/schemas/FeedItemType"
+          },
+          "cursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "AccountTransferFeedItemDTO" : {
+        "type" : "object",
+        "properties" : {
+          "cursor" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "recordedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "comment" : {
+            "type" : [ "string", "null" ]
+          },
+          "source" : {
+            "$ref" : "#/components/schemas/TransferLegResponse"
+          },
+          "target" : {
+            "$ref" : "#/components/schemas/TransferLegResponse"
+          },
+          "rate" : {
+            "type" : "number"
+          },
+          "side" : {
+            "$ref" : "#/components/schemas/TransferSide"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "type" : {
+            "$ref" : "#/components/schemas/FeedItemType"
+          }
+        },
+        "required" : [ "amount", "cursor", "id", "occurredAt", "rate", "recordedAt", "side", "source", "target", "type" ]
+      },
+      "BalanceAnchorFeedItemDTO" : {
+        "type" : "object",
+        "properties" : {
+          "cursor" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "value" : {
+            "type" : "number"
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "recordedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "type" : {
+            "$ref" : "#/components/schemas/FeedItemType"
+          }
+        },
+        "required" : [ "cursor", "id", "occurredAt", "recordedAt", "type", "value" ]
+      },
+      "DifferenceFeedItemDTO" : {
+        "type" : "object",
+        "properties" : {
+          "cursor" : {
+            "type" : "string"
+          },
+          "anchorId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "type" : {
+            "$ref" : "#/components/schemas/FeedItemType"
+          }
+        },
+        "required" : [ "amount", "anchorId", "cursor", "occurredAt", "type" ]
+      },
+      "PagedListResponseAccountFeedItemDTO" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AccountFeedItemDTO"
+            }
+          },
+          "page" : {
+            "$ref" : "#/components/schemas/PageCursors"
+          }
+        },
+        "required" : [ "items", "page" ]
+      },
+      "TransferSide" : {
+        "type" : "string",
+        "enum" : [ "SOURCE", "TARGET" ]
       },
       "UserProfileResponse" : {
         "type" : "object",

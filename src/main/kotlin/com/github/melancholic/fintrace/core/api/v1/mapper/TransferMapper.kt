@@ -53,13 +53,15 @@ interface TransferMapper {
         comment = request.comment,
     )
 
-    fun rate(transfer: Transfer): BigDecimal = transfer.target.amount.abs()
-        .divide(transfer.source.amount.abs(), RATE_SCALE, RoundingMode.HALF_UP)
+    fun rate(transfer: Transfer): BigDecimal = rate(transfer.source, transfer.target)
 
     @Named("signedToUnsignedAmount")
     fun signedToUnsignedAmount(amount: BigDecimal): BigDecimal = amount.abs()
 
     companion object {
         const val RATE_SCALE = 6
+
+        fun rate(source: TransferLeg, target: TransferLeg): BigDecimal = target.amount.abs()
+            .divide(source.amount.abs(), RATE_SCALE, RoundingMode.HALF_UP)
     }
 }

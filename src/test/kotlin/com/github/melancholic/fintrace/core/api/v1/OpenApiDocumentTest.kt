@@ -290,6 +290,42 @@ class OpenApiDocumentTest(
             .andExpect(jsonPath("$responses.403.content").doesNotExist())
     }
 
+    @Test
+    fun `both feeds name one enum of kinds and the workspace's says which it has`() {
+        fun kinds(path: String) = "$.paths['$path'].get.parameters[?(@.name == 'kinds')]"
+        mvc.perform(get("/v3/api-docs"))
+            .andExpect(jsonPath("${kinds(WORKSPACE_FEED)}.schema.items['\$ref']").value(hasItem("#/components/schemas/FeedItemType")))
+            .andExpect(jsonPath("${kinds(ACCOUNT_FEED)}.schema.items['\$ref']").value(hasItem("#/components/schemas/FeedItemType")))
+            .andExpect(jsonPath("${kinds(WORKSPACE_FEED)}.description").isNotEmpty)
+    }
+
+    @Test
+    fun `both feeds bound size and say only one cursor may be sent`() {
+        listOf(WORKSPACE_FEED, ACCOUNT_FEED).forEach { path ->
+            val parameters = "$.paths['$path'].get.parameters"
+            val size = "$parameters[?(@.name == 'size')].schema"
+            mvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$size.type").value(hasItem("integer")))
+                .andExpect(jsonPath("$size.minimum").value(hasItem(1)))
+                .andExpect(jsonPath("$size.maximum").value(hasItem(100)))
+                .andExpect(jsonPath("$size.default").value(hasItem(50)))
+                .andExpect(jsonPath("$parameters[?(@.required == true && @.in == 'query')]").isEmpty)
+            listOf("older", "newer", "at").forEach { cursor ->
+                mvc.perform(get("/v3/api-docs"))
+                    .andExpect(jsonPath("$parameters[?(@.name == '$cursor')].description").isNotEmpty)
+            }
+        }
+    }
+
+    @Test
+    fun `both feeds answer a union the client can narrow`() {
+        mvc.perform(get("/v3/api-docs"))
+            .andExpect(jsonPath("$.components.schemas.WorkspaceFeedItemDTO.discriminator.propertyName").value("type"))
+            .andExpect(jsonPath("$.components.schemas.WorkspaceFeedItemDTO.discriminator.mapping.length()").value(2))
+            .andExpect(jsonPath("$.components.schemas.AccountFeedItemDTO.discriminator.propertyName").value("type"))
+            .andExpect(jsonPath("$.components.schemas.AccountFeedItemDTO.discriminator.mapping.length()").value(4))
+    }
+
 	@Test
 	fun `serves the Swagger UI anonymously`() {
 		mvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk)
@@ -297,5 +333,7 @@ class OpenApiDocumentTest(
 
 	private companion object {
 		const val PROBLEM = "#/components/schemas/CoreProblem"
+		const val WORKSPACE_FEED = "/api/v1/workspaces/{workspaceId}/feed"
+		const val ACCOUNT_FEED = "/api/v1/workspaces/{workspaceId}/accounts/{accountId}/feed"
 	}
 }
