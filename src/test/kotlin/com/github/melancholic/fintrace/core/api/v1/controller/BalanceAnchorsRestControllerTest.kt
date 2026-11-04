@@ -102,15 +102,16 @@ class BalanceAnchorsRestControllerTest(
 
         mvc.perform(get(anchorsPath).with(user(USER)))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(2))
-            .andExpect(jsonPath("$[0].accountId").value(accountId.toString()))
+            .andExpect(jsonPath("$.items.length()").value(2))
+            .andExpect(jsonPath("$.page").doesNotExist())
+            .andExpect(jsonPath("$.items[0].accountId").value(accountId.toString()))
     }
 
     @Test
     fun `answers with an empty list for an account with no anchors`() {
         mvc.perform(get(anchorsPath).with(user(USER)))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(0))
+            .andExpect(jsonPath("$.items.length()").value(0))
     }
 
     @Test
@@ -208,10 +209,10 @@ class BalanceAnchorsRestControllerTest(
 
         // Newest first: 1400 observed against the 1500 anchor before it; 1500 against nothing.
         mvc.perform(get(anchorsPath).with(user(USER)))
-            .andExpect(jsonPath("$[0].value").value(1400.0000))
-            .andExpect(jsonPath("$[0].difference").value(-100.0000))
-            .andExpect(jsonPath("$[1].value").value(1500.0000))
-            .andExpect(jsonPath("$[1].difference").value(nullValue()))
+            .andExpect(jsonPath("$.items[0].value").value(1400.0000))
+            .andExpect(jsonPath("$.items[0].difference").value(-100.0000))
+            .andExpect(jsonPath("$.items[1].value").value(1500.0000))
+            .andExpect(jsonPath("$.items[1].difference").value(nullValue()))
     }
 
     @Test
@@ -222,7 +223,7 @@ class BalanceAnchorsRestControllerTest(
         mvc.perform(get("$anchorsPath/$id").with(user(USER)))
             .andExpect(jsonPath("$.difference").value(150.0000))
         mvc.perform(get(anchorsPath).with(user(USER)))
-            .andExpect(jsonPath("$[0].difference").value(150.0000))
+            .andExpect(jsonPath("$.items[0].difference").value(150.0000))
     }
 
     @Test

@@ -17,9 +17,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
-import org.springframework.data.domain.Pageable
-import org.springframework.data.domain.Sort
-import org.springframework.data.web.PageableDefault
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -81,12 +78,11 @@ class WorkspacesRestController(
     )
     @GetMapping
     fun getWorkspaces(
-        @PageableDefault(sort = ["createdAt"], direction = Sort.Direction.DESC) page: Pageable
-    ): ResponseEntity<List<WorkspaceResponse>> {
-        val workspaces: List<Workspace> = workspaceFacade.getWorkspaces(page)
-
+        @RequestParam(value = "includeArchived", required = false, defaultValue = "false") includeArchived: Boolean
+    ): ResponseEntity<ListResponse<WorkspaceResponse>> {
+        val workspaces: List<Workspace> = workspaceFacade.getAllWorkspaces(includeArchived)
         return ResponseEntity
-            .ok(mapper.toResponseList(workspaces))
+            .ok(ListResponse(mapper.toResponseList(workspaces)))
     }
 
     @Operation(summary = "Replace a workspace's name and currency")

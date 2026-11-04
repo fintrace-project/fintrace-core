@@ -15,15 +15,10 @@ import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.entity.CategorySystemCode
 import com.github.melancholic.fintrace.core.domain.entity.Workspace
 import com.github.melancholic.fintrace.core.domain.entity.WorkspaceStatus
-import com.github.melancholic.fintrace.core.exception.ActionConflictException
-import com.github.melancholic.fintrace.core.exception.ApplicationException
-import com.github.melancholic.fintrace.core.exception.CoreErrorCode
-import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
-import com.github.melancholic.fintrace.core.exception.OperationNotAllowedException
+import com.github.melancholic.fintrace.core.exception.*
 import com.github.melancholic.fintrace.core.service.command.CommandDispatcher
 import com.github.melancholic.fintrace.core.validation.WorkspaceValidationService
 import io.github.oshai.kotlinlogging.KotlinLogging
-import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -33,7 +28,7 @@ import java.util.*
 interface WorkspaceService {
     fun createWorkspace(userId: UUID, request: CreateWorkspaceRequest): Workspace
     fun getWorkspace(userId: UUID, workspaceId: UUID): Workspace
-    fun getWorkspaces(userId: UUID, page: Pageable): List<Workspace>
+    fun getAllWorkspaces(userId: UUID, includeArchived: Boolean): List<Workspace>
     fun editWorkspace(userId: UUID, workspaceId: UUID, request: EditWorkspaceRequest)
     fun archiveWorkspace(userId: UUID, workspaceId: UUID)
     fun unarchiveWorkspace(userId: UUID, workspaceId: UUID)
@@ -71,11 +66,8 @@ class WorkspaceServiceImpl(
             .orElseThrow { NotFoundEntityException("Workspace not found (workspaceId='$workspaceId')") }
     }
 
-    override fun getWorkspaces(
-        userId: UUID,
-        page: Pageable
-    ): List<Workspace> {
-        return workspaceDAO.search(userId, page)
+    override fun getAllWorkspaces(userId: UUID, includeArchived: Boolean): List<Workspace> {
+        return workspaceDAO.getAllWorkspaces(userId, includeArchived)
     }
 
     override fun editWorkspace(

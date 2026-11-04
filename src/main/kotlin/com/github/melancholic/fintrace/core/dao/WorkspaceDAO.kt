@@ -5,10 +5,8 @@ import com.github.melancholic.fintrace.core.api.v1.dto.EditWorkspaceRequest
 import com.github.melancholic.fintrace.core.domain.entity.Workspace
 import com.github.melancholic.fintrace.core.domain.entity.WorkspacePurgeData
 import com.github.melancholic.fintrace.core.domain.entity.WorkspaceStatus
-import com.github.melancholic.fintrace.core.util.SqlHelper.orderBy
 import com.github.melancholic.fintrace.core.util.TimestampProvider
 import com.github.melancholic.fintrace.core.util.UUIDGenerator
-import org.springframework.data.domain.Pageable
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
@@ -20,7 +18,7 @@ interface WorkspaceDAO {
 
     fun get(userId: UUID, workspaceId: UUID): Optional<Workspace>
 
-    fun search(userId: UUID, page: Pageable): List<Workspace>
+    fun getAllWorkspaces(userId: UUID, includeArchived: Boolean): List<Workspace>
 
     fun update(
         userId: UUID,
@@ -94,14 +92,15 @@ class WorkspaceDAOImpl(
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun search(
-        userId: UUID,
-        page: Pageable
-    ): List<Workspace> {
-        return jdbc.sql(SEARCH_WORKSPACE_PER_OWNER.format(orderBy(SORTABLE_COLS, listOf("created_at DESC"), page.sort)))
+    override fun getAllWorkspaces(userId: UUID, includeArchived: Boolean): List<Workspace> {
+        val excludedStatuses = mutableSetOf(WorkspaceStatus.DELETED.name)
+        if (!includeArchived) {
+            excludedStatuses.add(WorkspaceStatus.ARCHIVED.name)
+        }
+
+        return jdbc.sql(SELECT_ALL_PER_OWNER)
             .param("ownerId", userId)
-            .param("limit", page.pageSize)
-            .param("offset", page.offset)
+            .param("excludedStatuses", excludedStatuses)
             .query(Workspace::class.java)
             .list() as List<Workspace>
     }
@@ -228,12 +227,6 @@ class WorkspaceDAOImpl(
     }
 
     companion object {
-        val SORTABLE_COLS = mapOf(
-            "name" to "name",
-            "status" to "status",
-            "createdAt" to "created_at",
-        )
-
         const val TABLE = "t_workspaces"
 
         const val ALL_FIELDS = "id, name, status, owner_id, default_currency, created_at, updated_at, import_started_at, deleted_at, version"
@@ -252,13 +245,18 @@ class WorkspaceDAOImpl(
             AND status <> 'DELETED'
         """
 
-        const val SEARCH_WORKSPACE_PER_OWNER = """
+        const val SELECT_ALL_PER_OWNER = """
             SELECT $ALL_FIELDS
             FROM $TABLE
             WHERE owner_id = :ownerId 
-                AND status <> 'DELETED'
-            ORDER BY %s
-            LIMIT :limit OFFSET :offset
+                AND status not in (:excludedStatuses)
+            ORDER BY 
+                CASE
+                    WHEN status = 'ARCHIVED' THEN 0
+                    ELSE 1
+                END DESC,
+                created_at DESC,
+                id DESC
         """
 
         const val CHANGE_STATUS = """

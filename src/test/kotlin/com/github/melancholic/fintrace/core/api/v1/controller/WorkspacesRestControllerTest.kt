@@ -86,28 +86,54 @@ class WorkspacesRestControllerTest(
 
 		mvc.perform(get(WORKSPACES_PATH).with(user(USER)))
 			.andExpect(status().isOk)
-			.andExpect(jsonPath("$.length()").value(1))
-			.andExpect(jsonPath("$[0].id").value(mine.toString()))
+			.andExpect(jsonPath("$.items.length()").value(1))
+			.andExpect(jsonPath("$.items[0].id").value(mine.toString()))
 	}
 
 	@Test
-	fun `sorts the listing by a requested column`() {
-		createdId(name = "beta")
-		createdId(name = "alpha")
+	fun `lists every workspace in one answer, with no page`() {
+		repeat(11) { createdId(name = "ws-$it") }
 
-		mvc.perform(get("$WORKSPACES_PATH?sort=name,asc").with(user(USER)))
-			.andExpect(jsonPath("$[0].name").value("alpha"))
-			.andExpect(jsonPath("$[1].name").value("beta"))
+		mvc.perform(get(WORKSPACES_PATH).with(user(USER)))
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.items.length()").value(11))
+			.andExpect(jsonPath("$.page").doesNotExist())
 	}
 
 	@Test
-	fun `rejects sorting by a column that is not sortable`() {
-		createdId()
+	fun `hides archived workspaces unless asked for them`() {
+		val archived = archivedWorkspace()
+		val inUse = createdId()
 
-		// The sort property is concatenated into SQL, so anything outside the whitelist has to be
-		// refused rather than passed through.
-		mvc.perform(get("$WORKSPACES_PATH?sort=ownerId,asc").with(user(USER)))
-			.andExpect(status().isBadRequest)
+		mvc.perform(get(WORKSPACES_PATH).with(user(USER)))
+			.andExpect(jsonPath("$.items.length()").value(1))
+			.andExpect(jsonPath("$.items[0].id").value(inUse.toString()))
+		mvc.perform(get("$WORKSPACES_PATH?includeArchived=true").with(user(USER)))
+			.andExpect(jsonPath("$.items.length()").value(2))
+			.andExpect(jsonPath("$.items[1].id").value(archived.toString()))
+	}
+
+	@Test
+	fun `lists the workspaces in use before the archived, each newest first`() {
+		val olderInUse = createdId().also { createdOn(it, day = 1) }
+		val olderArchived = archivedWorkspace().also { createdOn(it, day = 2) }
+		val newerInUse = createdId().also { createdOn(it, day = 3) }
+		val newerArchived = archivedWorkspace().also { createdOn(it, day = 4) }
+
+		mvc.perform(get("$WORKSPACES_PATH?includeArchived=true").with(user(USER)))
+			.andExpect(jsonPath("$.items[0].id").value(newerInUse.toString()))
+			.andExpect(jsonPath("$.items[1].id").value(olderInUse.toString()))
+			.andExpect(jsonPath("$.items[2].id").value(newerArchived.toString()))
+			.andExpect(jsonPath("$.items[3].id").value(olderArchived.toString()))
+	}
+
+	@Test
+	fun `breaks a tie on the creation time by id`() {
+		val ids = List(2) { createdId().also { id -> createdOn(id, day = 1) } }.map { it.toString() }
+
+		mvc.perform(get(WORKSPACES_PATH).with(user(USER)))
+			.andExpect(jsonPath("$.items[0].id").value(ids.max()))
+			.andExpect(jsonPath("$.items[1].id").value(ids.min()))
 	}
 
 	@Test
@@ -248,8 +274,8 @@ class WorkspacesRestControllerTest(
 
 		mvc.perform(get("$WORKSPACES_PATH/$id").with(user(USER)))
 			.andExpect(status().isNotFound)
-		mvc.perform(get(WORKSPACES_PATH).with(user(USER)))
-			.andExpect(jsonPath("$.length()").value(0))
+		mvc.perform(get("$WORKSPACES_PATH?includeArchived=true").with(user(USER)))
+			.andExpect(jsonPath("$.items.length()").value(0))
 	}
 
 	@Test
@@ -314,6 +340,18 @@ class WorkspacesRestControllerTest(
 	/** Until task 1.4 adds `NEW → ACTIVE`, the status can only be moved directly. */
 	private fun activeWorkspace(): UUID = createdId().also {
 		jdbc.sql("UPDATE t_workspaces SET status = 'ACTIVE' WHERE id = :id").param("id", it).update()
+	}
+
+	private fun archivedWorkspace(): UUID = activeWorkspace().also {
+		mvc.perform(post("$WORKSPACES_PATH/$it/archive").with(user(USER)).with(csrf()))
+			.andExpect(status().isOk)
+	}
+
+	private fun createdOn(id: UUID, day: Int) {
+		jdbc.sql("UPDATE t_workspaces SET created_at = :createdAt WHERE id = :id")
+			.param("createdAt", LocalDateTime.of(2026, 1, day, 0, 0))
+			.param("id", id)
+			.update()
 	}
 
 	private fun otherUser(): UUID {

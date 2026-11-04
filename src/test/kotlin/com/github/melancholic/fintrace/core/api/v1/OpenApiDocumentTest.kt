@@ -234,12 +234,12 @@ class OpenApiDocumentTest(
     }
 
     @Test
-    fun `documents paging as the optional page, size and sort Spring reads`() {
+    fun `documents the workspace list with no paging, its one parameter optional`() {
         val parameters = "$.paths['/api/v1/workspaces'].get.parameters"
         mvc.perform(get("/v3/api-docs"))
-            .andExpect(jsonPath("$parameters[*].name").value(hasItems("page", "size", "sort")))
-            .andExpect(jsonPath("$parameters[?(@.required == true)]").isEmpty)
-            .andExpect(jsonPath("$parameters[?(@.name == 'page')].schema.type").value(hasItem("integer")))
+            .andExpect(jsonPath("$parameters.length()").value(1))
+            .andExpect(jsonPath("$parameters[0].name").value("includeArchived"))
+            .andExpect(jsonPath("$parameters[0].required").value(false))
     }
 
     @Test

@@ -217,9 +217,9 @@ class AccountsRestControllerTest(
         // The anchor is reachable where a client would look for it — under the account.
         mvc.perform(get("$accountsPath/$id/balance-anchors").with(user(USER)))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].accountId").value(id.toString()))
-            .andExpect(jsonPath("$[0].value").value(1500.0000))
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].accountId").value(id.toString()))
+            .andExpect(jsonPath("$.items[0].value").value(1500.0000))
     }
 
     @Test
@@ -228,7 +228,7 @@ class AccountsRestControllerTest(
 
         // Omitted is not zero, so the field being absent from the body must write nothing.
         mvc.perform(get("$accountsPath/$id/balance-anchors").with(user(USER)))
-            .andExpect(jsonPath("$.length()").value(0))
+            .andExpect(jsonPath("$.items.length()").value(0))
     }
 
     @Test
@@ -236,8 +236,8 @@ class AccountsRestControllerTest(
         val id = createdId(body = body(initialBalance = "0"))
 
         mvc.perform(get("$accountsPath/$id/balance-anchors").with(user(USER)))
-            .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].value").value(0))
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].value").value(0))
     }
 
     @Test

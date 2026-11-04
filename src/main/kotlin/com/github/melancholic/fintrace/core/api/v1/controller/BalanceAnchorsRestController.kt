@@ -2,6 +2,7 @@ package com.github.melancholic.fintrace.core.api.v1.controller
 
 import com.github.melancholic.fintrace.core.api.v1.dto.BalanceAnchorResponse
 import com.github.melancholic.fintrace.core.api.v1.dto.CreateBalanceAnchorRequest
+import com.github.melancholic.fintrace.core.api.v1.dto.ListResponse
 import com.github.melancholic.fintrace.core.api.v1.mapper.BalanceAnchorMapper
 import com.github.melancholic.fintrace.core.config.ACCOUNT_BALANCE_ANCHORS_AREA_API_PATH
 import com.github.melancholic.fintrace.core.domain.command.CancelBalanceAnchorCommand
@@ -72,11 +73,11 @@ class BalanceAnchorsRestController(
     fun getAllBalanceAnchors(
         @PathVariable("workspaceId") workspaceId: UUID,
         @PathVariable("accountId") accountId: UUID
-    ): ResponseEntity<List<BalanceAnchorResponse>> {
+    ): ResponseEntity<ListResponse<BalanceAnchorResponse>> {
         val containers: List<BalanceAnchorContainer> =
             projectionFacade.getAllBalanceAnchors(workspaceId, accountId)
         return ResponseEntity
-            .ok(mapper.toResponseList(containers))
+            .ok(ListResponse(mapper.toResponseList(containers)))
     }
 
     @Operation(summary = "Fetch a balance anchor")

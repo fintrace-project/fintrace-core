@@ -7,7 +7,6 @@ import com.github.melancholic.fintrace.core.api.v1.mapper.WorkspaceMapper
 import com.github.melancholic.fintrace.core.domain.entity.Workspace
 import com.github.melancholic.fintrace.core.security.IdentityProvider
 import com.github.melancholic.fintrace.core.service.WorkspaceService
-import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -15,7 +14,7 @@ import java.util.*
 sealed interface WorkspaceFacade: RestFacade {
     fun createWorkspace(request: CreateWorkspaceRequest): Workspace
     fun getWorkspace(workspaceId: UUID): Workspace
-    fun getWorkspaces(page: Pageable): List<Workspace>
+    fun getAllWorkspaces(includeArchived: Boolean): List<Workspace>
     fun editWorkspace(workspaceId: UUID, request: EditWorkspaceRequest): WorkspaceResponse
     fun archiveWorkspace(workspaceId: UUID): WorkspaceResponse
     fun unarchiveWorkspace(workspaceId: UUID): WorkspaceResponse
@@ -40,8 +39,8 @@ class WorkspaceFacadeImpl(
     }
 
     @Transactional(readOnly = true)
-    override fun getWorkspaces(page: Pageable): List<Workspace> {
-        return workspaceService.getWorkspaces(identityProvider.currentUserId(), page)
+    override fun getAllWorkspaces(includeArchived: Boolean): List<Workspace> {
+        return workspaceService.getAllWorkspaces(identityProvider.currentUserId(), includeArchived)
     }
 
     override fun editWorkspace(workspaceId: UUID, request: EditWorkspaceRequest): WorkspaceResponse {

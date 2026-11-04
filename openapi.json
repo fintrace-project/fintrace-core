@@ -927,36 +927,12 @@
         "summary" : "List the caller's workspaces",
         "operationId" : "getWorkspaces",
         "parameters" : [ {
-          "name" : "page",
+          "name" : "includeArchived",
           "in" : "query",
-          "description" : "Zero-based page index (0..N)",
           "required" : false,
           "schema" : {
-            "type" : "integer",
-            "default" : 0,
-            "minimum" : 0
-          }
-        }, {
-          "name" : "size",
-          "in" : "query",
-          "description" : "The size of the page to be returned",
-          "required" : false,
-          "schema" : {
-            "type" : "integer",
-            "default" : 10,
-            "minimum" : 1
-          }
-        }, {
-          "name" : "sort",
-          "in" : "query",
-          "description" : "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
-          "required" : false,
-          "schema" : {
-            "type" : "array",
-            "default" : [ "createdAt,DESC" ],
-            "items" : {
-              "type" : "string"
-            }
+            "type" : "boolean",
+            "default" : false
           }
         } ],
         "responses" : {
@@ -965,10 +941,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/WorkspaceResponse"
-                  }
+                  "$ref" : "#/components/schemas/ListResponseWorkspaceResponse"
                 }
               }
             }
@@ -1729,10 +1702,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/BalanceAnchorResponse"
-                  }
+                  "$ref" : "#/components/schemas/ListResponseBalanceAnchorResponse"
                 }
               }
             }
@@ -3264,6 +3234,18 @@
         },
         "required" : [ "accountId", "id", "occurredAt", "recordedAt", "value", "workspaceId" ]
       },
+      "ListResponseWorkspaceResponse" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/WorkspaceResponse"
+            }
+          }
+        },
+        "required" : [ "items" ]
+      },
       "AccountBalanceResponse" : {
         "type" : "object",
         "properties" : {
@@ -3552,6 +3534,18 @@
       "TransferSide" : {
         "type" : "string",
         "enum" : [ "SOURCE", "TARGET" ]
+      },
+      "ListResponseBalanceAnchorResponse" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/BalanceAnchorResponse"
+            }
+          }
+        },
+        "required" : [ "items" ]
       },
       "UserProfileResponse" : {
         "type" : "object",

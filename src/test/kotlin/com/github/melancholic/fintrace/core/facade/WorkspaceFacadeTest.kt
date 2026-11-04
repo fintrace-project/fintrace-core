@@ -14,8 +14,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Import
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Sort
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.security.test.context.support.WithMockUser
 import java.time.LocalDateTime
@@ -73,7 +71,7 @@ class WorkspaceFacadeTest(
 
 		// 404, not 403: an id you cannot reach and one that does not exist answer alike (§7.4).
 		assertFailsWith<NotFoundEntityException> { facade.getWorkspace(theirs) }
-		assertTrue(facade.getWorkspaces(page()).none { it.id == theirs })
+		assertTrue(facade.getAllWorkspaces(includeArchived = true).none { it.id == theirs })
 	}
 
 	@Test
@@ -86,25 +84,7 @@ class WorkspaceFacadeTest(
 		val mine = facade.createWorkspace(CreateWorkspaceRequest("mine", "EUR")).id
 		workspaceDAO.create(otherUser(), CreateWorkspaceRequest("theirs", "USD"))
 
-		assertEquals(listOf(mine), facade.getWorkspaces(page()).map { it.id })
-	}
-
-	@Test
-	fun `sorts the listing by the requested column`() {
-		val first = facade.createWorkspace(CreateWorkspaceRequest("alpha", "EUR")).id
-		val second = facade.createWorkspace(CreateWorkspaceRequest("beta", "EUR")).id
-
-		val ascending = facade.getWorkspaces(page(Sort.by("name"))).map { it.id }
-		assertEquals(listOf(first, second), ascending)
-		assertEquals(listOf(second, first), facade.getWorkspaces(page(Sort.by(Sort.Direction.DESC, "name"))).map { it.id })
-	}
-
-	@Test
-	fun `pages the listing`() {
-		repeat(3) { facade.createWorkspace(CreateWorkspaceRequest("ws-$it", "EUR")).id }
-
-		assertEquals(2, facade.getWorkspaces(PageRequest.of(0, 2, Sort.by("name"))).size)
-		assertEquals(1, facade.getWorkspaces(PageRequest.of(1, 2, Sort.by("name"))).size)
+		assertEquals(listOf(mine), facade.getAllWorkspaces(includeArchived = true).map { it.id })
 	}
 
 	@Test
@@ -224,7 +204,7 @@ class WorkspaceFacadeTest(
 
 		// Soft delete, but terminal: the row survives for the retention job, not for the caller.
 		assertFailsWith<NotFoundEntityException> { facade.getWorkspace(id) }
-		assertTrue(facade.getWorkspaces(page()).none { it.id == id })
+		assertTrue(facade.getAllWorkspaces(includeArchived = true).none { it.id == id })
 	}
 
 	@Test
@@ -293,8 +273,6 @@ class WorkspaceFacadeTest(
 	}
 
 	private fun versionOf(id: UUID): Long = row(id).version
-
-	private fun page(sort: Sort = Sort.by(Sort.Direction.DESC, "createdAt")) = PageRequest.of(0, 20, sort)
 
 	/**
 	 * Until task 1.4 adds the `NEW → ACTIVE` transition ("start empty", and the hook import will
