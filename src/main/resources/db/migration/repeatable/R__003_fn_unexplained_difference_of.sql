@@ -1,6 +1,4 @@
--- What an anchor absorbed: its observed value minus the balance the operations explain at that
--- moment (§4.6). Takes the anchor's id, so it cannot be counted as its own baseline. An account's
--- first anchor has nothing to be measured against, so the subtraction answers NULL.
+-- NULL for an account's first anchor, which has nothing to be measured against.
 DROP FUNCTION IF EXISTS fn_unexplained_difference_of(uuid, uuid);
 
 CREATE

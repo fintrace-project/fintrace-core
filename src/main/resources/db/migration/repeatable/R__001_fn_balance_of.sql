@@ -1,7 +1,5 @@
--- An account's balance strictly before an instant: the nearest preceding anchor plus the
--- operations after it (§4.6). The bound is exclusive so a caller can say "the whole of 15 March"
--- as `16 March 00:00` without depending on timestamp precision. The `p_` prefix keeps a parameter
--- from resolving to the column of that name.
+-- The bound is exclusive, so `16 March 00:00` means the whole of 15 March. `p_` keeps a
+-- parameter from resolving to a column.
 DROP FUNCTION IF EXISTS fn_balance_of(uuid, uuid, timestamp);
 
 CREATE

@@ -30,11 +30,20 @@ class MigrationNamingTest {
 	}
 
 	@Test
-	fun `repeatable migrations are named for what they define`() {
+	fun `repeatable migrations are numbered and named for what they define`() {
 		// Views and functions live in R__ files: they are replaced in place whenever the file
-		// changes, so a schema read can be edited without burning a version number.
+		// changes, so a schema read can be edited without burning a version number. The number is
+		// their order, since a SQL function's body must find what it calls (§4.13.1).
 		val malformed = repeatable.filterNot { it.matches(REPEATABLE_NAMING) }
-		assertEquals(emptyList(), malformed, "repeatable migrations not matching R__name.sql")
+		assertEquals(emptyList(), malformed, "repeatable migrations not matching R__000_name.sql")
+	}
+
+	@Test
+	fun `repeatable numbers are unique`() {
+		val numbers = repeatable.map { it.substring(3, 6) }
+		val duplicated = numbers.groupBy { it }.filterValues { it.size > 1 }.keys
+
+		assertEquals(emptySet(), duplicated)
 	}
 
 	@Test
@@ -47,6 +56,6 @@ class MigrationNamingTest {
 
 	private companion object {
 		val NAMING = Regex("""V\d{4}__[a-z0-9_]+\.sql""")
-		val REPEATABLE_NAMING = Regex("""R__[a-z0-9_]+\.sql""")
+		val REPEATABLE_NAMING = Regex("""R__\d{3}_[a-z0-9_]+\.sql""")
 	}
 }

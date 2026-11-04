@@ -1,11 +1,5 @@
--- A feed's items at their position: newest first is `occurred_at, item_rank, sort_id`, all
--- DESC, so one row comparison pages it. The workspace's feed with a null account; an account's adds
--- its anchors and their differences. Paging, the period and kinds are the caller's, over the columns
--- returned. A transfer is one row from its source leg, the only negative one.
--- Flyway runs repeatables by name, so fn_unexplained_difference_of may not exist yet: the body is
--- checked on first call instead, for this script's transaction only.
-SET LOCAL check_function_bodies = false;
-
+-- A null account is the workspace's feed. A transfer is read from its source leg, the only
+-- negative one.
 DROP FUNCTION IF EXISTS fn_load_feed(uuid, uuid);
 
 CREATE
