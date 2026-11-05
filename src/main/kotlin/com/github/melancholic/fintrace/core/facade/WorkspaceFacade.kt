@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
-sealed interface WorkspaceFacade: RestFacade {
+sealed interface WorkspaceFacade : RestFacade {
     fun createWorkspace(request: CreateWorkspaceRequest): Workspace
     fun getWorkspace(workspaceId: UUID): Workspace
     fun getAllWorkspaces(includeArchived: Boolean): List<Workspace>
@@ -49,7 +49,7 @@ class WorkspaceFacadeImpl(
         return workspaceMapper.toResponse(workspace)
     }
 
-    override fun archiveWorkspace(workspaceId: UUID) : WorkspaceResponse {
+    override fun archiveWorkspace(workspaceId: UUID): WorkspaceResponse {
         workspaceService.archiveWorkspace(identityProvider.currentUserId(), workspaceId)
         val workspace = workspaceService.getWorkspace(identityProvider.currentUserId(), workspaceId)
         return workspaceMapper.toResponse(workspace)

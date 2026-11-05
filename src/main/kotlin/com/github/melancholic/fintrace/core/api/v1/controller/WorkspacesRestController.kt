@@ -73,8 +73,10 @@ class WorkspacesRestController(
 
     @Operation(summary = "List the caller's workspaces")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Sortable by name, status, createdAt"),
-        ApiResponse(responseCode = "400", description = "Sort requested on an unsupported field"),
+        ApiResponse(
+            responseCode = "200",
+            description = "Whole, never paged; in use before archived, then newest first. Archived excluded unless `includeArchived`"
+        ),
     )
     @GetMapping
     fun getWorkspaces(

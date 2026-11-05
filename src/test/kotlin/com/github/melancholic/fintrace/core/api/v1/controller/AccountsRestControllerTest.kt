@@ -84,13 +84,14 @@ class AccountsRestControllerTest(
     }
 
     @Test
-    fun `lists the workspace's accounts`() {
+    fun `lists every account in one answer, with no page`() {
         createdId(name = "first")
         createdId(name = "second")
 
         mvc.perform(get(accountsPath).with(user(USER)))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$.items.length()").value(2))
+            .andExpect(jsonPath("$.page").doesNotExist())
     }
 
     @Test
@@ -101,11 +102,11 @@ class AccountsRestControllerTest(
 
         // §4.8: an archived account is not offered for selection, but is still reachable.
         mvc.perform(get(accountsPath).with(user(USER)))
-            .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].id").value(kept.toString()))
+            .andExpect(jsonPath("$.items.length()").value(1))
+            .andExpect(jsonPath("$.items[0].id").value(kept.toString()))
 
         mvc.perform(get("$accountsPath?includeArchived=true").with(user(USER)))
-            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$.items.length()").value(2))
     }
 
     @Test

@@ -53,6 +53,7 @@ interface WorkspaceDAO {
     fun purgeWorkspace(workspacePurgeData: WorkspacePurgeData): Boolean
 
     fun resetWorkspaceStatusIfImportAbandoned(id: UUID, staleBefore: LocalDateTime): Optional<Workspace>
+
     fun resetMultipleWorkspacesWithAbandonedImport(chunkSize: Int, staleBefore: LocalDateTime): List<UUID>
 }
 
@@ -229,7 +230,8 @@ class WorkspaceDAOImpl(
     companion object {
         const val TABLE = "t_workspaces"
 
-        const val ALL_FIELDS = "id, name, status, owner_id, default_currency, created_at, updated_at, import_started_at, deleted_at, version"
+        const val ALL_FIELDS =
+            "id, name, status, owner_id, default_currency, created_at, updated_at, import_started_at, deleted_at, version"
 
         const val CREATE_WORKSPACE = """
             INSERT INTO $TABLE (id, name, status, owner_id, default_currency, created_at, updated_at, version)

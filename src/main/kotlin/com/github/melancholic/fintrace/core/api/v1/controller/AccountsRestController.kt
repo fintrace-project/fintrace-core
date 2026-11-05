@@ -89,17 +89,17 @@ class AccountsRestController(
 
     @Operation(summary = "List accounts")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Archived accounts excluded unless `includeArchived`"),
+        ApiResponse(responseCode = "200", description = "Every account, never paged. Archived excluded unless `includeArchived`"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
     )
     @GetMapping
     fun getAccount(
         @PathVariable("workspaceId") workspaceId: UUID,
         @RequestParam(value = "includeArchived", required = false, defaultValue = "false") includeArchived: Boolean
-    ): ResponseEntity<List<AccountResponse>> {
+    ): ResponseEntity<ListResponse<AccountResponse>> {
         val projections: List<AccountProjection> = projectionFacade.getAllAccounts(workspaceId, includeArchived)
         return ResponseEntity
-            .ok(mapper.toResponseList(projections))
+            .ok(ListResponse(mapper.toResponseList(projections)))
     }
 
     @Operation(summary = "Replace an account's name and icon")

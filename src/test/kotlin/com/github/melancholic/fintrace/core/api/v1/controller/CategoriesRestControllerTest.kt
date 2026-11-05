@@ -51,13 +51,14 @@ class CategoriesRestControllerTest(
     }
 
     @Test
-    fun `lists the seeded system categories`() {
+    fun `lists the seeded system categories in one answer, with no page`() {
         mvc.perform(get(categoriesPath).with(user(USER)))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(4))
+            .andExpect(jsonPath("$.items.length()").value(4))
+            .andExpect(jsonPath("$.page").doesNotExist())
             .andExpect(
                 jsonPath(
-                    "$[*].systemCode",
+                    "$.items[*].systemCode",
                     containsInAnyOrder("INCOME_ROOT", "INCOME_OTHERS", "EXPENSE_ROOT", "EXPENSE_OTHERS"),
                 )
             )
@@ -132,9 +133,9 @@ class CategoriesRestControllerTest(
         // Archiving cascaded to Groceries, so both disappear from the default listing while the
         // four system categories remain.
         mvc.perform(get(categoriesPath).with(user(USER)))
-            .andExpect(jsonPath("$.length()").value(4))
+            .andExpect(jsonPath("$.items.length()").value(4))
         mvc.perform(get("$categoriesPath?includeArchived=true").with(user(USER)))
-            .andExpect(jsonPath("$.length()").value(6))
+            .andExpect(jsonPath("$.items.length()").value(6))
     }
 
     @Test

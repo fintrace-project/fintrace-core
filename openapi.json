@@ -937,21 +937,11 @@
         } ],
         "responses" : {
           "200" : {
-            "description" : "Sortable by name, status, createdAt",
+            "description" : "Whole, never paged; in use before archived, then newest first. Archived excluded unless `includeArchived`",
             "content" : {
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ListResponseWorkspaceResponse"
-                }
-              }
-            }
-          },
-          "400" : {
-            "description" : "Sort requested on an unsupported field",
-            "content" : {
-              "application/problem+json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CoreProblem"
                 }
               }
             }
@@ -1244,14 +1234,11 @@
         } ],
         "responses" : {
           "200" : {
-            "description" : "Flat; build the tree from `parentId`. Archived excluded unless `includeArchived`",
+            "description" : "The whole tree, never paged; flat, so build it from `parentId`. Archived excluded unless `includeArchived`",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/CategoryResponse"
-                  }
+                  "$ref" : "#/components/schemas/ListResponseCategoryResponse"
                 }
               }
             }
@@ -1519,14 +1506,11 @@
         } ],
         "responses" : {
           "200" : {
-            "description" : "Archived accounts excluded unless `includeArchived`",
+            "description" : "Every account, never paged. Archived excluded unless `includeArchived`",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/AccountResponse"
-                  }
+                  "$ref" : "#/components/schemas/ListResponseAccountResponse"
                 }
               }
             }
@@ -3394,6 +3378,30 @@
           }
         },
         "required" : [ "cursor", "id", "occurredAt", "rate", "recordedAt", "source", "target", "type" ]
+      },
+      "ListResponseCategoryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CategoryResponse"
+            }
+          }
+        },
+        "required" : [ "items" ]
+      },
+      "ListResponseAccountResponse" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AccountResponse"
+            }
+          }
+        },
+        "required" : [ "items" ]
       },
       "AccountFeedItemDTO" : {
         "type" : "object",

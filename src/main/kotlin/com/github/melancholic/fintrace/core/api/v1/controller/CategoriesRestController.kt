@@ -2,6 +2,7 @@ package com.github.melancholic.fintrace.core.api.v1.controller
 
 import com.github.melancholic.fintrace.core.api.v1.dto.CategoryResponse
 import com.github.melancholic.fintrace.core.api.v1.dto.CreateCategoryRequest
+import com.github.melancholic.fintrace.core.api.v1.dto.ListResponse
 import com.github.melancholic.fintrace.core.api.v1.dto.UpdateCategoryRequest
 import com.github.melancholic.fintrace.core.api.v1.mapper.CategoryMapper
 import com.github.melancholic.fintrace.core.config.CATEGORIES_AREA_API_PATH
@@ -74,7 +75,7 @@ class CategoriesRestController(
     @ApiResponses(
         ApiResponse(
             responseCode = "200",
-            description = "Flat; build the tree from `parentId`. Archived excluded unless `includeArchived`"
+            description = "The whole tree, never paged; flat, so build it from `parentId`. Archived excluded unless `includeArchived`"
         ),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
     )
@@ -82,10 +83,10 @@ class CategoriesRestController(
     fun getAllCategories(
         @PathVariable("workspaceId") workspaceId: UUID,
         @RequestParam(value = "includeArchived", required = false, defaultValue = "false") includeArchived: Boolean
-    ): ResponseEntity<List<CategoryResponse>> {
+    ): ResponseEntity<ListResponse<CategoryResponse>> {
         val projections: List<CategoryProjection> = projectionFacade.getAllCategories(workspaceId, includeArchived)
         return ResponseEntity
-            .ok(mapper.toResponseList(projections))
+            .ok(ListResponse(mapper.toResponseList(projections)))
     }
 
     @Operation(summary = "Replace a category's name, icon and parent")
