@@ -252,17 +252,60 @@ class WorkspacesRestControllerTest(
 
 		// Both transitions answer with the workspace, so the caller sees the new status and the
 		// version it must send next.
-		mvc.perform(post("$WORKSPACES_PATH/$id/archive").with(user(USER)).with(csrf()))
+		mvc.perform(post("$WORKSPACES_PATH/$id/archive?version=0").with(user(USER)).with(csrf()))
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value("ARCHIVED"))
+			.andExpect(jsonPath("$.version").value(1))
 		mvc.perform(get("$WORKSPACES_PATH/$id").with(user(USER)))
 			.andExpect(jsonPath("$.status").value("ARCHIVED"))
 
-		mvc.perform(delete("$WORKSPACES_PATH/$id/archive").with(user(USER)).with(csrf()))
+		mvc.perform(delete("$WORKSPACES_PATH/$id/archive?version=1").with(user(USER)).with(csrf()))
 			.andExpect(status().isOk)
 			.andExpect(jsonPath("$.status").value("ACTIVE"))
+			.andExpect(jsonPath("$.version").value(2))
 		mvc.perform(get("$WORKSPACES_PATH/$id").with(user(USER)))
 			.andExpect(jsonPath("$.status").value("ACTIVE"))
+	}
+
+	@Test
+	fun `archive and unarchive require the version`() {
+		val id = activeWorkspace()
+
+		mvc.perform(post("$WORKSPACES_PATH/$id/archive").with(user(USER)).with(csrf()))
+			.andExpect(status().isBadRequest)
+		mvc.perform(delete("$WORKSPACES_PATH/$id/archive").with(user(USER)).with(csrf()))
+			.andExpect(status().isBadRequest)
+		assertEquals("ACTIVE", statusOf(id))
+	}
+
+	@Test
+	fun `archive and unarchive refuse a stale version`() {
+		val id = activeWorkspace()
+		mvc.perform(editRequest(id, """{"version":0,"workspaceName":"renamed"}""")).andExpect(status().isOk)
+
+		mvc.perform(post("$WORKSPACES_PATH/$id/archive?version=0").with(user(USER)).with(csrf()))
+			.andExpect(status().isConflict)
+			.andExpect(jsonPath("$.code").value("VERSION_CONFLICT"))
+		assertEquals("ACTIVE", statusOf(id))
+
+		mvc.perform(post("$WORKSPACES_PATH/$id/archive?version=1").with(user(USER)).with(csrf()))
+			.andExpect(status().isOk)
+		mvc.perform(delete("$WORKSPACES_PATH/$id/archive?version=1").with(user(USER)).with(csrf()))
+			.andExpect(status().isConflict)
+			.andExpect(jsonPath("$.code").value("VERSION_CONFLICT"))
+		assertEquals("ARCHIVED", statusOf(id))
+	}
+
+	@Test
+	fun `a repeated archive answers 200 on its first version, and bumps nothing`() {
+		val id = activeWorkspace()
+		mvc.perform(post("$WORKSPACES_PATH/$id/archive?version=0").with(user(USER)).with(csrf()))
+			.andExpect(status().isOk)
+
+		mvc.perform(post("$WORKSPACES_PATH/$id/archive?version=0").with(user(USER)).with(csrf()))
+			.andExpect(status().isOk)
+			.andExpect(jsonPath("$.status").value("ARCHIVED"))
+			.andExpect(jsonPath("$.version").value(1))
 	}
 
 	@Test
@@ -343,9 +386,12 @@ class WorkspacesRestControllerTest(
 	}
 
 	private fun archivedWorkspace(): UUID = activeWorkspace().also {
-		mvc.perform(post("$WORKSPACES_PATH/$it/archive").with(user(USER)).with(csrf()))
+		mvc.perform(post("$WORKSPACES_PATH/$it/archive?version=0").with(user(USER)).with(csrf()))
 			.andExpect(status().isOk)
 	}
+
+	private fun statusOf(id: UUID): String =
+		jdbc.sql("SELECT status FROM t_workspaces WHERE id = :id").param("id", id).query(String::class.java).single()
 
 	private fun createdOn(id: UUID, day: Int) {
 		jdbc.sql("UPDATE t_workspaces SET created_at = :createdAt WHERE id = :id")

@@ -243,6 +243,16 @@ class OpenApiDocumentTest(
     }
 
     @Test
+    fun `documents version as required on archive, unarchive and delete`() {
+        val archive = "$.paths['/api/v1/workspaces/{workspaceId}/archive']"
+        val workspace = "$.paths['/api/v1/workspaces/{workspaceId}']"
+        mvc.perform(get("/v3/api-docs"))
+            .andExpect(jsonPath("$archive.post.parameters[?(@.name=='version')].required").value(true))
+            .andExpect(jsonPath("$archive.delete.parameters[?(@.name=='version')].required").value(true))
+            .andExpect(jsonPath("$workspace.delete.parameters[?(@.name=='version')].required").value(true))
+    }
+
+    @Test
     fun `documents no query parameter as an object`() {
         // Spring binds an object such as Pageable from separate parameters; one object-valued parameter is
         // a request no generated client can make (springdoc.default-flat-param-object)

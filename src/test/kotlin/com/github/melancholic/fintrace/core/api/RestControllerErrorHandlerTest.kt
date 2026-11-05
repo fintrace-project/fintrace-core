@@ -50,7 +50,7 @@ class RestControllerErrorHandlerTest(
     fun `a conflict names its reason`() {
         val id = createdId()
 
-        mvc.perform(post("$WORKSPACES/$id/archive").with(user(USER)).with(csrf()))
+        mvc.perform(post("$WORKSPACES/$id/archive?version=0").with(user(USER)).with(csrf()))
             .andExpect(status().isConflict)
             .problem("WORKSPACE_STATUS_CONFLICT")
     }

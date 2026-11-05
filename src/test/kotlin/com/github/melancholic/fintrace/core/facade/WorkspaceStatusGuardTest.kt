@@ -74,7 +74,7 @@ class WorkspaceStatusGuardTest(
 
     @Test
     fun `an archived workspace refuses a command of every aggregate and writes nothing`() {
-        workspaceFacade.archiveWorkspace(workspaceId)
+        workspaceFacade.archiveWorkspace(workspaceId, workspaceFacade.getWorkspace(workspaceId).version)
         val before = state()
 
         for (command in commandsOfEveryAggregate()) {
@@ -86,7 +86,7 @@ class WorkspaceStatusGuardTest(
 
     @Test
     fun `an archived workspace still answers every read`() {
-        workspaceFacade.archiveWorkspace(workspaceId)
+        workspaceFacade.archiveWorkspace(workspaceId, workspaceFacade.getWorkspace(workspaceId).version)
 
         for ((name, read) in reads()) {
             assertDoesNotThrow(name) { read() }

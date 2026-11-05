@@ -105,28 +105,33 @@ class WorkspacesRestController(
 
     @Operation(summary = "Archive a workspace")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Archived, or already archived"),
+        ApiResponse(responseCode = "200", description = "Archived, or already archived whatever `version`"),
+        ApiResponse(responseCode = "400", description = "`version` missing"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
-        ApiResponse(responseCode = "409", description = "Not ACTIVE"),
+        ApiResponse(responseCode = "409", description = "Not ACTIVE, or `version` is stale"),
     )
     @PostMapping("/{workspaceId}/archive")
     fun archiveWorkspace(
         @PathVariable("workspaceId") workspaceId: UUID,
+        @RequestParam("version") version: Long
     ): ResponseEntity<WorkspaceResponse> {
-        val updatedWorkspace = workspaceFacade.archiveWorkspace(workspaceId)
+        val updatedWorkspace = workspaceFacade.archiveWorkspace(workspaceId, version)
         return ResponseEntity.ok(updatedWorkspace)
     }
 
     @Operation(summary = "Unarchive a workspace")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Active, or already active"),
+        ApiResponse(responseCode = "200", description = "Active, or already active whatever `version`"),
+        ApiResponse(responseCode = "400", description = "`version` missing"),
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
+        ApiResponse(responseCode = "409", description = "Neither ARCHIVED nor ACTIVE, or `version` is stale"),
     )
     @DeleteMapping("/{workspaceId}/archive")
     fun unarchiveWorkspace(
         @PathVariable("workspaceId") workspaceId: UUID,
+        @RequestParam("version") version: Long
     ): ResponseEntity<WorkspaceResponse> {
-        val updatedWorkspace = workspaceFacade.unarchiveWorkspace(workspaceId)
+        val updatedWorkspace = workspaceFacade.unarchiveWorkspace(workspaceId, version)
         return ResponseEntity.ok(updatedWorkspace)
     }
 

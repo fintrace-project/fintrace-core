@@ -16,8 +16,8 @@ sealed interface WorkspaceFacade : RestFacade {
     fun getWorkspace(workspaceId: UUID): Workspace
     fun getAllWorkspaces(includeArchived: Boolean): List<Workspace>
     fun editWorkspace(workspaceId: UUID, request: EditWorkspaceRequest): WorkspaceResponse
-    fun archiveWorkspace(workspaceId: UUID): WorkspaceResponse
-    fun unarchiveWorkspace(workspaceId: UUID): WorkspaceResponse
+    fun archiveWorkspace(workspaceId: UUID, version: Long): WorkspaceResponse
+    fun unarchiveWorkspace(workspaceId: UUID, version: Long): WorkspaceResponse
     fun deleteWorkspace(workspaceId: UUID, version: Long)
 }
 
@@ -49,14 +49,14 @@ class WorkspaceFacadeImpl(
         return workspaceMapper.toResponse(workspace)
     }
 
-    override fun archiveWorkspace(workspaceId: UUID): WorkspaceResponse {
-        workspaceService.archiveWorkspace(identityProvider.currentUserId(), workspaceId)
+    override fun archiveWorkspace(workspaceId: UUID, version: Long): WorkspaceResponse {
+        workspaceService.archiveWorkspace(identityProvider.currentUserId(), workspaceId, version)
         val workspace = workspaceService.getWorkspace(identityProvider.currentUserId(), workspaceId)
         return workspaceMapper.toResponse(workspace)
     }
 
-    override fun unarchiveWorkspace(workspaceId: UUID): WorkspaceResponse {
-        workspaceService.unarchiveWorkspace(identityProvider.currentUserId(), workspaceId)
+    override fun unarchiveWorkspace(workspaceId: UUID, version: Long): WorkspaceResponse {
+        workspaceService.unarchiveWorkspace(identityProvider.currentUserId(), workspaceId, version)
         val workspace = workspaceService.getWorkspace(identityProvider.currentUserId(), workspaceId)
         return workspaceMapper.toResponse(workspace)
     }

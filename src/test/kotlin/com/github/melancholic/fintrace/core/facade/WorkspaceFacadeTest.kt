@@ -8,6 +8,7 @@ import com.github.melancholic.fintrace.core.dao.UsersDAO
 import com.github.melancholic.fintrace.core.dao.WorkspaceDAO
 import com.github.melancholic.fintrace.core.domain.entity.WorkspaceStatus
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -139,10 +140,10 @@ class WorkspaceFacadeTest(
 	fun `archives an active workspace and unarchives it back`() {
 		val id = activeWorkspace()
 
-		facade.archiveWorkspace(id)
+		facade.archiveWorkspace(id, versionOf(id))
 		assertEquals(WorkspaceStatus.ARCHIVED, facade.getWorkspace(id).status)
 
-		facade.unarchiveWorkspace(id)
+		facade.unarchiveWorkspace(id, versionOf(id))
 		assertEquals(WorkspaceStatus.ACTIVE, facade.getWorkspace(id).status, "archiving is reversible (§4.8)")
 	}
 
@@ -152,29 +153,67 @@ class WorkspaceFacadeTest(
 
 		// A NEW workspace is empty by definition, so there is nothing to keep for reference —
 		// and unarchiving would have to guess which status to return to.
-		assertFailsWith<ActionConflictException> { facade.archiveWorkspace(id) }
+		val conflict = assertFailsWith<ActionConflictException> { facade.archiveWorkspace(id, versionOf(id)) }
+		assertEquals(CoreErrorCode.WORKSPACE_STATUS_CONFLICT, conflict.code)
 		assertEquals(WorkspaceStatus.NEW, facade.getWorkspace(id).status)
 	}
 
 	@Test
-	fun `unarchiving a workspace that is already active is a no-op`() {
-		val id = activeWorkspace()
+	fun `refuses to unarchive a workspace that is still NEW`() {
+		val id = facade.createWorkspace(CreateWorkspaceRequest("budget", "EUR")).id
 
-		// The service treats "already in the target state" as success, so only a transition that
-		// cannot reach the target — archiving a NEW workspace — is a conflict.
-		facade.unarchiveWorkspace(id)
-
-		assertEquals(WorkspaceStatus.ACTIVE, facade.getWorkspace(id).status)
+		// NEW is neither the source nor the target, so this is no no-op: answering 200 would read as "now active"
+		val conflict = assertFailsWith<ActionConflictException> { facade.unarchiveWorkspace(id, versionOf(id)) }
+		assertEquals(CoreErrorCode.WORKSPACE_STATUS_CONFLICT, conflict.code)
+		assertEquals(WorkspaceStatus.NEW, facade.getWorkspace(id).status)
 	}
 
 	@Test
-	fun `archiving twice is a no-op`() {
+	fun `refuses to archive against a stale version`() {
 		val id = activeWorkspace()
-		facade.archiveWorkspace(id)
+		val stale = versionOf(id)
+		facade.editWorkspace(id, EditWorkspaceRequest(version = stale, workspaceName = "renamed", defaultCurrency = null))
 
-		facade.archiveWorkspace(id)
+		val conflict = assertFailsWith<ActionConflictException> { facade.archiveWorkspace(id, stale) }
+		assertEquals(CoreErrorCode.VERSION_CONFLICT, conflict.code)
+		assertEquals(WorkspaceStatus.ACTIVE, row(id).status)
+	}
+
+	@Test
+	fun `refuses to unarchive against a stale version`() {
+		val id = activeWorkspace()
+		val stale = versionOf(id)
+		facade.archiveWorkspace(id, stale)
+
+		val conflict = assertFailsWith<ActionConflictException> { facade.unarchiveWorkspace(id, stale) }
+		assertEquals(CoreErrorCode.VERSION_CONFLICT, conflict.code)
+		assertEquals(WorkspaceStatus.ARCHIVED, row(id).status)
+	}
+
+	@Test
+	fun `unarchiving a workspace that is already active is a no-op, whatever its version`() {
+		val id = activeWorkspace()
+		val before = versionOf(id)
+
+		// "Already in the target state" is checked before the version (§10.0.1), so a retry succeeds;
+		// only a transition that cannot reach the target — archiving a NEW workspace — is a conflict.
+		facade.unarchiveWorkspace(id, before - 1)
+
+		assertEquals(WorkspaceStatus.ACTIVE, facade.getWorkspace(id).status)
+		assertEquals(before, versionOf(id), "a no-op bumps nothing")
+	}
+
+	@Test
+	fun `archiving twice is a no-op, the retry carrying the version it was first sent with`() {
+		val id = activeWorkspace()
+		val sent = versionOf(id)
+		facade.archiveWorkspace(id, sent)
+		val after = versionOf(id)
+
+		facade.archiveWorkspace(id, sent)
 
 		assertEquals(WorkspaceStatus.ARCHIVED, facade.getWorkspace(id).status)
+		assertEquals(after, versionOf(id), "a no-op bumps nothing")
 	}
 
 	@Test
@@ -189,7 +228,7 @@ class WorkspaceFacadeTest(
 	@Test
 	fun `deletes an archived workspace`() {
 		val id = activeWorkspace()
-		facade.archiveWorkspace(id)
+		facade.archiveWorkspace(id, versionOf(id))
 
 		facade.deleteWorkspace(id, versionOf(id))
 
@@ -231,7 +270,7 @@ class WorkspaceFacadeTest(
 	@Test
 	fun `refuses to delete against a stale version`() {
 		val id = activeWorkspace()
-		facade.archiveWorkspace(id)
+		facade.archiveWorkspace(id, versionOf(id))
 
 		// The caller last saw version 0; archiving has moved it on. Deleting is terminal, so a
 		// stale view is exactly what must not be allowed to act.
@@ -243,7 +282,7 @@ class WorkspaceFacadeTest(
 	@Test
 	fun `deletes against the current version`() {
 		val id = activeWorkspace()
-		facade.archiveWorkspace(id)
+		facade.archiveWorkspace(id, versionOf(id))
 
 		facade.deleteWorkspace(id, versionOf(id))
 
@@ -265,7 +304,7 @@ class WorkspaceFacadeTest(
 		val id = activeWorkspace()
 		val before = facade.getWorkspace(id).version
 
-		facade.archiveWorkspace(id)
+		facade.archiveWorkspace(id, versionOf(id))
 
 		// Any write invalidates a client's held version, or "the state I last saw" stops meaning
 		// anything as soon as a transition happens between a read and an edit.

@@ -1399,14 +1399,32 @@
             "type" : "string",
             "format" : "uuid"
           }
+        }, {
+          "name" : "version",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
         } ],
         "responses" : {
           "200" : {
-            "description" : "Archived, or already archived",
+            "description" : "Archived, or already archived whatever `version`",
             "content" : {
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "`version` missing",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
                 }
               }
             }
@@ -1422,7 +1440,7 @@
             }
           },
           "409" : {
-            "description" : "Not ACTIVE",
+            "description" : "Not ACTIVE, or `version` is stale",
             "content" : {
               "application/problem+json" : {
                 "schema" : {
@@ -1451,10 +1469,18 @@
             "type" : "string",
             "format" : "uuid"
           }
+        }, {
+          "name" : "version",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
         } ],
         "responses" : {
           "200" : {
-            "description" : "Active, or already active",
+            "description" : "Active, or already active whatever `version`",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -1463,8 +1489,28 @@
               }
             }
           },
+          "400" : {
+            "description" : "`version` missing",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
+          },
           "404" : {
             "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Neither ARCHIVED nor ACTIVE, or `version` is stale",
             "content" : {
               "application/problem+json" : {
                 "schema" : {

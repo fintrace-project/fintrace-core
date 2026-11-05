@@ -30,8 +30,8 @@ interface WorkspaceService {
     fun getWorkspace(userId: UUID, workspaceId: UUID): Workspace
     fun getAllWorkspaces(userId: UUID, includeArchived: Boolean): List<Workspace>
     fun editWorkspace(userId: UUID, workspaceId: UUID, request: EditWorkspaceRequest)
-    fun archiveWorkspace(userId: UUID, workspaceId: UUID)
-    fun unarchiveWorkspace(userId: UUID, workspaceId: UUID)
+    fun archiveWorkspace(userId: UUID, workspaceId: UUID, version: Long)
+    fun unarchiveWorkspace(userId: UUID, workspaceId: UUID, version: Long)
     fun deleteWorkspace(userId: UUID, workspaceId: UUID, version: Long)
     fun activateWorkspace(userId: UUID, workspaceId: UUID): Boolean
     fun requireWritable(userId: UUID, workspaceId: UUID): Workspace
@@ -90,33 +90,44 @@ class WorkspaceServiceImpl(
     }
 
     override
-    fun archiveWorkspace(userId: UUID, workspaceId: UUID) {
+    fun archiveWorkspace(userId: UUID, workspaceId: UUID, version: Long) {
         if (!workspaceDAO.changeStatus(
                 userId,
                 workspaceId,
                 setOf(WorkspaceStatus.ACTIVE),
-                WorkspaceStatus.ARCHIVED
+                WorkspaceStatus.ARCHIVED,
+                version
             )
         ) {
             val workspace = getWorkspace(userId, workspaceId)
             if (workspace.status != WorkspaceStatus.ARCHIVED) {
-                throw ActionConflictException(CoreErrorCode.WORKSPACE_STATUS_CONFLICT, STATUS_CONFLICT_MSG)
+                throw if (workspace.version != version)
+                    ActionConflictException(CoreErrorCode.VERSION_CONFLICT, "Workspace changed since it was read")
+                else
+                    throw ActionConflictException(CoreErrorCode.WORKSPACE_STATUS_CONFLICT, STATUS_CONFLICT_MSG)
             }
         }
 
     }
 
-    override fun unarchiveWorkspace(userId: UUID, workspaceId: UUID) {
+    override fun unarchiveWorkspace(userId: UUID, workspaceId: UUID, version: Long) {
         if (!workspaceDAO.changeStatus(
                 userId,
                 workspaceId,
                 setOf(WorkspaceStatus.ARCHIVED),
-                WorkspaceStatus.ACTIVE
+                WorkspaceStatus.ACTIVE,
+                version
             )
         ) {
             val workspace = getWorkspace(userId, workspaceId)
             if (workspace.status != WorkspaceStatus.ACTIVE) {
-                throw ActionConflictException(CoreErrorCode.WORKSPACE_STATUS_CONFLICT, STATUS_CONFLICT_MSG)
+                throw if (workspace.status == WorkspaceStatus.ARCHIVED
+                    && workspace.version != version
+                ) {
+                    ActionConflictException(CoreErrorCode.VERSION_CONFLICT, "Workspace changed since it was read")
+                } else {
+                    ActionConflictException(CoreErrorCode.WORKSPACE_STATUS_CONFLICT, STATUS_CONFLICT_MSG)
+                }
             }
         }
     }
