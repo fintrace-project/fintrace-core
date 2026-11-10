@@ -181,8 +181,8 @@ class BalanceAnchorsRestControllerTest(
     // ------------------------------------------------------------------ difference (1.25)
 
     @Test
-    fun `an account's first anchor answers a null difference`() {
-        // §4.6: the opening balance, with no earlier observation to be measured against.
+    fun `an opening anchor answers a null difference`() {
+        // §4.6: the opening balance, with no anchor and no operation before it to be measured against.
         val response = mvc.perform(createRequest("1500.0000"))
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.difference").value(nullValue()))

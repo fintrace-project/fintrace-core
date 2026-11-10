@@ -274,24 +274,73 @@ class BalanceDAOIntegrationTest(
 
         val differences = balanceDAO.getUnexplainedDifference(workspaceId, setOf(first, second))
 
-        // Keyed per anchor, not collapsed: nothing before the first, then 1500 − (1000 − 100).
+        // Keyed per anchor, not collapsed: 1000 − (−300) against the operations alone, then 1500 − (1000 − 100).
         assertEquals(
-            mapOf(first to null, second to BigDecimal("600.0000")),
+            mapOf(first to BigDecimal("1300.0000"), second to BigDecimal("600.0000")),
             differences,
         )
     }
 
     @Test
-    fun `an account's first anchor has no difference, not its whole value`() {
+    fun `a first anchor is measured against the operations before it`() {
         operation(MARCH_01, "-300.0000")
         val id = anchor(MARCH_15, "1500.0000")
 
-        // §4.6: zero would claim the books were checked and agreed. Null is not "no such anchor" either.
+        // §4.6: with no anchor before it, the balance it observes against is the operations' alone.
+        assertEquals(BigDecimal("1800.0000"), balanceDAO.getUnexplainedDifference(workspaceId, id))
+    }
+
+    @Test
+    fun `an opening anchor has no difference, not its whole value`() {
+        val id = anchor(MARCH_15, "1500.0000")
+
+        // §4.6: nothing before it at all. Zero would claim the books were checked and agreed; null is not
+        // "no such anchor" either.
         assertNull(balanceDAO.getUnexplainedDifference(workspaceId, id))
     }
 
     @Test
-    fun `an unknown anchor is not found, unlike a first one`() {
+    fun `an operation at an opening anchor's own instant leaves it an opening one`() {
+        val at = MARCH_15
+        operation(at, "-50.0000")
+        val id = anchor(at, "1500.0000")
+
+        // Inside the anchor, not before it: the same exclusive bound as the balance's.
+        assertNull(balanceDAO.getUnexplainedDifference(workspaceId, id))
+    }
+
+    @Test
+    fun `a back-dated operation before an opening anchor gives it a difference`() {
+        val id = anchor(MARCH_15, "1500.0000")
+        assertNull(balanceDAO.getUnexplainedDifference(workspaceId, id))
+
+        operation(MARCH_01, "-300.0000")
+
+        // §4.6's accepted consequence: the account's pre-history, which the opening balance had absorbed.
+        assertEquals(BigDecimal("1800.0000"), balanceDAO.getUnexplainedDifference(workspaceId, id))
+    }
+
+    @Test
+    fun `operations before a first anchor count by being there, not by their sum`() {
+        operation(MARCH_01, "100.0000")
+        operation(MARCH_05, "-100.0000")
+        val id = anchor(MARCH_15, "1500.0000")
+
+        // Books were kept, so it is measured against them — a sum of zero is no opening balance.
+        assertEquals(BigDecimal("1500.0000"), balanceDAO.getUnexplainedDifference(workspaceId, id))
+    }
+
+    @Test
+    fun `a transfer leg before a first anchor is measured against too`() {
+        operationDAO.create(leg(MARCH_05, BigDecimal("-120.0000")))
+        val id = anchor(MARCH_15, "-120.0000")
+
+        // Money moved in by a transfer is as much a part of the books as an operation.
+        assertEquals(BigDecimal("0.0000"), balanceDAO.getUnexplainedDifference(workspaceId, id))
+    }
+
+    @Test
+    fun `an unknown anchor is not found, unlike an opening one`() {
         assertFailsWith<NotFoundEntityException> { balanceDAO.getUnexplainedDifference(workspaceId, UUID.randomUUID()) }
     }
 

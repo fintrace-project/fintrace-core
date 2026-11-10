@@ -394,7 +394,7 @@ class FeedRestControllerTest(
     }
 
     @Test
-    fun `an account's first anchor has no difference item, whatever its value`() {
+    fun `an opening anchor has no difference item, whatever its value`() {
         anchor(day(1), "1500.0000")
 
         assertEquals(listOf("BALANCE_ANCHOR"), types(body(accountFeed())))

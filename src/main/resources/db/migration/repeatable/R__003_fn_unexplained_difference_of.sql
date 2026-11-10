@@ -1,4 +1,3 @@
--- NULL for an account's first anchor, which has nothing to be measured against.
 DROP FUNCTION IF EXISTS fn_unexplained_difference_of(uuid, uuid);
 
 CREATE
@@ -14,25 +13,23 @@ $$
 WITH this AS (SELECT account_id, value, occurred_at
               FROM t_balance_anchors
               WHERE workspace_id = p_workspace_id
-                AND id = p_anchor_id),
-     previous AS (SELECT a.value, a.occurred_at
-                  FROM t_balance_anchors a,
-                       this
-                  WHERE a.workspace_id = p_workspace_id
-                    AND a.account_id = this.account_id
-                    AND a.occurred_at < this.occurred_at
-                  ORDER BY a.occurred_at DESC, a.id DESC
-                  LIMIT 1)
-SELECT (
-           (SELECT value FROM this)
-               - (SELECT value FROM previous)
-               - COALESCE((SELECT SUM(o.amount)
-                           FROM t_operations o,
-                                this
-                           WHERE o.workspace_id = p_workspace_id
-                             AND o.account_id = this.account_id
-                             AND o.occurred_at < this.occurred_at
-                             AND o.occurred_at > COALESCE((SELECT occurred_at FROM previous),
-                                                          '-infinity' ::timestamp)), 0)
-           ) ::numeric(19, 4);
+                AND id = p_anchor_id)
+SELECT CASE
+           -- the opening balance: nothing observed or booked before it
+           WHEN NOT EXISTS (SELECT 1
+                            FROM t_balance_anchors a,
+                                 this
+                            WHERE a.workspace_id = p_workspace_id
+                              AND a.account_id = this.account_id
+                              AND a.occurred_at < this.occurred_at)
+               AND NOT EXISTS (SELECT 1
+                               FROM t_operations o,
+                                    this
+                               WHERE o.workspace_id = p_workspace_id
+                                 AND o.account_id = this.account_id
+                                 AND o.occurred_at < this.occurred_at)
+               THEN NULL
+           ELSE this.value - fn_balance_of(p_workspace_id, this.account_id, this.occurred_at)
+           END ::numeric(19, 4)
+FROM this;
 $$;
