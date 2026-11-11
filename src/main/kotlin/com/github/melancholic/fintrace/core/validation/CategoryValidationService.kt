@@ -56,10 +56,20 @@ class CategoryValidationServiceImpl(
     override fun validate(setArchivedCommand: SetCategoryArchivedCommand) {
         val category = requireExists(setArchivedCommand.workspaceId, setArchivedCommand.categoryId)
         checkSystem(category)
+        if (!setArchivedCommand.archived && category.archived && category.parentId != null) {
+            val parent = requireExists(setArchivedCommand.workspaceId, category.parentId)
+            if (parent.archived) {
+                throw ActionConflictException(CoreErrorCode.CATEGORY_ARCHIVED, "Couldn't restore category '${category.id}': its parent '${category.parentId}' is archived; restore the parent first"
+                )
+            }
+        }
     }
 
     private fun checkSystem(category: CategoryProjection) {
-        if (category.systemCode != null) throw ActionConflictException(CoreErrorCode.SYSTEM_CATEGORY, "Can't modify system category")
+        if (category.systemCode != null) throw ActionConflictException(
+            CoreErrorCode.SYSTEM_CATEGORY,
+            "Can't modify system category"
+        )
     }
 
     private fun requireExists(workspaceId: UUID, categoryId: UUID): CategoryProjection {
@@ -72,7 +82,10 @@ class CategoryValidationServiceImpl(
             throw ValidationError("Category name must not be blank", "name")
         }
         if (name.length > MAX_NAME_LENGTH) {
-            throw ValidationError("Category name must be at most $MAX_NAME_LENGTH characters, was ${name.length}", "name")
+            throw ValidationError(
+                "Category name must be at most $MAX_NAME_LENGTH characters, was ${name.length}",
+                "name"
+            )
         }
         if (!NAME_REGEX.matches(name)) {
             throw ValidationError("Category name '$name' contains characters that are not permitted", "name")
@@ -81,7 +94,10 @@ class CategoryValidationServiceImpl(
 
     private fun checkIcon(icon: String?) {
         if (icon != null && icon.length > MAX_ICON_LENGTH) {
-            throw ValidationError("Category icon must be at most $MAX_ICON_LENGTH characters, was ${icon.length}", "icon")
+            throw ValidationError(
+                "Category icon must be at most $MAX_ICON_LENGTH characters, was ${icon.length}",
+                "icon"
+            )
         }
     }
 
@@ -122,7 +138,10 @@ class CategoryValidationServiceImpl(
             .orElseThrow { NotFoundCategoryException(workspaceId, parentId) }
 
         if (parent.archived) {
-            throw ActionConflictException(CoreErrorCode.CATEGORY_ARCHIVED, "Can't create category under archived category")
+            throw ActionConflictException(
+                CoreErrorCode.CATEGORY_ARCHIVED,
+                "Can't create category under archived category"
+            )
         }
 
         if (kind != parent.kind) {
@@ -139,10 +158,16 @@ class CategoryValidationServiceImpl(
         NotFoundEntityException("Category not found (workspaceId='${workspaceId}', categoryId='${categoryId}')")
 
     private class CategoryKindConflictException :
-        ActionConflictException(CoreErrorCode.CATEGORY_KIND_MISMATCH, "Category kind should be the same as the parent id")
+        ActionConflictException(
+            CoreErrorCode.CATEGORY_KIND_MISMATCH,
+            "Category kind should be the same as the parent id"
+        )
 
     private class CantNestCategoryUnderOthersException :
-        ActionConflictException(CoreErrorCode.CATEGORY_PARENT_REFUSED, "Can't nest a category under an $ROOT_OTHERS_CAT_NAME category")
+        ActionConflictException(
+            CoreErrorCode.CATEGORY_PARENT_REFUSED,
+            "Can't nest a category under an $ROOT_OTHERS_CAT_NAME category"
+        )
 
     private companion object {
         val NAME_REGEX = Regex(CATEGORY_NAME_PATTERN)

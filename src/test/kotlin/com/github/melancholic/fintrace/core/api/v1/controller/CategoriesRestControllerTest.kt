@@ -125,6 +125,28 @@ class CategoriesRestControllerTest(
     }
 
     @Test
+    fun `restores an archived branch from the top down, refusing a child before its parent`() {
+        val food = createdId(parent = expenseRootId(), name = "Food")
+        val cafes = createdId(parent = food, name = "Cafes")
+        mvc.perform(delete("$categoriesPath/$food").with(user(USER)).with(csrf())).andExpect(status().isOk)
+
+        // Live under an archived parent it would have nowhere to show in the tree (§4.7)
+        mvc.perform(post("$categoriesPath/$cafes/restore").with(user(USER)).with(csrf()))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("CATEGORY_ARCHIVED"))
+
+        // One category, never its subtree: Cafes stays archived until restored itself
+        mvc.perform(post("$categoriesPath/$food/restore").with(user(USER)).with(csrf()))
+            .andExpect(status().isOk)
+        mvc.perform(get("$categoriesPath/$cafes").with(user(USER)))
+            .andExpect(jsonPath("$.archived").value(true))
+
+        mvc.perform(post("$categoriesPath/$cafes/restore").with(user(USER)).with(csrf()))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.archived").value(false))
+    }
+
+    @Test
     fun `hides archived categories from the listing by default`() {
         val food = createdId(parent = expenseRootId(), name = "Food")
         createdId(parent = food, name = "Groceries")
