@@ -38,5 +38,7 @@ jobs:
     cron: "0 */10 * * * *"
 
 logging:
+  level:
+    com.github.melancholic.fintrace: ${LOG_LEVEL:INFO}
   pattern:
     correlation: "%X{traceId:-} [user=%X{userId:-}|workspace=%X{workspaceId:-}] "

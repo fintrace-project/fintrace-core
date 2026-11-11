@@ -44,7 +44,7 @@ class OperationValidationServiceImpl(
         checkKind(command)
         checkAmount(command)
         checkAccountOnRevise(command, current.accountId)
-        checkCategoryOnRevise(command)
+        checkCategoryOnRevise(command, current)
     }
 
     override fun validate(command: CancelOperationCommand) {
@@ -105,7 +105,7 @@ class OperationValidationServiceImpl(
         }
     }
 
-    private fun checkCategoryOnRevise(command: ReviseOperationCommand) {
+    private fun checkCategoryOnRevise(command: ReviseOperationCommand, current: OperationProjection) {
         val category = categoryDAO.getById(command.workspaceId, command.categoryId)
 
         if (category.kind != command.kind.asCategoryKind()) {
@@ -113,6 +113,10 @@ class OperationValidationServiceImpl(
                 CoreErrorCode.CATEGORY_KIND_MISMATCH,
                 "Operation with kind=`${command.kind}` couldn't be under a category with kind='${category.kind}'"
             )
+        }
+
+        if (category.id != current.categoryId && category.archived) {
+            throw ActionConflictException(CoreErrorCode.CATEGORY_ARCHIVED, "Couldn't move the operation into archived category")
         }
     }
 

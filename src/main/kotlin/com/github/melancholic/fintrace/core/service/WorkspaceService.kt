@@ -18,7 +18,6 @@ import com.github.melancholic.fintrace.core.domain.entity.WorkspaceStatus
 import com.github.melancholic.fintrace.core.exception.*
 import com.github.melancholic.fintrace.core.service.command.CommandDispatcher
 import com.github.melancholic.fintrace.core.validation.WorkspaceValidationService
-import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -100,14 +99,13 @@ class WorkspaceServiceImpl(
             )
         ) {
             val workspace = getWorkspace(userId, workspaceId)
-            if (workspace.status != WorkspaceStatus.ARCHIVED) {
-                throw if (workspace.version != version)
-                    ActionConflictException(CoreErrorCode.VERSION_CONFLICT, "Workspace changed since it was read")
-                else
-                    throw ActionConflictException(CoreErrorCode.WORKSPACE_STATUS_CONFLICT, STATUS_CONFLICT_MSG)
+
+            when (workspace.status) {
+                WorkspaceStatus.ARCHIVED ->  return
+                WorkspaceStatus.ACTIVE ->  throw ActionConflictException(CoreErrorCode.VERSION_CONFLICT, "Workspace changed since it was read")
+                else -> throw ActionConflictException(CoreErrorCode.WORKSPACE_STATUS_CONFLICT, STATUS_CONFLICT_MSG)
             }
         }
-
     }
 
     override fun unarchiveWorkspace(userId: UUID, workspaceId: UUID, version: Long) {
@@ -243,8 +241,6 @@ class WorkspaceServiceImpl(
     }
 
     companion object {
-        private val logger = KotlinLogging.logger {}
-
         val WRITABLE_STATUSES = setOf(
             WorkspaceStatus.NEW,
             WorkspaceStatus.ACTIVE

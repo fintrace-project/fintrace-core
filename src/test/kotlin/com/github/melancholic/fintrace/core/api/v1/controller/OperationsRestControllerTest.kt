@@ -313,6 +313,44 @@ class OperationsRestControllerTest(
         assertEquals(1, eventCount(), "a rejected command writes nothing")
     }
 
+    @Test
+    fun `revises an operation whose category was archived afterwards`() {
+        val id = createdId()
+        archiveCategory(categoryId)
+
+        mvc.perform(reviseRequest(id, amount = "42.0000"))
+            .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `moves an operation into another live category`() {
+        val id = createdId()
+        val other = TestWorkspaces.seedCategory(categoryDAO, workspaceId, name = "other-category")
+
+        mvc.perform(
+            put("${operationsPath}/$id").with(user(USER)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body().replace(categoryId.toString(), other.toString()))
+        ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.categoryId").value(other.toString()))
+    }
+
+    @Test
+    fun `refuses to move an operation into an archived category`() {
+        val id = createdId()
+        val archived = TestWorkspaces.seedCategory(categoryDAO, workspaceId, name = "archived-category")
+        archiveCategory(archived)
+
+        mvc.perform(
+            put("${operationsPath}/$id").with(user(USER)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body().replace(categoryId.toString(), archived.toString()))
+        ).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("CATEGORY_ARCHIVED"))
+
+        assertEquals(1, eventCount(), "a rejected command writes nothing")
+    }
+
 	@Test
 	fun `rejects a malformed revision body`() {
 		val id = createdId()
@@ -488,6 +526,11 @@ class OperationsRestControllerTest(
 
     private fun archive(id: UUID) = jdbc
         .sql("UPDATE t_accounts SET archived = true WHERE id = :id")
+        .param("id", id)
+        .update()
+
+    private fun archiveCategory(id: UUID) = jdbc
+        .sql("UPDATE t_categories SET archived = true WHERE id = :id")
         .param("id", id)
         .update()
 
