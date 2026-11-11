@@ -41,12 +41,19 @@ data class ImportDiagnostic(
     val detail: String?
 )
 
+@Suppress("unused")
+// API Contract
 enum class ImportDiagnosticSeverity {
     WARNING, ERROR
 }
 
+@Suppress("unused")
+// API Contract
 enum class ImportDiagnosticCode {
-    UNSUPPORTED_RECORD, UNKNOWN_CURRENCY, UNRESOLVED_REFERENCE, SOURCE_ANOMALY
+    UNSUPPORTED_RECORD,
+    UNKNOWN_CURRENCY,
+    UNRESOLVED_REFERENCE,
+    SOURCE_ANOMALY
 }
 
 data class ImportJobStatistics(
