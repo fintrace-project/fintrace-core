@@ -1864,11 +1864,81 @@
         }
       }
     },
+    "/api/v1/workspaces/{workspaceId}/statistics/balances/currencies" : {
+      "get" : {
+        "tags" : [ "Statistics" ],
+        "summary" : "Total balances per currency",
+        "operationId" : "getBalancesByCurrencies",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "asOf",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "includeArchived",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : true
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "One total per currency the accounts hold, ordered by code, as of the end of `asOf`",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BalancesByCurrenciesResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed `asOf` or `includeArchived`",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/statistics/balances/accounts" : {
       "get" : {
         "tags" : [ "Statistics" ],
         "summary" : "List account balances",
-        "operationId" : "getAllBalancesOf",
+        "operationId" : "getBalancesByAccounts",
         "parameters" : [ {
           "name" : "workspaceId",
           "in" : "path",
@@ -1900,10 +1970,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/AccountBalanceResponse"
-                  }
+                  "$ref" : "#/components/schemas/BalancesByAccountsResponse"
                 }
               }
             }
@@ -3276,6 +3343,68 @@
         },
         "required" : [ "items" ]
       },
+      "BalancesByCurrenciesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "asOf" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "totals" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          }
+        },
+        "required" : [ "asOf", "totals" ]
+      },
+      "ConvertedAmountResponse" : {
+        "type" : "object",
+        "properties" : {
+          "currency" : {
+            "type" : "string"
+          },
+          "total" : {
+            "type" : "number"
+          },
+          "coveredCurrencies" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        },
+        "required" : [ "coveredCurrencies", "currency", "total" ]
+      },
+      "CurrencyAmountResponse" : {
+        "type" : "object",
+        "properties" : {
+          "currency" : {
+            "type" : "string"
+          },
+          "total" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "currency", "total" ]
+      },
+      "CurrencyAmountsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "byCurrency" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CurrencyAmountResponse"
+            }
+          },
+          "converted" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/ConvertedAmountResponse"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "required" : [ "byCurrency" ]
+      },
       "AccountBalanceResponse" : {
         "type" : "object",
         "properties" : {
@@ -3291,6 +3420,22 @@
           }
         },
         "required" : [ "accountId", "balance", "currency" ]
+      },
+      "BalancesByAccountsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "asOf" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "balances" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AccountBalanceResponse"
+            }
+          }
+        },
+        "required" : [ "asOf", "balances" ]
       },
       "FeedItemType" : {
         "type" : "string",

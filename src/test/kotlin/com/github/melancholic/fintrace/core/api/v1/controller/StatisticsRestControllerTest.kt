@@ -11,6 +11,8 @@ import com.github.melancholic.fintrace.core.dao.projection.OperationProjectionDA
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.projection.BalanceAnchorProjection
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
+import org.hamcrest.Matchers.hasKey
+import org.hamcrest.Matchers.nullValue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -50,6 +52,7 @@ class StatisticsRestControllerTest(
     private lateinit var categoryId: UUID
 
     private val balancesPath get() = "/api/v1/workspaces/$workspaceId/statistics/balances/accounts"
+    private val currenciesPath get() = "/api/v1/workspaces/$workspaceId/statistics/balances/currencies"
 
     @BeforeEach
     fun clean() {
@@ -66,9 +69,15 @@ class StatisticsRestControllerTest(
 
         mvc.perform(get(balancesPath).with(user(USER)))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(2))
-            .andExpect(jsonPath("$[?(@.accountId=='$accountId')].balance").value(-300.0000))
-            .andExpect(jsonPath("$[?(@.accountId=='$accountId')].currency").value("EUR"))
+            .andExpect(jsonPath("$.balances.length()").value(2))
+            .andExpect(jsonPath("$.balances[?(@.accountId=='$accountId')].balance").value(-300.0000))
+            .andExpect(jsonPath("$.balances[?(@.accountId=='$accountId')].currency").value("EUR"))
+    }
+
+    @Test
+    fun `echoes the asOf the account balances are for`() {
+        mvc.perform(get("$balancesPath?asOf=2026-03-31").with(user(USER)))
+            .andExpect(jsonPath("$.asOf").value("2026-03-31"))
     }
 
     @Test
@@ -78,7 +87,7 @@ class StatisticsRestControllerTest(
         operation(MARCH_20, "-50.0000")
 
         mvc.perform(get("$balancesPath?asOf=2026-03-31").with(user(USER)))
-            .andExpect(jsonPath("$[0].balance").value(1450.0000))
+            .andExpect(jsonPath("$.balances[0].balance").value(1450.0000))
     }
 
     @Test
@@ -86,9 +95,9 @@ class StatisticsRestControllerTest(
         operation(MARCH_10, "-200.0000")
 
         mvc.perform(get("$balancesPath?asOf=2026-03-10").with(user(USER)))
-            .andExpect(jsonPath("$[0].balance").value(-200.0000))
+            .andExpect(jsonPath("$.balances[0].balance").value(-200.0000))
         mvc.perform(get("$balancesPath?asOf=2026-03-09").with(user(USER)))
-            .andExpect(jsonPath("$[0].balance").value(0))
+            .andExpect(jsonPath("$.balances[0].balance").value(0))
     }
 
     @Test
@@ -99,10 +108,10 @@ class StatisticsRestControllerTest(
         // §11.4: `includeArchived` defaults to true here — the opposite of the accounts listing,
         // because a report that silently drops a closed account misstates the totals.
         mvc.perform(get(balancesPath).with(user(USER)))
-            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$.balances.length()").value(2))
 
         mvc.perform(get("$balancesPath?includeArchived=false").with(user(USER)))
-            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$.balances.length()").value(1))
     }
 
     @Test
@@ -111,7 +120,7 @@ class StatisticsRestControllerTest(
         TestWorkspaces.seedAccount(accountDAO, other, name = "theirs")
 
         mvc.perform(get(balancesPath).with(user(USER)))
-            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$.balances.length()").value(1))
     }
 
     @Test
@@ -121,7 +130,7 @@ class StatisticsRestControllerTest(
 
         // Today's spending is in, tomorrow's is not.
         mvc.perform(get(balancesPath).with(user(USER)))
-            .andExpect(jsonPath("$[0].balance").value(-10.0000))
+            .andExpect(jsonPath("$.balances[0].balance").value(-10.0000))
     }
 
     @Test
@@ -145,6 +154,86 @@ class StatisticsRestControllerTest(
     @Test
     fun `rejects an unauthenticated read`() {
         mvc.perform(get(balancesPath)).andExpect(status().isUnauthorized)
+    }
+
+    // ------------------------------------------------------------------ GET /balances/currencies (3.3)
+
+    @Test
+    fun `answers a total per currency, ordered by code`() {
+        TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "savings", currency = "GBP")
+        operation(MARCH_01, "-300.0000")
+
+        mvc.perform(get("$currenciesPath?asOf=2026-03-31").with(user(USER)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.totals.byCurrency.length()").value(2))
+            .andExpect(jsonPath("$.totals.byCurrency[0].currency").value("EUR"))
+            .andExpect(jsonPath("$.totals.byCurrency[0].total").value(-300.0000))
+            .andExpect(jsonPath("$.totals.byCurrency[1].currency").value("GBP"))
+            .andExpect(jsonPath("$.totals.byCurrency[1].total").value(0))
+    }
+
+    @Test
+    fun `answers converted as null until conversion lands`() {
+        // §11.4: the field is in the contract from the start, present and null, so 3.10 adds a value.
+        mvc.perform(get(currenciesPath).with(user(USER)))
+            .andExpect(jsonPath("$.totals", hasKey("converted")))
+            .andExpect(jsonPath("$.totals.converted").value(nullValue()))
+    }
+
+    @Test
+    fun `echoes the asOf it answered for`() {
+        // §11.4: statistics answer objects carrying their bounds beside the data.
+        mvc.perform(get("$currenciesPath?asOf=2026-03-31").with(user(USER)))
+            .andExpect(jsonPath("$.asOf").value("2026-03-31"))
+    }
+
+    @Test
+    fun `a currency total includes the whole of the asOf day`() {
+        operation(MARCH_10, "-200.0000")
+
+        mvc.perform(get("$currenciesPath?asOf=2026-03-10").with(user(USER)))
+            .andExpect(jsonPath("$.totals.byCurrency[0].total").value(-200.0000))
+        mvc.perform(get("$currenciesPath?asOf=2026-03-09").with(user(USER)))
+            .andExpect(jsonPath("$.totals.byCurrency[0].total").value(0))
+    }
+
+    @Test
+    fun `archived accounts stay in the currency totals by default`() {
+        val closed = TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "closed", currency = "GBP")
+        jdbc.sql("UPDATE t_accounts SET archived = true WHERE id = :id").param("id", closed).update()
+
+        // §11.4's parameter, named as on /balances/accounts.
+        mvc.perform(get(currenciesPath).with(user(USER)))
+            .andExpect(jsonPath("$.totals.byCurrency.length()").value(2))
+        mvc.perform(get("$currenciesPath?includeArchived=false").with(user(USER)))
+            .andExpect(jsonPath("$.totals.byCurrency.length()").value(1))
+    }
+
+    @Test
+    fun `adds nothing from another workspace to the currency totals`() {
+        val other = TestWorkspaces.create(workspaceDAO, usersDAO, name = "other-workspace")
+        TestWorkspaces.seedAccount(accountDAO, other, name = "theirs", currency = "USD")
+
+        mvc.perform(get(currenciesPath).with(user(USER)))
+            .andExpect(jsonPath("$.totals.byCurrency.length()").value(1))
+            .andExpect(jsonPath("$.totals.byCurrency[0].currency").value("EUR"))
+    }
+
+    @Test
+    fun `answers not found for currency totals of a workspace the caller cannot reach`() {
+        mvc.perform(get("/api/v1/workspaces/${UUID.randomUUID()}/statistics/balances/currencies").with(user(USER)))
+            .andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `rejects a malformed asOf for currency totals`() {
+        mvc.perform(get("$currenciesPath?asOf=not-a-date").with(user(USER)))
+            .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `rejects an unauthenticated read of currency totals`() {
+        mvc.perform(get(currenciesPath)).andExpect(status().isUnauthorized)
     }
 
     private fun operation(occurredAt: LocalDateTime, amount: String) = operationDAO.create(

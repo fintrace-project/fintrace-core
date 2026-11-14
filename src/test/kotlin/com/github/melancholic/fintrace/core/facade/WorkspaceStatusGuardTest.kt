@@ -143,7 +143,7 @@ class WorkspaceStatusGuardTest(
         "transfer" to { projectionFacade.getTransfer(workspaceId, transferId) },
         "anchors" to { projectionFacade.getAllBalanceAnchors(workspaceId, cash) },
         "anchor" to { projectionFacade.getBalanceAnchor(workspaceId, cash, anchorId) },
-        "balances" to { statisticFacade.getAllBalancesOf(workspaceId, LocalDate.now(), includeArchived = true) },
+        "balances" to { statisticFacade.getBalancesByAccounts(workspaceId, LocalDate.now(), includeArchived = true) },
     )
 
     @Suppress("UNCHECKED_CAST")

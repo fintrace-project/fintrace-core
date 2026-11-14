@@ -1,6 +1,7 @@
 package com.github.melancholic.fintrace.core.dao
 
 import com.github.melancholic.fintrace.core.domain.entity.AccountBalance
+import com.github.melancholic.fintrace.core.domain.entity.CurrencyAmount
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
@@ -12,11 +13,24 @@ import java.util.*
 interface BalanceDAO {
     fun getBalanceOf(workspaceId: UUID, accountId: UUID, asOf: LocalDate): BigDecimal
     fun getBalanceOf(workspaceId: UUID, accountId: UUID, asOf: LocalDateTime): BigDecimal
-    fun getAllBalancesOf(workspaceId: UUID, asOf: LocalDate, includeArchived: Boolean): List<AccountBalance>
-    fun getAllBalancesOf(workspaceId: UUID, asOf: LocalDateTime, includeArchived: Boolean): List<AccountBalance>
+    fun getBalancesByAccounts(workspaceId: UUID, asOf: LocalDate, includeArchived: Boolean): List<AccountBalance>
+    fun getBalancesByAccounts(workspaceId: UUID, asOf: LocalDateTime, includeArchived: Boolean): List<AccountBalance>
+
+    fun getBalancesByCurrencies(
+        workspaceId: UUID,
+        asOf: LocalDate,
+        includeArchived: Boolean
+    ): List<CurrencyAmount>
+
+    fun getBalancesByCurrencies(
+        workspaceId: UUID,
+        asOf: LocalDateTime,
+        includeArchived: Boolean
+    ): List<CurrencyAmount>
 
     fun getUnexplainedDifference(workspaceId: UUID, anchorId: UUID): BigDecimal?
     fun getUnexplainedDifference(workspaceId: UUID, anchorIds: Set<UUID>): Map<UUID, BigDecimal?>
+
 }
 
 @Repository
@@ -62,13 +76,13 @@ class BalanceDAOImpl(
             .toMap()
     }
 
-    override fun getAllBalancesOf(
+    override fun getBalancesByAccounts(
         workspaceId: UUID,
         asOf: LocalDate,
         includeArchived: Boolean
-    ): List<AccountBalance> = getAllBalancesOf(workspaceId, asOf.atBeginNextDay(), includeArchived)
+    ): List<AccountBalance> = getBalancesByAccounts(workspaceId, asOf.atBeginNextDay(), includeArchived)
 
-    override fun getAllBalancesOf(
+    override fun getBalancesByAccounts(
         workspaceId: UUID,
         asOf: LocalDateTime,
         includeArchived: Boolean
@@ -79,17 +93,43 @@ class BalanceDAOImpl(
         .query(AccountBalance::class.java)
         .list() as List<AccountBalance>
 
+    override fun getBalancesByCurrencies(
+        workspaceId: UUID,
+        asOf: LocalDate,
+        includeArchived: Boolean
+    ): List<CurrencyAmount> = getBalancesByCurrencies(workspaceId, asOf.atBeginNextDay(), includeArchived)
+
+    override fun getBalancesByCurrencies(
+        workspaceId: UUID,
+        asOf: LocalDateTime,
+        includeArchived: Boolean
+    ): List<CurrencyAmount> = jdbc.sql(CALL_BALANCE_OF_MULTI_CURRENCY_FUNC)
+        .param("workspaceId", workspaceId)
+        .param("until", asOf)
+        .param("includeArchived", includeArchived)
+        .query(CurrencyAmount::class.java)
+        .list() as List<CurrencyAmount>
+
     companion object {
         const val CALL_BALANCE_OF_FUNC = """
             SELECT fn_balance_of(:workspaceId, :accountId, :until)
         """
 
         const val CALL_BALANCE_OF_MULTI_ACCOUNT_FUNC = """
-            SELECT a.id AS account_id, a.currency, fn_balance_of(:workspaceId, a.id, :until) AS balance
+            SELECT a.id AS account_id, a.currency, fn_balance_of(a.workspace_id, a.id, :until) AS balance
             FROM t_accounts a
             WHERE a.workspace_id = :workspaceId
               AND (:includeArchived OR NOT a.archived)
             ORDER BY a.name
+        """
+
+        const val CALL_BALANCE_OF_MULTI_CURRENCY_FUNC = """
+            SELECT a.currency, SUM(fn_balance_of(a.workspace_id, a.id, :until)) AS total
+            FROM t_accounts a
+            WHERE a.workspace_id = :workspaceId
+              AND (:includeArchived OR NOT a.archived)
+            GROUP BY a.currency
+            ORDER BY a.currency
         """
 
         const val CALL_UNEXPLAINED_DIFF_FUNC = """

@@ -1,7 +1,9 @@
 package com.github.melancholic.fintrace.core.api.v1.controller
 
-import com.github.melancholic.fintrace.core.api.v1.dto.AccountBalanceResponse
+import com.github.melancholic.fintrace.core.api.v1.dto.BalancesByAccountsResponse
+import com.github.melancholic.fintrace.core.api.v1.dto.BalancesByCurrenciesResponse
 import com.github.melancholic.fintrace.core.api.v1.mapper.AccountBalanceMapper
+import com.github.melancholic.fintrace.core.api.v1.mapper.CurrencyAmountsMapper
 import com.github.melancholic.fintrace.core.config.STATISTICS_AREA_API_PATH
 import com.github.melancholic.fintrace.core.domain.entity.AccountBalance
 import com.github.melancholic.fintrace.core.facade.StatisticFacade
@@ -19,7 +21,8 @@ import java.util.*
 @Tag(name = "Statistics")
 class StatisticsRestController(
     private val statisticFacade: StatisticFacade,
-    private val mapper: AccountBalanceMapper
+    private val mapper: AccountBalanceMapper,
+    private val currencyAmountsMapper: CurrencyAmountsMapper
 ) {
 
     @Operation(summary = "List account balances")
@@ -32,15 +35,46 @@ class StatisticsRestController(
         ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
     )
     @GetMapping("/balances/accounts")
-    fun getAllBalancesOf(
+    fun getBalancesByAccounts(
         @PathVariable("workspaceId") workspaceId: UUID,
-        @RequestParam("asOf", required = false) asOf: LocalDate?,
+        @RequestParam("asOf", required = false) asOfRequested: LocalDate?,
         @RequestParam(value = "includeArchived", required = false, defaultValue = "true") includeArchived: Boolean
-    ): ResponseEntity<List<AccountBalanceResponse>> {
+    ): ResponseEntity<BalancesByAccountsResponse> {
+        val asOf = asOfRequested ?: LocalDate.now()
         val balancesList: List<AccountBalance> =
-            statisticFacade.getAllBalancesOf(workspaceId, asOf ?: LocalDate.now(), includeArchived)
+            statisticFacade.getBalancesByAccounts(workspaceId, asOf, includeArchived)
         return ResponseEntity
-            .ok(mapper.toResponseList(balancesList))
+            .ok(
+                BalancesByAccountsResponse(
+                    asOf = asOf,
+                    balances = mapper.toResponseList(balancesList)
+                )
+            )
     }
 
+    @Operation(summary = "Total balances per currency")
+    @ApiResponses(
+        ApiResponse(
+            responseCode = "200",
+            description = "One total per currency the accounts hold, ordered by code, as of the end of `asOf`"
+        ),
+        ApiResponse(responseCode = "400", description = "Malformed `asOf` or `includeArchived`"),
+        ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
+    )
+    @GetMapping("/balances/currencies")
+    fun getBalancesByCurrencies(
+        @PathVariable("workspaceId") workspaceId: UUID,
+        @RequestParam("asOf", required = false) asOfRequested: LocalDate?,
+        @RequestParam(value = "includeArchived", required = false, defaultValue = "true") includeArchived: Boolean
+    ): ResponseEntity<BalancesByCurrenciesResponse> {
+        val asOf = asOfRequested ?: LocalDate.now()
+        val result = statisticFacade.getBalancesByCurrencies(workspaceId, asOf, includeArchived)
+        return ResponseEntity
+            .ok(
+                BalancesByCurrenciesResponse(
+                    asOf = asOf,
+                    totals = currencyAmountsMapper.toResponse(result)
+                )
+            )
+    }
 }

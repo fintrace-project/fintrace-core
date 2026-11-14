@@ -6,6 +6,7 @@ import com.github.melancholic.fintrace.core.dao.projection.AccountProjectionDAO
 import com.github.melancholic.fintrace.core.dao.projection.BalanceAnchorProjectionDAO
 import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
 import com.github.melancholic.fintrace.core.dao.projection.OperationProjectionDAO
+import com.github.melancholic.fintrace.core.domain.entity.CurrencyAmount
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.projection.BalanceAnchorProjection
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
@@ -216,7 +217,7 @@ class BalanceDAOIntegrationTest(
         val savings = TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "savings", currency = "GBP")
         operation(MARCH_01, "-300.0000")
 
-        val balances = balanceDAO.getAllBalancesOf(workspaceId, LocalDate.of(2026, 3, 31), true)
+        val balances = balanceDAO.getBalancesByAccounts(workspaceId, LocalDate.of(2026, 3, 31), true)
 
         // The accounts table drives the rows: an account with no activity is 0, not missing.
         assertEquals(2, balances.size)
@@ -228,7 +229,7 @@ class BalanceDAOIntegrationTest(
     fun `carries each account's own currency`() {
         TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "savings", currency = "GBP")
 
-        val currencies = balanceDAO.getAllBalancesOf(workspaceId, LocalDate.of(2026, 3, 31), true)
+        val currencies = balanceDAO.getBalancesByAccounts(workspaceId, LocalDate.of(2026, 3, 31), true)
             .map { it.currency }.sorted()
 
         // §11.4: balances here are always in the account's own currency; conversion is elsewhere.
@@ -240,8 +241,8 @@ class BalanceDAOIntegrationTest(
         val closed = TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "closed")
         jdbc.sql("UPDATE t_accounts SET archived = true WHERE id = :id").param("id", closed).update()
 
-        assertEquals(2, balanceDAO.getAllBalancesOf(workspaceId, LocalDate.of(2026, 3, 31), true).size)
-        assertEquals(1, balanceDAO.getAllBalancesOf(workspaceId, LocalDate.of(2026, 3, 31), false).size)
+        assertEquals(2, balanceDAO.getBalancesByAccounts(workspaceId, LocalDate.of(2026, 3, 31), true).size)
+        assertEquals(1, balanceDAO.getBalancesByAccounts(workspaceId, LocalDate.of(2026, 3, 31), false).size)
     }
 
     @Test
@@ -249,7 +250,7 @@ class BalanceDAOIntegrationTest(
         val other = TestWorkspaces.create(workspaceDAO, usersDAO, name = "other-workspace")
         TestWorkspaces.seedAccount(accountDAO, other, name = "theirs")
 
-        assertEquals(1, balanceDAO.getAllBalancesOf(workspaceId, LocalDate.of(2026, 3, 31), true).size)
+        assertEquals(1, balanceDAO.getBalancesByAccounts(workspaceId, LocalDate.of(2026, 3, 31), true).size)
     }
 
     @Test
@@ -261,8 +262,113 @@ class BalanceDAOIntegrationTest(
 
         assertEquals(
             balanceDAO.getBalanceOf(workspaceId, accountId, asOf),
-            balanceDAO.getAllBalancesOf(workspaceId, asOf, true).single().balance,
+            balanceDAO.getBalancesByAccounts(workspaceId, asOf, true).single().balance,
         )
+    }
+
+    // ------------------------------------------------------------------ totals per currency
+
+    @Test
+    fun `sums the accounts that share a currency`() {
+        val card = TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "card", currency = "EUR")
+        operation(MARCH_01, "-300.0000")
+        anchor(MARCH_05, "100.0000", account = card)
+
+        val totals = balanceDAO.getBalancesByCurrencies(workspaceId, LocalDate.of(2026, 3, 31), true)
+
+        assertEquals(listOf(CurrencyAmount("EUR", BigDecimal("-200.0000"))), totals)
+    }
+
+    @Test
+    fun `lists a currency whose accounts hold nothing, as zero`() {
+        TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "savings", currency = "GBP")
+
+        val totals = balanceDAO.getBalancesByCurrencies(workspaceId, LocalDate.of(2026, 3, 31), true)
+
+        // §11.4: every currency the accounts hold, so a chart's series never appears and vanishes.
+        assertEquals(BigDecimal("0.0000"), totals.single { it.currency == "GBP" }.total)
+    }
+
+    @Test
+    fun `orders the currencies by code`() {
+        TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "dollars", currency = "USD")
+        TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "dinars", currency = "RSD")
+        TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "pounds", currency = "GBP")
+
+        val currencies = balanceDAO.getBalancesByCurrencies(workspaceId, LocalDate.of(2026, 3, 31), true)
+            .map { it.currency }
+
+        assertEquals(listOf("EUR", "GBP", "RSD", "USD"), currencies)
+    }
+
+    @Test
+    fun `a currency total agrees with the sum of its accounts' balances`() {
+        val card = TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "card", currency = "EUR")
+        operation(MARCH_01, "-300.0000")
+        anchor(MARCH_15, "1500.0000")
+        operation(MARCH_20, "-50.0000")
+        anchor(MARCH_10, "75.5000", account = card)
+        val asOf = LocalDate.of(2026, 3, 31)
+
+        val perAccount = balanceDAO.getBalancesByAccounts(workspaceId, asOf, true)
+            .map { it.balance }.reduce(BigDecimal::add)
+
+        assertEquals(perAccount, balanceDAO.getBalancesByCurrencies(workspaceId, asOf, true).single().total)
+    }
+
+    @Test
+    fun `a currency total is as of the end of the asOf day`() {
+        operation(MARCH_20, "-50.0000")
+
+        assertEquals(
+            BigDecimal("0.0000"),
+            balanceDAO.getBalancesByCurrencies(workspaceId, LocalDate.of(2026, 3, 19), true).single().total,
+        )
+        assertEquals(
+            BigDecimal("-50.0000"),
+            balanceDAO.getBalancesByCurrencies(workspaceId, LocalDate.of(2026, 3, 20), true).single().total,
+        )
+    }
+
+    @Test
+    fun `leaves archived accounts out of a currency total only when asked to`() {
+        val closed = TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "closed", currency = "EUR")
+        anchor(MARCH_05, "40.0000", account = closed)
+        jdbc.sql("UPDATE t_accounts SET archived = true WHERE id = :id").param("id", closed).update()
+        val asOf = LocalDate.of(2026, 3, 31)
+
+        assertEquals(BigDecimal("40.0000"), balanceDAO.getBalancesByCurrencies(workspaceId, asOf, true).single().total)
+        assertEquals(BigDecimal("0.0000"), balanceDAO.getBalancesByCurrencies(workspaceId, asOf, false).single().total)
+    }
+
+    @Test
+    fun `leaves out a currency held only by archived accounts when they are excluded`() {
+        val closed = TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "closed", currency = "GBP")
+        jdbc.sql("UPDATE t_accounts SET archived = true WHERE id = :id").param("id", closed).update()
+
+        val currencies = balanceDAO.getBalancesByCurrencies(workspaceId, LocalDate.of(2026, 3, 31), false)
+            .map { it.currency }
+
+        assertEquals(listOf("EUR"), currencies)
+    }
+
+    @Test
+    fun `adds nothing from another workspace to a currency total`() {
+        val other = TestWorkspaces.create(workspaceDAO, usersDAO, name = "other-workspace")
+        val theirs = TestWorkspaces.seedAccount(accountDAO, other, name = "theirs", currency = "EUR")
+        anchor(MARCH_05, "999.0000", account = theirs, workspace = other)
+
+        assertEquals(
+            listOf(CurrencyAmount("EUR", BigDecimal("0.0000"))),
+            balanceDAO.getBalancesByCurrencies(workspaceId, LocalDate.of(2026, 3, 31), true),
+        )
+    }
+
+    @Test
+    fun `a workspace with no accounts has no currency totals`() {
+        val empty = TestWorkspaces.create(workspaceDAO, usersDAO, name = "empty-workspace")
+
+        assertEquals(emptyList(), balanceDAO.getBalancesByCurrencies(empty, LocalDate.of(2026, 3, 31), true))
     }
 
     @Test
@@ -400,11 +506,16 @@ class BalanceDAOIntegrationTest(
         recordedAt = occurredAt,
     )
 
-    private fun anchor(occurredAt: LocalDateTime, value: String): UUID = anchorDAO.create(
+    private fun anchor(
+        occurredAt: LocalDateTime,
+        value: String,
+        account: UUID = accountId,
+        workspace: UUID = workspaceId,
+    ): UUID = anchorDAO.create(
         BalanceAnchorProjection(
             id = UUID.randomUUID(),
-            workspaceId = workspaceId,
-            accountId = accountId,
+            workspaceId = workspace,
+            accountId = account,
             value = BigDecimal(value),
             occurredAt = occurredAt,
             externalRef = null,
