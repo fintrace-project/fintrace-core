@@ -20,7 +20,7 @@ import com.github.melancholic.fintrace.core.domain.entity.TransferLeg
 import com.github.melancholic.fintrace.core.util.FeedPositionCodec
 import org.mapstruct.Mapper
 
-@Mapper(componentModel = "spring")
+@Mapper
 interface FeedItemMapper {
 
     fun toWorkspaceFeed(items: List<FeedItem>, older: FeedPosition?, newer: FeedPosition?) =

@@ -62,6 +62,13 @@ kotlin {
 	}
 }
 
+kapt {
+	arguments {
+		arg("mapstruct.defaultComponentModel", "spring")
+		arg("mapstruct.unmappedTargetPolicy", "ERROR")
+	}
+}
+
 tasks.withType<Test> {
 	useJUnitPlatform()
 }

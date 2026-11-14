@@ -15,7 +15,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.*
 
-@Mapper(componentModel = "spring")
+@Mapper
 interface TransferMapper {
 
     fun toResponse(transfer: Transfer): TransferResponse = TransferResponse(

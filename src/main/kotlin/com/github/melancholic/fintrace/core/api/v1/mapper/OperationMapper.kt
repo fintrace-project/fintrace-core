@@ -7,7 +7,7 @@ import org.mapstruct.Mapping
 import org.mapstruct.Named
 import java.math.BigDecimal
 
-@Mapper(componentModel = "spring")
+@Mapper
 interface OperationMapper {
 
 	@Mapping(source = "amount", target = "amount", qualifiedByName = ["signedToUnsignedAmount"])

@@ -7,7 +7,7 @@ import org.mapstruct.Mapper
 import org.mapstruct.Mapping
 import java.math.BigDecimal
 
-@Mapper(componentModel = "spring")
+@Mapper
 interface BalanceAnchorMapper {
     @Mapping(source = "difference", target = "difference")
     fun toResponse(projection: BalanceAnchorProjection, difference: BigDecimal?): BalanceAnchorResponse
