@@ -1,4 +1,4 @@
-package com.github.melancholic.fintrace.core.domain.entity
+package com.github.melancholic.fintrace.core.domain.statistic
 
 import java.math.BigDecimal
 

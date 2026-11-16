@@ -6,7 +6,7 @@ import com.github.melancholic.fintrace.core.dao.projection.AccountProjectionDAO
 import com.github.melancholic.fintrace.core.dao.projection.BalanceAnchorProjectionDAO
 import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
 import com.github.melancholic.fintrace.core.dao.projection.OperationProjectionDAO
-import com.github.melancholic.fintrace.core.domain.entity.CurrencyAmount
+import com.github.melancholic.fintrace.core.domain.statistic.CurrencyAmount
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.projection.BalanceAnchorProjection
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection

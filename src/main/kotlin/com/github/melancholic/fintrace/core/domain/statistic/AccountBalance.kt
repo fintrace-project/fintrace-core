@@ -1,7 +1,7 @@
-package com.github.melancholic.fintrace.core.domain.entity
+package com.github.melancholic.fintrace.core.domain.statistic
 
 import java.math.BigDecimal
-import java.util.*
+import java.util.UUID
 
 data class AccountBalance(
     val accountId: UUID,

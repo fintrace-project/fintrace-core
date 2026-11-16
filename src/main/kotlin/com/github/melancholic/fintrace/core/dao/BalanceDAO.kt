@@ -1,7 +1,7 @@
 package com.github.melancholic.fintrace.core.dao
 
-import com.github.melancholic.fintrace.core.domain.entity.AccountBalance
-import com.github.melancholic.fintrace.core.domain.entity.CurrencyAmount
+import com.github.melancholic.fintrace.core.domain.statistic.AccountBalance
+import com.github.melancholic.fintrace.core.domain.statistic.CurrencyAmount
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository

@@ -1,7 +1,7 @@
 package com.github.melancholic.fintrace.core.api.v1.mapper
 
 import com.github.melancholic.fintrace.core.api.v1.dto.AccountBalanceResponse
-import com.github.melancholic.fintrace.core.domain.entity.AccountBalance
+import com.github.melancholic.fintrace.core.domain.statistic.AccountBalance
 import org.mapstruct.Mapper
 
 @Mapper

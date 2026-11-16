@@ -1,5 +1,6 @@
 package com.github.melancholic.fintrace.core.api.v1.dto
 
+import com.github.melancholic.fintrace.core.domain.statistic.Granularity
 import java.math.BigDecimal
 import java.time.LocalDate
 
@@ -22,4 +23,16 @@ data class ConvertedAmountResponse(
 data class BalancesByCurrenciesResponse(
     val asOf: LocalDate,
     val totals: CurrencyAmountsResponse,
+)
+
+data class BalancesSeriesResponse(
+    val granularity: Granularity,
+    val from: LocalDate,
+    val to: LocalDate,
+    val buckets: List<BalancesSeriesBucketResponse>,
+)
+
+data class BalancesSeriesBucketResponse(
+    val start: LocalDate,
+    val balance: CurrencyAmountsResponse
 )

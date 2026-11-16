@@ -214,7 +214,6 @@ class WorkspaceDAOImpl(
             .query(UUID::class.java)
             .list() as List<UUID>
 
-
     private fun updateSql(request: EditWorkspaceRequest): String = buildString {
         append("UPDATE t_workspaces SET")
         request.workspaceName?.let { append(" name = :name,") }

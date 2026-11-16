@@ -2,10 +2,13 @@ package com.github.melancholic.fintrace.core.api.v1.controller
 
 import com.github.melancholic.fintrace.core.api.v1.dto.BalancesByAccountsResponse
 import com.github.melancholic.fintrace.core.api.v1.dto.BalancesByCurrenciesResponse
+import com.github.melancholic.fintrace.core.api.v1.dto.BalancesSeriesResponse
 import com.github.melancholic.fintrace.core.api.v1.mapper.AccountBalanceMapper
+import com.github.melancholic.fintrace.core.api.v1.mapper.BalanceSeriesMapper
 import com.github.melancholic.fintrace.core.api.v1.mapper.CurrencyAmountsMapper
 import com.github.melancholic.fintrace.core.config.STATISTICS_AREA_API_PATH
-import com.github.melancholic.fintrace.core.domain.entity.AccountBalance
+import com.github.melancholic.fintrace.core.domain.statistic.AccountBalance
+import com.github.melancholic.fintrace.core.domain.statistic.Granularity
 import com.github.melancholic.fintrace.core.facade.StatisticFacade
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -22,7 +25,8 @@ import java.util.*
 class StatisticsRestController(
     private val statisticFacade: StatisticFacade,
     private val mapper: AccountBalanceMapper,
-    private val currencyAmountsMapper: CurrencyAmountsMapper
+    private val currencyAmountsMapper: CurrencyAmountsMapper,
+    private val balanceSeriesMapper: BalanceSeriesMapper
 ) {
 
     @Operation(summary = "List account balances")
@@ -76,5 +80,31 @@ class StatisticsRestController(
                     totals = currencyAmountsMapper.toResponse(result)
                 )
             )
+    }
+
+    @Operation(summary = "Balance over time")
+    @ApiResponses(
+        ApiResponse(
+            responseCode = "200",
+            description = "One bucket per calendar period, each the balance per currency at its end; bounds widened to whole buckets"
+        ),
+        ApiResponse(
+            responseCode = "400",
+            description = "Missing or unknown `granularity`, more than 2,000 buckets, `from` after `to`, or an `accountIds` not in this workspace"
+        ),
+        ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
+    )
+    @GetMapping("/balances/series")
+    fun getBalancesSeries(
+        @PathVariable("workspaceId") workspaceId: UUID,
+        @RequestParam("granularity", required = true) granularity: Granularity,
+        @RequestParam("from", required = false) startDate: LocalDate?,
+        @RequestParam("to", required = false) endDate: LocalDate?,
+        @RequestParam("accountIds", required = false) accountIds: Set<UUID> = setOf(),
+        @RequestParam("includeArchived", required = false, defaultValue = "true") includeArchived: Boolean
+    ): ResponseEntity<BalancesSeriesResponse> {
+        val result =
+            statisticFacade.getBalancesSeries(workspaceId, granularity, startDate, endDate, accountIds, includeArchived)
+        return ResponseEntity.ok(balanceSeriesMapper.toResponse(result))
     }
 }

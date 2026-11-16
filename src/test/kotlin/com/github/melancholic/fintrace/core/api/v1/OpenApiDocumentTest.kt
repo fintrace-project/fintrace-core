@@ -14,6 +14,7 @@ import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import org.hamcrest.Matchers.hasItem
 import org.hamcrest.Matchers.hasItems
 import org.hamcrest.Matchers.not
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import kotlin.test.assertEquals
 
@@ -257,11 +258,17 @@ class OpenApiDocumentTest(
         // Spring binds an object such as Pageable from separate parameters; one object-valued parameter is
         // a request no generated client can make (springdoc.default-flat-param-object)
         val body = mvc.perform(get("/v3/api-docs")).andReturn().response.contentAsString
-        val paths = mapper.readTree(body).get("paths")
-        val objects = paths.properties().flatMap { (path, operations) ->
+        val document = mapper.readTree(body)
+        // A $ref may name an enum, which is a plain string on the wire; only a referenced object is the problem
+        val isObject = { schema: JsonNode ->
+            val resolved = schema.path("\$ref").asText().takeIf { it.isNotEmpty() }
+                ?.let { document.at(it.removePrefix("#")) } ?: schema
+            resolved.path("type").asText() == "object" || resolved.has("properties")
+        }
+        val objects = document.get("paths").properties().flatMap { (path, operations) ->
             operations.properties().flatMap { (method, operation) ->
                 operation.path("parameters")
-                    .filter { it.path("in").asText() == "query" && it.path("schema").has("\$ref") }
+                    .filter { it.path("in").asText() == "query" && isObject(it.path("schema")) }
                     .map { "${it.path("name").asText()} on $method $path" }
             }
         }
