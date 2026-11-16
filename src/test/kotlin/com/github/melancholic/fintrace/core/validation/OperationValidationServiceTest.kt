@@ -108,6 +108,9 @@ class OperationValidationServiceTest {
         override fun getAllAccounts(workspaceId: UUID, includeArchived: Boolean): List<AccountProjection> =
             unsupported()
 
+        override fun allExists(workspaceId: UUID, accountIds: Set<UUID>, includeArchived: Boolean): Boolean =
+            unsupported()
+
         override fun removeAll(workspaceId: UUID): Unit = unsupported()
         override fun remove(workspaceId: UUID, accountId: UUID): Unit = unsupported()
         override fun remove(workspaceId: UUID, ids: Set<UUID>): Unit = unsupported()

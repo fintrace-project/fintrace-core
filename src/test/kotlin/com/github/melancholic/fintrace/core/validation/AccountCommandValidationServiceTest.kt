@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 /** Rules that hold whoever the caller is: no Spring, no HTTP, no database. */
-class AccountValidationServiceTest {
+class AccountCommandValidationServiceTest {
 
     private class FakeAccountDAO(private val known: Set<Pair<UUID, UUID>>) : AccountProjectionDAO {
         val asked = mutableListOf<Pair<UUID, UUID>>()
@@ -29,6 +29,9 @@ class AccountValidationServiceTest {
         override fun getAllAccounts(workspaceId: UUID, includeArchived: Boolean): List<AccountProjection> =
             unsupported()
 
+        override fun allExists(workspaceId: UUID, accountIds: Set<UUID>, includeArchived: Boolean): Boolean =
+            unsupported()
+
         override fun remove(workspaceId: UUID, accountId: UUID): Unit = unsupported()
         override fun remove(workspaceId: UUID, ids: Set<UUID>): Unit = unsupported()
         override fun removeAll(workspaceId: UUID): Unit = unsupported()
@@ -38,7 +41,7 @@ class AccountValidationServiceTest {
     }
 
     private fun service(known: Set<Pair<UUID, UUID>> = emptySet(), dao: FakeAccountDAO = FakeAccountDAO(known)) =
-        dao to AccountValidationServiceImpl(dao)
+        dao to AccountCommandValidationServiceImpl(AccountValidationServiceImpl(dao))
 
     @Test
     fun `accepts a well-formed account`() {

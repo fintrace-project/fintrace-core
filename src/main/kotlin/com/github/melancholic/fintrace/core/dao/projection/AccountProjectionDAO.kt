@@ -22,6 +22,7 @@ interface AccountProjectionDAO : ProjectionDAO<AccountProjection> {
 
     fun remove(workspaceId: UUID, accountId: UUID)
     fun exists(workspaceId: UUID, accountId: UUID): Boolean
+    fun allExists(workspaceId: UUID, accountIds: Set<UUID>, includeArchived: Boolean): Boolean
     fun getAllAccounts(workspaceId: UUID, includeArchived: Boolean): List<AccountProjection>
 }
 
@@ -71,8 +72,25 @@ class AccountProjectionDAOImpl(
     }
 
     override fun exists(workspaceId: UUID, accountId: UUID): Boolean {
-        return jdbc.sql(CHECK_EXISTS).param("id", accountId).param("workspaceId", workspaceId)
-            .query(Boolean::class.java).single()
+        return jdbc.sql(CHECK_EXISTS)
+            .param("id", accountId)
+            .param("workspaceId", workspaceId)
+            .query(Boolean::class.java)
+            .single()
+    }
+
+    override fun allExists(
+        workspaceId: UUID,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): Boolean {
+        val existingIds = jdbc.sql(CHECK_ALL_EXISTS)
+            .param("workspaceId", workspaceId)
+            .param("ids", accountIds)
+            .param("archived", includeArchived)
+            .query(UUID::class.java)
+            .list().filterNotNull().toSet()
+        return (accountIds - existingIds).isEmpty()
     }
 
     override fun getAllAccounts(
@@ -129,6 +147,11 @@ class AccountProjectionDAOImpl(
 
         const val CHECK_EXISTS = """
             SELECT EXISTS(SELECT 1 FROM $TABLE_NAME WHERE workspace_id = :workspaceId AND id = :id)
+        """
+
+        const val CHECK_ALL_EXISTS = """
+            SELECT id FROM $TABLE_NAME WHERE workspace_id = :workspaceId AND id IN (:ids)
+            AND (:archived OR NOT archived)
         """
 
         const val DELETE_BY_WORKSPACE = """

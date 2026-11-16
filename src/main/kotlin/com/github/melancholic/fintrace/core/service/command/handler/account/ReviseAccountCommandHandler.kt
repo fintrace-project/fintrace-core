@@ -11,7 +11,7 @@ import com.github.melancholic.fintrace.core.domain.projection.AccountProjection
 import com.github.melancholic.fintrace.core.exception.ApplicationException
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
 import com.github.melancholic.fintrace.core.util.TimestampProvider
-import com.github.melancholic.fintrace.core.validation.AccountValidationService
+import com.github.melancholic.fintrace.core.validation.AccountCommandValidationService
 import org.springframework.stereotype.Component
 import kotlin.reflect.KClass
 
@@ -19,7 +19,7 @@ import kotlin.reflect.KClass
 class ReviseAccountCommandHandler(
     private val timestampProvider: TimestampProvider,
     private val projectionApplier: ProjectionApplier,
-    private val validationService: AccountValidationService,
+    private val validationService: AccountCommandValidationService,
     eventsDAO: EventsDAO,
 ) : AbstractAccountCommandHandler<ReviseAccountCommand, AccountProjection, AccountRevised>(
     eventsDAO

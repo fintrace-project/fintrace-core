@@ -6,14 +6,13 @@ import com.github.melancholic.fintrace.core.domain.command.CreateAccountCommand
 import com.github.melancholic.fintrace.core.domain.command.CreateBalanceAnchorCommand
 import com.github.melancholic.fintrace.core.domain.event.payload.AccountCreated
 import com.github.melancholic.fintrace.core.domain.event.payload.AccountCreatedV1
-import com.github.melancholic.fintrace.core.domain.event.payload.ProjectionEventPayload
 import com.github.melancholic.fintrace.core.domain.event.projectionChange
 import com.github.melancholic.fintrace.core.domain.projection.AccountProjection
 import com.github.melancholic.fintrace.core.service.command.CommandDispatcher
 import com.github.melancholic.fintrace.core.service.projection.ProjectionApplier
 import com.github.melancholic.fintrace.core.util.TimestampProvider
 import com.github.melancholic.fintrace.core.util.UUIDGenerator
-import com.github.melancholic.fintrace.core.validation.AccountValidationService
+import com.github.melancholic.fintrace.core.validation.AccountCommandValidationService
 import org.springframework.stereotype.Component
 import kotlin.reflect.KClass
 
@@ -22,7 +21,7 @@ class CreateAccountCommandHandler(
     private val timestampProvider: TimestampProvider,
     private val uuidGenerator: UUIDGenerator,
     private val projectionApplier: ProjectionApplier,
-    private val validationService: AccountValidationService,
+    private val validationService: AccountCommandValidationService,
     private val commandDispatcher: CommandDispatcher,
     eventsDAO: EventsDAO,
 ) : AbstractAccountCommandHandler<CreateAccountCommand, AccountProjection, AccountCreated>(eventsDAO) {
