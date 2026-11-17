@@ -4,6 +4,9 @@ import com.github.melancholic.fintrace.core.dao.BalanceDAO
 import com.github.melancholic.fintrace.core.dao.StatisticDAO
 import com.github.melancholic.fintrace.core.domain.statistic.*
 import com.github.melancholic.fintrace.core.exception.ValidationError
+import com.github.melancholic.fintrace.core.util.StatisticHelper.toCashflowBuckets
+import com.github.melancholic.fintrace.core.util.StatisticHelper.toSeriesBuckets
+import com.github.melancholic.fintrace.core.util.StatisticHelper.toCashflowTotals
 import com.github.melancholic.fintrace.core.util.TimestampProvider
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
@@ -23,6 +26,15 @@ sealed interface StatisticService {
         accountIds: Set<UUID>,
         includeArchived: Boolean
     ): BalancesSeries
+
+    fun getCashflow(
+        workspaceId: UUID,
+        granularity: Granularity,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): Cashflow
 
 }
 
@@ -60,11 +72,9 @@ class StatisticServiceImpl(
         includeArchived: Boolean
     ): BalancesSeries {
         val to = endDate ?: timestampProvider.now().toLocalDate()
-
         val from = startDate
             ?: statisticDAO.firstActivityDate(workspaceId, accountIds, includeArchived)
             ?: return emptySeries(granularity, to)
-
         if (from.isAfter(to)) {
             if (startDate != null) {
                 throw ValidationError("'from' $from is after 'to' $to", "from")
@@ -73,7 +83,6 @@ class StatisticServiceImpl(
         }
 
         val buckets = StatisticBuckets.splitByBuckets(granularity, from, to)
-
         if (buckets.count > MAX_BUCKETS_LIMIT) {
             throw ValidationError(
                 "$granularity from $from to $to is ${buckets.count} buckets, at most $MAX_BUCKETS_LIMIT",
@@ -93,11 +102,64 @@ class StatisticServiceImpl(
             granularity,
             buckets.firstStart,
             buckets.end,
-            rows.toBuckets()
+            rows.toSeriesBuckets()
         )
     }
 
-    // Nothing to draw, in the window of the one bucket holding `to`, widened as every answer is
+    override fun getCashflow(
+        workspaceId: UUID,
+        granularity: Granularity,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): Cashflow {
+        val to = endDate ?: timestampProvider.now().toLocalDate()
+        val from = startDate
+            ?: statisticDAO.firstOperationDate(workspaceId, accountIds, includeArchived)
+            ?: return emptyCashflow(granularity, to)
+        if (from.isAfter(to)) {
+            if (startDate != null) {
+                throw ValidationError("'from' $from is after 'to' $to", "from")
+            }
+            return emptyCashflow(granularity, to)
+        }
+
+        val splits = splitByBuckets(granularity, from, to)
+        val until = to.plusDays(1).atStartOfDay()
+
+        val rows = statisticDAO.getBalanceCashflow(
+            workspaceId,
+            splits,
+            until,
+            accountIds,
+            includeArchived
+        )
+
+        return Cashflow(
+            granularity,
+            splits.firstStart,
+            splits.end,
+            rows.toCashflowBuckets(),
+            rows.toCashflowTotals(splits, until)
+        )
+    }
+
+    private fun splitByBuckets(
+        granularity: Granularity,
+        from: LocalDate,
+        to: LocalDate
+    ): StatisticBuckets {
+        val buckets = StatisticBuckets.splitByBuckets(granularity, from, to)
+        if (buckets.count > MAX_BUCKETS_LIMIT) {
+            throw ValidationError(
+                "$granularity from $from to $to is ${buckets.count} buckets, at most $MAX_BUCKETS_LIMIT",
+                "granularity"
+            )
+        }
+        return buckets
+    }
+
     private fun emptySeries(
         granularity: Granularity,
         to: LocalDate
@@ -111,22 +173,31 @@ class StatisticServiceImpl(
         )
     }
 
+    private fun emptyCashflow(
+        granularity: Granularity,
+        to: LocalDate
+    ): Cashflow {
+        val window = StatisticBuckets.splitByBuckets(granularity, to, to)
+        return Cashflow(
+            granularity = granularity,
+            from = window.firstStart,
+            to = window.end,
+            buckets = emptyList(),
+            totals = CashflowTotals(
+                income = CurrencyAmounts(emptyList()),
+                expense = CurrencyAmounts(emptyList()),
+                net = CurrencyAmounts(emptyList()),
+                count = emptyList(),
+                perDay = CashflowPerDay(
+                    income = CurrencyAmounts(emptyList()),
+                    expense = CurrencyAmounts(emptyList()),
+                    net = CurrencyAmounts(emptyList())
+                )
+            )
+        )
+    }
 
     private companion object {
         const val MAX_BUCKETS_LIMIT: Int = 2000;
     }
 }
-
-private fun List<BalanceSeriesRow>.toBuckets(): List<BalancesSeriesBucket> =
-    this.groupBy { it.start }
-        .mapValues { (_, v) ->
-            v.filter { it.currency != null  && it.total != null}
-                .associateBy { it.currency }
-                .map { (currency, row) -> CurrencyAmount(currency!!, row.total!!) }
-        }
-        .map { (startDate, byCurrency) ->
-            BalancesSeriesBucket(
-                start = startDate,
-                balance = CurrencyAmounts(byCurrency = byCurrency)
-            )
-        }

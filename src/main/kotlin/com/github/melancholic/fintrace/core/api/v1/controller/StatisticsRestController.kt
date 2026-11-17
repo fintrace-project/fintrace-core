@@ -3,8 +3,10 @@ package com.github.melancholic.fintrace.core.api.v1.controller
 import com.github.melancholic.fintrace.core.api.v1.dto.BalancesByAccountsResponse
 import com.github.melancholic.fintrace.core.api.v1.dto.BalancesByCurrenciesResponse
 import com.github.melancholic.fintrace.core.api.v1.dto.BalancesSeriesResponse
+import com.github.melancholic.fintrace.core.api.v1.dto.CashflowResponse
 import com.github.melancholic.fintrace.core.api.v1.mapper.AccountBalanceMapper
 import com.github.melancholic.fintrace.core.api.v1.mapper.BalanceSeriesMapper
+import com.github.melancholic.fintrace.core.api.v1.mapper.CashflowMapper
 import com.github.melancholic.fintrace.core.api.v1.mapper.CurrencyAmountsMapper
 import com.github.melancholic.fintrace.core.config.STATISTICS_AREA_API_PATH
 import com.github.melancholic.fintrace.core.domain.statistic.AccountBalance
@@ -26,7 +28,8 @@ class StatisticsRestController(
     private val statisticFacade: StatisticFacade,
     private val mapper: AccountBalanceMapper,
     private val currencyAmountsMapper: CurrencyAmountsMapper,
-    private val balanceSeriesMapper: BalanceSeriesMapper
+    private val balanceSeriesMapper: BalanceSeriesMapper,
+    private val cashflowMapper: CashflowMapper
 ) {
 
     @Operation(summary = "List account balances")
@@ -106,5 +109,37 @@ class StatisticsRestController(
         val result =
             statisticFacade.getBalancesSeries(workspaceId, granularity, startDate, endDate, accountIds, includeArchived)
         return ResponseEntity.ok(balanceSeriesMapper.toResponse(result))
+    }
+
+    @Operation(summary = "Income and expenses over time")
+    @ApiResponses(
+        ApiResponse(
+            responseCode = "200",
+            description = "One bucket per calendar period with its income, expense, net and operations per currency, transfers excluded; the period's totals and daily averages beside them"
+        ),
+        ApiResponse(
+            responseCode = "400",
+            description = "Missing or unknown `granularity`, more than 2,000 buckets, `from` after `to`, or an `accountIds` not in this workspace"
+        ),
+        ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
+    )
+    @GetMapping("/cashflow")
+    fun getCashflow(
+        @PathVariable("workspaceId") workspaceId: UUID,
+        @RequestParam("granularity", required = true) granularity: Granularity,
+        @RequestParam("from", required = false) startDate: LocalDate?,
+        @RequestParam("to", required = false) endDate: LocalDate?,
+        @RequestParam("accountIds", required = false) accountIds: Set<UUID> = setOf(),
+        @RequestParam("includeArchived", required = false, defaultValue = "true") includeArchived: Boolean
+    ): ResponseEntity<CashflowResponse> {
+        val result = statisticFacade.getCashflow(
+            workspaceId,
+            granularity,
+            startDate,
+            endDate,
+            accountIds,
+            includeArchived
+        )
+        return ResponseEntity.ok(cashflowMapper.toResponse(result))
     }
 }

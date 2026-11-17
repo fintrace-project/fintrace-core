@@ -1864,6 +1864,103 @@
         }
       }
     },
+    "/api/v1/workspaces/{workspaceId}/statistics/cashflow" : {
+      "get" : {
+        "tags" : [ "Statistics" ],
+        "summary" : "Income and expenses over time",
+        "operationId" : "getCashflow",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "granularity",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/Granularity"
+          }
+        }, {
+          "name" : "from",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "to",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "accountIds",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            },
+            "uniqueItems" : true
+          }
+        }, {
+          "name" : "includeArchived",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : true
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "One bucket per calendar period with its income, expense, net and operations per currency, transfers excluded; the period's totals and daily averages beside them",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CashflowResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Missing or unknown `granularity`, more than 2,000 buckets, `from` after `to`, or an `accountIds` not in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/statistics/balances/series" : {
       "get" : {
         "tags" : [ "Statistics" ],
@@ -3444,20 +3541,47 @@
         "type" : "string",
         "enum" : [ "DAY", "WEEK", "MONTH", "YEAR" ]
       },
-      "BalancesSeriesBucketResponse" : {
+      "CashflowBucketResponse" : {
         "type" : "object",
         "properties" : {
           "start" : {
             "type" : "string",
             "format" : "date"
           },
-          "balance" : {
+          "income" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          },
+          "expense" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          },
+          "net" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          },
+          "count" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CurrencyCountResponse"
+            }
+          }
+        },
+        "required" : [ "count", "expense", "income", "net", "start" ]
+      },
+      "CashflowPerDayResponse" : {
+        "type" : "object",
+        "properties" : {
+          "income" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          },
+          "expense" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          },
+          "net" : {
             "$ref" : "#/components/schemas/CurrencyAmountsResponse"
           }
         },
-        "required" : [ "balance", "start" ]
+        "required" : [ "expense", "income", "net" ]
       },
-      "BalancesSeriesResponse" : {
+      "CashflowResponse" : {
         "type" : "object",
         "properties" : {
           "granularity" : {
@@ -3474,11 +3598,38 @@
           "buckets" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/BalancesSeriesBucketResponse"
+              "$ref" : "#/components/schemas/CashflowBucketResponse"
             }
+          },
+          "totals" : {
+            "$ref" : "#/components/schemas/CashflowTotalsResponse"
           }
         },
-        "required" : [ "buckets", "from", "granularity", "to" ]
+        "required" : [ "buckets", "from", "granularity", "to", "totals" ]
+      },
+      "CashflowTotalsResponse" : {
+        "type" : "object",
+        "properties" : {
+          "income" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          },
+          "expense" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          },
+          "net" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          },
+          "count" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CurrencyCountResponse"
+            }
+          },
+          "perDay" : {
+            "$ref" : "#/components/schemas/CashflowPerDayResponse"
+          }
+        },
+        "required" : [ "count", "expense", "income", "net", "perDay" ]
       },
       "ConvertedAmountResponse" : {
         "type" : "object",
@@ -3528,6 +3679,55 @@
           }
         },
         "required" : [ "byCurrency" ]
+      },
+      "CurrencyCountResponse" : {
+        "type" : "object",
+        "properties" : {
+          "currency" : {
+            "type" : "string"
+          },
+          "count" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        },
+        "required" : [ "count", "currency" ]
+      },
+      "BalancesSeriesBucketResponse" : {
+        "type" : "object",
+        "properties" : {
+          "start" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "balance" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          }
+        },
+        "required" : [ "balance", "start" ]
+      },
+      "BalancesSeriesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "granularity" : {
+            "$ref" : "#/components/schemas/Granularity"
+          },
+          "from" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "to" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "buckets" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/BalancesSeriesBucketResponse"
+            }
+          }
+        },
+        "required" : [ "buckets", "from", "granularity", "to" ]
       },
       "BalancesByCurrenciesResponse" : {
         "type" : "object",

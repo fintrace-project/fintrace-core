@@ -9,7 +9,7 @@ import com.github.melancholic.fintrace.core.dao.projection.OperationProjectionDA
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.projection.BalanceAnchorProjection
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
-import com.github.melancholic.fintrace.core.domain.statistic.BalanceSeriesRow
+import com.github.melancholic.fintrace.core.domain.entity.BalanceSeriesRow
 import com.github.melancholic.fintrace.core.domain.statistic.Granularity
 import com.github.melancholic.fintrace.core.domain.statistic.StatisticBuckets
 import org.junit.jupiter.api.BeforeEach
@@ -233,7 +233,7 @@ class StatisticDAOIntegrationTest(
             val generated = jdbc.sql("SELECT count(*) FROM generate_series(:first, :last, CAST(:step AS interval))")
                 .param("first", buckets.firstStart.atStartOfDay())
                 .param("last", buckets.lastStart.atStartOfDay())
-                .param("step", granularity.postgresValue())
+                .param("step", granularity.postgresInterval())
                 .query(Long::class.java)
                 .single()
 

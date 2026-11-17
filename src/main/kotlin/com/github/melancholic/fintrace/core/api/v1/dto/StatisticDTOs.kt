@@ -36,3 +36,38 @@ data class BalancesSeriesBucketResponse(
     val start: LocalDate,
     val balance: CurrencyAmountsResponse
 )
+
+data class CashflowResponse(
+    val granularity: Granularity,
+    val from: LocalDate,
+    val to: LocalDate,
+    val buckets: List<CashflowBucketResponse>,
+    val totals: CashflowTotalsResponse,
+)
+
+data class CashflowBucketResponse(
+    val start: LocalDate,
+    val income: CurrencyAmountsResponse,
+    val expense: CurrencyAmountsResponse,
+    val net: CurrencyAmountsResponse,
+    val count: List<CurrencyCountResponse>,
+)
+
+data class CashflowTotalsResponse(
+    val income: CurrencyAmountsResponse,
+    val expense: CurrencyAmountsResponse,
+    val net: CurrencyAmountsResponse,
+    val count: List<CurrencyCountResponse>,
+    val perDay: CashflowPerDayResponse,
+)
+
+data class CashflowPerDayResponse(
+    val income: CurrencyAmountsResponse,
+    val expense: CurrencyAmountsResponse,
+    val net: CurrencyAmountsResponse,
+)
+
+data class CurrencyCountResponse(
+    val currency: String,
+    val count: Long,
+)

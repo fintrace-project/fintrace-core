@@ -1,0 +1,79 @@
+package com.github.melancholic.fintrace.core.util
+
+import com.github.melancholic.fintrace.core.domain.entity.BalanceSeriesRow
+import com.github.melancholic.fintrace.core.domain.entity.CashflowRow
+import com.github.melancholic.fintrace.core.domain.statistic.*
+import java.math.BigDecimal
+import java.math.RoundingMode
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
+
+object StatisticHelper {
+
+    fun List<BalanceSeriesRow>.toSeriesBuckets(): List<BalancesSeriesBucket> =
+        this.groupBy { it.start }
+            .mapValues { (_, v) ->
+                v.filter { it.currency != null && it.total != null }
+                    .associateBy { it.currency }
+                    .map { (currency, row) -> CurrencyAmount(currency!!, row.total!!) }
+            }
+            .map { (startDate, byCurrency) ->
+                BalancesSeriesBucket(
+                    start = startDate,
+                    balance = CurrencyAmounts(byCurrency = byCurrency)
+                )
+            }
+
+
+    fun List<CashflowRow>.toCashflowBuckets(): List<CashflowBucket> {
+        return groupBy { it.start }
+            .map { (start, rows) ->
+                val real = rows.filter { it.currency != null }
+                CashflowBucket(
+                    start = start,
+                    income = CurrencyAmounts(real.map { CurrencyAmount(it.currency!!, it.income) }),
+                    expense = CurrencyAmounts(real.map { CurrencyAmount(it.currency!!, it.expense) }),
+                    net = CurrencyAmounts(real.map { CurrencyAmount(it.currency!!, it.net) }),
+                    count = real.map { CurrencyCount(it.currency!!, it.operations) },
+                )
+            }
+    }
+
+    fun List<CashflowRow>.toCashflowTotals(splits: StatisticBuckets, until: LocalDateTime): CashflowTotals {
+        val byCurrency = filter { it.currency != null }
+            .groupBy { it.currency!! }
+
+        fun total(pick: (CashflowRow) -> BigDecimal) = CurrencyAmounts(
+            byCurrency.map { (currency, rows) ->
+                CurrencyAmount(currency, rows.sumOf(pick))
+            }
+        )
+
+        val days = ChronoUnit.DAYS.between(splits.firstStart, until.toLocalDate())
+
+        fun perDay(amounts: CurrencyAmounts) = CurrencyAmounts(amounts.byCurrency.map {
+            CurrencyAmount(
+                it.currency,
+                it.total.divide(BigDecimal.valueOf(days), 4, RoundingMode.HALF_EVEN)
+            )
+        })
+
+        val income = total { x -> x.income }
+        val expense = total { it.expense }
+        val net = total { it.net }
+
+        return CashflowTotals(
+            income, expense, net,
+            count = byCurrency.map { (currency, rs) ->
+                CurrencyCount(
+                    currency,
+                    rs.sumOf { it.operations })
+            },
+            perDay = CashflowPerDay(
+                perDay(income),
+                perDay(expense),
+                perDay(net)
+            )
+        )
+    }
+}

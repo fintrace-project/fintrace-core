@@ -2,6 +2,7 @@ package com.github.melancholic.fintrace.core.facade
 
 import com.github.melancholic.fintrace.core.domain.statistic.AccountBalance
 import com.github.melancholic.fintrace.core.domain.statistic.BalancesSeries
+import com.github.melancholic.fintrace.core.domain.statistic.Cashflow
 import com.github.melancholic.fintrace.core.domain.statistic.CurrencyAmounts
 import com.github.melancholic.fintrace.core.domain.statistic.Granularity
 import com.github.melancholic.fintrace.core.security.IdentityProvider
@@ -24,6 +25,15 @@ sealed interface StatisticFacade : RestFacade {
         accountIds: Set<UUID>,
         includeArchived: Boolean
     ): BalancesSeries
+
+    fun getCashflow(
+        workspaceId: UUID,
+        granularity: Granularity,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): Cashflow
 }
 
 @Service
@@ -67,5 +77,19 @@ class StatisticFacadeImpl(
         }
         return statisticService.getBalancesSeries(workspace.id, granularity, startDate, endDate, accountIds, includeArchived)
     }
+
+    override fun getCashflow(
+        workspaceId: UUID,
+        granularity: Granularity,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): Cashflow {
+        val workspace = workspaceService.requireReadable(identityProvider.currentUserId(), workspaceId)
+        if (accountIds.isNotEmpty()) {
+            accountValidationService.checkExists(workspace.id, accountIds, true, "accountIds")
+        }
+        return statisticService.getCashflow(workspace.id, granularity, startDate, endDate, accountIds, includeArchived)    }
 
 }
