@@ -1,5 +1,6 @@
 package com.github.melancholic.fintrace.core.domain.statistic
 
+import java.math.BigDecimal
 import java.time.LocalDate
 
 data class Cashflow(
@@ -21,8 +22,10 @@ data class CashflowBucket(
 data class CashflowTotals(
     val income: CurrencyAmounts,
     val expense: CurrencyAmounts,
+    val expenseRatio: List<CurrencyRatio>,
     val net: CurrencyAmounts,
     val count: List<CurrencyCount>,
+    val netRatio: List<CurrencyRatio>,
     val perDay: CashflowPerDay,
 )
 
@@ -35,4 +38,9 @@ data class CashflowPerDay(
 data class CurrencyCount(
     val currency: String,
     val count: Long,
+)
+
+data class CurrencyRatio(
+    val currency: String,
+    val ratio: BigDecimal,
 )

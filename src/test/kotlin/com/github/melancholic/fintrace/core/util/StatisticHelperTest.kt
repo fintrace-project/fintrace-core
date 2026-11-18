@@ -3,6 +3,7 @@ package com.github.melancholic.fintrace.core.util
 import com.github.melancholic.fintrace.core.domain.entity.CashflowRow
 import com.github.melancholic.fintrace.core.domain.statistic.CurrencyAmount
 import com.github.melancholic.fintrace.core.domain.statistic.CurrencyCount
+import com.github.melancholic.fintrace.core.domain.statistic.CurrencyRatio
 import com.github.melancholic.fintrace.core.domain.statistic.Granularity
 import com.github.melancholic.fintrace.core.domain.statistic.StatisticBuckets
 import com.github.melancholic.fintrace.core.util.StatisticHelper.toCashflowBuckets
@@ -97,6 +98,48 @@ class StatisticHelperTest {
     }
 
     @Test
+    fun `ratios divide the period's totals, one per currency, not each bucket's`() {
+        val totals = listOf(
+            row("2026-01-01", "EUR", income = "100", expense = "30", net = "70", operations = 2),
+            row("2026-02-01", "EUR", income = "0", expense = "12", net = "-12", operations = 1),
+        ).toCashflowTotals(february(), until("2026-03-01"))
+
+        assertEquals(listOf(ratio("EUR", "0.4200")), totals.expenseRatio)
+        assertEquals(listOf(ratio("EUR", "0.5800")), totals.netRatio)
+    }
+
+    @Test
+    fun `a currency with no income is left out of both ratios, the rest in Core's order`() {
+        val totals = listOf(
+            row("2026-01-01", "EUR", income = "100", expense = "25", net = "75", operations = 2),
+            row("2026-01-01", "GBP", income = "0", expense = "10", net = "-10", operations = 1),
+            row("2026-01-01", "USD", income = "50", expense = "10", net = "40", operations = 2),
+        ).toCashflowTotals(january(), until("2026-02-01"))
+
+        assertEquals(listOf(ratio("EUR", "0.2500"), ratio("USD", "0.2000")), totals.expenseRatio)
+        assertEquals(listOf(ratio("EUR", "0.7500"), ratio("USD", "0.8000")), totals.netRatio)
+    }
+
+    @Test
+    fun `spending past the income answers an expense ratio above one and a negative net ratio`() {
+        val totals = listOf(row("2026-01-01", "EUR", income = "10", expense = "35", net = "-25", operations = 2))
+            .toCashflowTotals(january(), until("2026-02-01"))
+
+        assertEquals(listOf(ratio("EUR", "3.5000")), totals.expenseRatio)
+        assertEquals(listOf(ratio("EUR", "-2.5000")), totals.netRatio)
+    }
+
+    @Test
+    fun `ratios round at four places, half even`() {
+        // 1 / 20000 = 0.00005 exactly: half-up would answer 0.0001
+        val totals = listOf(row("2026-01-01", "EUR", income = "20000", expense = "1", net = "19999", operations = 2))
+            .toCashflowTotals(january(), until("2026-02-01"))
+
+        assertEquals(listOf(ratio("EUR", "0.0000")), totals.expenseRatio)
+        assertEquals(listOf(ratio("EUR", "1.0000")), totals.netRatio)
+    }
+
+    @Test
     fun `an empty selection totals nothing`() {
         val totals = listOf(
             CashflowRow(LocalDate.parse("2026-01-01"), null, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0),
@@ -105,6 +148,8 @@ class StatisticHelperTest {
         assertEquals(emptyList(), totals.income.byCurrency)
         assertEquals(emptyList(), totals.count)
         assertEquals(emptyList(), totals.perDay.net.byCurrency)
+        assertEquals(emptyList(), totals.expenseRatio)
+        assertEquals(emptyList(), totals.netRatio)
     }
 
     private fun row(
@@ -124,6 +169,8 @@ class StatisticHelperTest {
     )
 
     private fun amount(currency: String, total: String) = CurrencyAmount(currency, BigDecimal(total).setScale(4))
+
+    private fun ratio(currency: String, ratio: String) = CurrencyRatio(currency, BigDecimal(ratio))
 
     private fun january() =
         StatisticBuckets.splitByBuckets(Granularity.MONTH, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-01-31"))

@@ -92,6 +92,21 @@ class CashflowRestControllerTest(
             .andExpect(jsonPath("$.totals.count[0].count").value(2))
             .andExpect(jsonPath("$.totals.perDay.income.byCurrency[0].total").value(3.2258))
             .andExpect(jsonPath("$.totals.perDay.expense.byCurrency[0].total").value(1.0000))
+            .andExpect(jsonPath("$.totals.expenseRatio[0].currency").value("EUR"))
+            .andExpect(jsonPath("$.totals.expenseRatio[0].ratio").value(0.3100))
+            .andExpect(jsonPath("$.totals.netRatio[0].currency").value("EUR"))
+            .andExpect(jsonPath("$.totals.netRatio[0].ratio").value(0.6900))
+    }
+
+    @Test
+    fun `a period with spending and no income answers its totals and no ratios`() {
+        operation(wallet, "2026-01-20T09:00:00", "-12.0000")
+
+        mvc.perform(get("$cashflowPath?granularity=DAY&from=2026-01-20&to=2026-01-20").with(user(USER)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.totals.expense.byCurrency[0].total").value(12.0000))
+            .andExpect(jsonPath("$.totals.expenseRatio.length()").value(0))
+            .andExpect(jsonPath("$.totals.netRatio.length()").value(0))
     }
 
     @Test
@@ -126,6 +141,8 @@ class CashflowRestControllerTest(
             .andExpect(jsonPath("$.to").value(today.withDayOfMonth(today.lengthOfMonth()).toString()))
             .andExpect(jsonPath("$.totals.income.byCurrency.length()").value(0))
             .andExpect(jsonPath("$.totals.count.length()").value(0))
+            .andExpect(jsonPath("$.totals.expenseRatio.length()").value(0))
+            .andExpect(jsonPath("$.totals.netRatio.length()").value(0))
     }
 
     @Test

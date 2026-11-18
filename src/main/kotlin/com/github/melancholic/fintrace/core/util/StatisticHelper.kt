@@ -3,8 +3,8 @@ package com.github.melancholic.fintrace.core.util
 import com.github.melancholic.fintrace.core.domain.entity.BalanceSeriesRow
 import com.github.melancholic.fintrace.core.domain.entity.CashflowRow
 import com.github.melancholic.fintrace.core.domain.statistic.*
+import com.github.melancholic.fintrace.core.util.MathUtils.divideWithDefaultPrecision
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
@@ -54,20 +54,31 @@ object StatisticHelper {
         fun perDay(amounts: CurrencyAmounts) = CurrencyAmounts(amounts.byCurrency.map {
             CurrencyAmount(
                 it.currency,
-                it.total.divide(BigDecimal.valueOf(days), 4, RoundingMode.HALF_EVEN)
+                it.total.divideWithDefaultPrecision(BigDecimal.valueOf(days))
             )
         })
+
+        fun ratio(pick1: (CashflowRow) -> BigDecimal, pick2: (CashflowRow) -> BigDecimal): List<CurrencyRatio> =
+            byCurrency.mapNotNull { (currency, rows) ->
+                val d1 = rows.sumOf(pick1)
+                val d2 =  rows.sumOf(pick2)
+                return@mapNotNull if (d2.signum() != 0) CurrencyRatio(currency, d1.divideWithDefaultPrecision(d2)) else null
+            }
 
         val income = total { x -> x.income }
         val expense = total { it.expense }
         val net = total { it.net }
 
         return CashflowTotals(
-            income, expense, net,
-            count = byCurrency.map { (currency, rs) ->
+            income = income,
+            expense = expense,
+            expenseRatio = ratio(CashflowRow::expense, CashflowRow::income),
+            net = net,
+            netRatio = ratio(CashflowRow::net, CashflowRow::income),
+            count = byCurrency.map { (currency, rows) ->
                 CurrencyCount(
                     currency,
-                    rs.sumOf { it.operations })
+                    rows.sumOf { it.operations })
             },
             perDay = CashflowPerDay(
                 perDay(income),

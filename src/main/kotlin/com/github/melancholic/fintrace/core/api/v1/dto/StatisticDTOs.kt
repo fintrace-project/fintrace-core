@@ -1,5 +1,6 @@
 package com.github.melancholic.fintrace.core.api.v1.dto
 
+import com.github.melancholic.fintrace.core.domain.statistic.CurrencyRatio
 import com.github.melancholic.fintrace.core.domain.statistic.Granularity
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -56,7 +57,9 @@ data class CashflowBucketResponse(
 data class CashflowTotalsResponse(
     val income: CurrencyAmountsResponse,
     val expense: CurrencyAmountsResponse,
+    val expenseRatio: List<CurrencyRatioResponse>,
     val net: CurrencyAmountsResponse,
+    val netRatio: List<CurrencyRatioResponse>,
     val count: List<CurrencyCountResponse>,
     val perDay: CashflowPerDayResponse,
 )
@@ -70,4 +73,9 @@ data class CashflowPerDayResponse(
 data class CurrencyCountResponse(
     val currency: String,
     val count: Long,
+)
+
+data class CurrencyRatioResponse(
+    val currency: String,
+    val ratio: BigDecimal,
 )

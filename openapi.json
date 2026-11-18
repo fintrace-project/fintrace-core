@@ -3616,8 +3616,20 @@
           "expense" : {
             "$ref" : "#/components/schemas/CurrencyAmountsResponse"
           },
+          "expenseRatio" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CurrencyRatioResponse"
+            }
+          },
           "net" : {
             "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          },
+          "netRatio" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CurrencyRatioResponse"
+            }
           },
           "count" : {
             "type" : "array",
@@ -3629,7 +3641,7 @@
             "$ref" : "#/components/schemas/CashflowPerDayResponse"
           }
         },
-        "required" : [ "count", "expense", "income", "net", "perDay" ]
+        "required" : [ "count", "expense", "expenseRatio", "income", "net", "netRatio", "perDay" ]
       },
       "ConvertedAmountResponse" : {
         "type" : "object",
@@ -3692,6 +3704,18 @@
           }
         },
         "required" : [ "count", "currency" ]
+      },
+      "CurrencyRatioResponse" : {
+        "type" : "object",
+        "properties" : {
+          "currency" : {
+            "type" : "string"
+          },
+          "ratio" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "currency", "ratio" ]
       },
       "BalancesSeriesBucketResponse" : {
         "type" : "object",

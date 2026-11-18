@@ -186,7 +186,9 @@ class StatisticServiceImpl(
             totals = CashflowTotals(
                 income = CurrencyAmounts(emptyList()),
                 expense = CurrencyAmounts(emptyList()),
+                expenseRatio = emptyList(),
                 net = CurrencyAmounts(emptyList()),
+                netRatio = emptyList(),
                 count = emptyList(),
                 perDay = CashflowPerDay(
                     income = CurrencyAmounts(emptyList()),
