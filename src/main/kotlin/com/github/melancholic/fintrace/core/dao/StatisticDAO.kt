@@ -2,6 +2,8 @@ package com.github.melancholic.fintrace.core.dao
 
 import com.github.melancholic.fintrace.core.domain.entity.BalanceSeriesRow
 import com.github.melancholic.fintrace.core.domain.entity.CashflowRow
+import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
+import com.github.melancholic.fintrace.core.domain.entity.CategoryTotalRow
 import com.github.melancholic.fintrace.core.domain.statistic.StatisticBuckets
 import org.springframework.jdbc.core.simple.JdbcClient
 import org.springframework.stereotype.Repository
@@ -30,7 +32,7 @@ interface StatisticDAO {
         includeArchived: Boolean
     ): List<BalanceSeriesRow>
 
-    fun getBalanceCashflow(
+    fun getCashflow(
         workspaceId: UUID,
         buckets: StatisticBuckets,
         until: LocalDateTime,
@@ -38,6 +40,14 @@ interface StatisticDAO {
         includeArchived: Boolean
     ): List<CashflowRow>
 
+    fun getCategoryTotalsExpanded(
+        workspaceId: UUID,
+        kind: CategoryKind,
+        from: LocalDateTime,
+        until: LocalDateTime,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): List<CategoryTotalRow>
 }
 
 @Repository
@@ -98,7 +108,7 @@ class StatisticDAOImpl(
             }.list()
     }
 
-    override fun getBalanceCashflow(
+    override fun getCashflow(
         workspaceId: UUID,
         buckets: StatisticBuckets,
         until: LocalDateTime,
@@ -123,6 +133,33 @@ class StatisticDAOImpl(
                     rs.getBigDecimal("expense"),
                     rs.getBigDecimal("net"),
                     rs.getLong("operations")
+                )
+            }.list()
+    }
+
+    override fun getCategoryTotalsExpanded(
+        workspaceId: UUID,
+        kind: CategoryKind,
+        from: LocalDateTime,
+        until: LocalDateTime,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): List<CategoryTotalRow> {
+        val builder = jdbc.sql(SELECT_CATEGORY_TOTALS)
+            .param("workspaceId", workspaceId)
+            .param("kind", kind.name)
+            .param("from", from)
+            .param("until", until)
+            .param("accountIds", accountIds.takeIf { it.isNotEmpty() }?.toTypedArray())
+            .param("includeArchived", includeArchived)
+
+        return builder
+            .query { rs, _ ->
+                CategoryTotalRow(
+                    categoryId = rs.getObject("category_id", UUID::class.java),
+                    parentId = rs.getObject("parent_id", UUID::class.java),
+                    currency = rs.getString("currency"),
+                    total = rs.getBigDecimal("total")
                 )
             }.list()
     }
@@ -175,6 +212,18 @@ class StatisticDAOImpl(
                 :firstStart,
                 :lastStart,
                 :unit,
+                :until,
+                CAST(:accountIds AS uuid[]),
+                :includeArchived
+            )
+        """
+
+        const val SELECT_CATEGORY_TOTALS = """
+            SELECT category_id, parent_id, currency, total
+            FROM fn_category_totals(
+                :workspaceId,
+                :kind,
+                :from,
                 :until,
                 CAST(:accountIds AS uuid[]),
                 :includeArchived

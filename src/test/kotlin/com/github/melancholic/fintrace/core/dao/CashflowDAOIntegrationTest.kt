@@ -269,7 +269,7 @@ class CashflowDAOIntegrationTest(
         includeArchived: Boolean = true,
     ): List<CashflowRow> {
         val buckets = StatisticBuckets.splitByBuckets(granularity, LocalDate.parse(from), LocalDate.parse(to))
-        return statisticDAO.getBalanceCashflow(
+        return statisticDAO.getCashflow(
             workspaceId, buckets, LocalDate.parse(to).plusDays(1).atStartOfDay(), accountIds, includeArchived,
         )
     }

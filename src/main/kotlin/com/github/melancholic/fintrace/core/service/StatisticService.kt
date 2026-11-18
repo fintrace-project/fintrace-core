@@ -2,11 +2,13 @@ package com.github.melancholic.fintrace.core.service
 
 import com.github.melancholic.fintrace.core.dao.BalanceDAO
 import com.github.melancholic.fintrace.core.dao.StatisticDAO
+import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.statistic.*
 import com.github.melancholic.fintrace.core.exception.ValidationError
 import com.github.melancholic.fintrace.core.util.StatisticHelper.toCashflowBuckets
-import com.github.melancholic.fintrace.core.util.StatisticHelper.toSeriesBuckets
 import com.github.melancholic.fintrace.core.util.StatisticHelper.toCashflowTotals
+import com.github.melancholic.fintrace.core.util.StatisticHelper.toCategoryTotals
+import com.github.melancholic.fintrace.core.util.StatisticHelper.toSeriesBuckets
 import com.github.melancholic.fintrace.core.util.TimestampProvider
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Propagation
@@ -36,6 +38,14 @@ sealed interface StatisticService {
         includeArchived: Boolean
     ): Cashflow
 
+    fun getCategoryTotalsExpanded(
+        workspaceId: UUID,
+        kind: CategoryKind,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): CategoryTotals
 }
 
 @Service
@@ -128,7 +138,7 @@ class StatisticServiceImpl(
         val splits = splitByBuckets(granularity, from, to)
         val until = to.plusDays(1).atStartOfDay()
 
-        val rows = statisticDAO.getBalanceCashflow(
+        val rows = statisticDAO.getCashflow(
             workspaceId,
             splits,
             until,
@@ -142,6 +152,43 @@ class StatisticServiceImpl(
             splits.end,
             rows.toCashflowBuckets(),
             rows.toCashflowTotals(splits, until)
+        )
+    }
+
+    override fun getCategoryTotalsExpanded(
+        workspaceId: UUID,
+        kind: CategoryKind,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): CategoryTotals {
+        val to = endDate ?: timestampProvider.now().toLocalDate()
+        val from = startDate
+            ?: statisticDAO.firstOperationDate(workspaceId, accountIds, includeArchived)
+            ?: return emptyCategoryTotals(kind, CategoryTotalsMode.EXPANDED, to)
+        if (from.isAfter(to)) {
+            if (startDate != null) {
+                throw ValidationError("'from' $from is after 'to' $to", "from")
+            }
+            return emptyCategoryTotals(kind, CategoryTotalsMode.EXPANDED, to)
+        }
+
+        val rows = statisticDAO.getCategoryTotalsExpanded(
+            workspaceId,
+            kind,
+            from.atStartOfDay(),
+            to.plusDays(1).atStartOfDay(),
+            accountIds,
+            includeArchived
+        )
+
+        return CategoryTotals(
+            from,
+            to,
+            kind,
+            CategoryTotalsMode.EXPANDED,
+            rows.toCategoryTotals()
         )
     }
 
@@ -198,6 +245,12 @@ class StatisticServiceImpl(
             )
         )
     }
+
+    private fun emptyCategoryTotals(
+        kind: CategoryKind,
+        mode: CategoryTotalsMode,
+        to: LocalDate,
+    ): CategoryTotals = CategoryTotals(to, to, kind, mode, emptyList())
 
     private companion object {
         const val MAX_BUCKETS_LIMIT: Int = 2000;

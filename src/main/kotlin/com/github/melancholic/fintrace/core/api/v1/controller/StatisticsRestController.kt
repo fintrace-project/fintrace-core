@@ -1,15 +1,11 @@
 package com.github.melancholic.fintrace.core.api.v1.controller
 
-import com.github.melancholic.fintrace.core.api.v1.dto.BalancesByAccountsResponse
-import com.github.melancholic.fintrace.core.api.v1.dto.BalancesByCurrenciesResponse
-import com.github.melancholic.fintrace.core.api.v1.dto.BalancesSeriesResponse
-import com.github.melancholic.fintrace.core.api.v1.dto.CashflowResponse
-import com.github.melancholic.fintrace.core.api.v1.mapper.AccountBalanceMapper
-import com.github.melancholic.fintrace.core.api.v1.mapper.BalanceSeriesMapper
-import com.github.melancholic.fintrace.core.api.v1.mapper.CashflowMapper
-import com.github.melancholic.fintrace.core.api.v1.mapper.CurrencyAmountsMapper
+import com.github.melancholic.fintrace.core.api.v1.dto.*
+import com.github.melancholic.fintrace.core.api.v1.mapper.*
 import com.github.melancholic.fintrace.core.config.STATISTICS_AREA_API_PATH
+import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.statistic.AccountBalance
+import com.github.melancholic.fintrace.core.domain.statistic.CategoryTotalsMode
 import com.github.melancholic.fintrace.core.domain.statistic.Granularity
 import com.github.melancholic.fintrace.core.facade.StatisticFacade
 import io.swagger.v3.oas.annotations.Operation
@@ -29,7 +25,8 @@ class StatisticsRestController(
     private val mapper: AccountBalanceMapper,
     private val currencyAmountsMapper: CurrencyAmountsMapper,
     private val balanceSeriesMapper: BalanceSeriesMapper,
-    private val cashflowMapper: CashflowMapper
+    private val cashflowMapper: CashflowMapper,
+    private val categoryTotalsMapper: CategoryTotalsMapper
 ) {
 
     @Operation(summary = "List account balances")
@@ -141,5 +138,40 @@ class StatisticsRestController(
             includeArchived
         )
         return ResponseEntity.ok(cashflowMapper.toResponse(result))
+    }
+
+    @Operation(summary = "Totals per category")
+    @ApiResponses(
+        ApiResponse(
+            responseCode = "200",
+            description = "One row per category with operations of `kind` in the period, its total per currency; transfers excluded"
+        ),
+        ApiResponse(
+            responseCode = "400",
+            description = "Missing or unknown `kind` or `mode`, `from` after `to`, or an `accountIds` not in this workspace"
+        ),
+        ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
+        ApiResponse(responseCode = "409", description = "`mode` not supported yet"),
+    )
+    @GetMapping("/categories/totals")
+    fun getCategoryTotals(
+        @PathVariable("workspaceId") workspaceId: UUID,
+        @RequestParam("kind", required = true) kind: CategoryKind,
+        @RequestParam("mode", required = true) mode: CategoryTotalsMode,
+        @RequestParam("from", required = false) startDate: LocalDate?,
+        @RequestParam("to", required = false) endDate: LocalDate?,
+        @RequestParam("accountIds", required = false) accountIds: Set<UUID> = setOf(),
+        @RequestParam("includeArchived", required = false, defaultValue = "true") includeArchived: Boolean
+    ): ResponseEntity<CategoryTotalsResponse> {
+        val result = statisticFacade.getCategoryTotals(
+            workspaceId,
+            kind,
+            mode,
+            startDate,
+            endDate,
+            accountIds,
+            includeArchived
+        )
+        return ResponseEntity.ok(categoryTotalsMapper.toResponse(result))
     }
 }

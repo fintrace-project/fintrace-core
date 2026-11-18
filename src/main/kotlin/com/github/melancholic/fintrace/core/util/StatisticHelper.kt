@@ -2,6 +2,7 @@ package com.github.melancholic.fintrace.core.util
 
 import com.github.melancholic.fintrace.core.domain.entity.BalanceSeriesRow
 import com.github.melancholic.fintrace.core.domain.entity.CashflowRow
+import com.github.melancholic.fintrace.core.domain.entity.CategoryTotalRow
 import com.github.melancholic.fintrace.core.domain.statistic.*
 import com.github.melancholic.fintrace.core.util.MathUtils.divideWithDefaultPrecision
 import java.math.BigDecimal
@@ -61,8 +62,11 @@ object StatisticHelper {
         fun ratio(pick1: (CashflowRow) -> BigDecimal, pick2: (CashflowRow) -> BigDecimal): List<CurrencyRatio> =
             byCurrency.mapNotNull { (currency, rows) ->
                 val d1 = rows.sumOf(pick1)
-                val d2 =  rows.sumOf(pick2)
-                return@mapNotNull if (d2.signum() != 0) CurrencyRatio(currency, d1.divideWithDefaultPrecision(d2)) else null
+                val d2 = rows.sumOf(pick2)
+                return@mapNotNull if (d2.signum() != 0) CurrencyRatio(
+                    currency,
+                    d1.divideWithDefaultPrecision(d2)
+                ) else null
             }
 
         val income = total { x -> x.income }
@@ -87,4 +91,13 @@ object StatisticHelper {
             )
         )
     }
+
+    fun List<CategoryTotalRow>.toCategoryTotals(): List<CategoryTotal> = groupBy { it.categoryId }
+        .map { (catId, rows) ->
+            CategoryTotal(
+                catId,
+                rows.map { it.parentId }.distinct().single(),
+                CurrencyAmounts(rows.map { CurrencyAmount(it.currency, it.total) })
+            )
+        }
 }

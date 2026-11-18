@@ -1,10 +1,9 @@
 package com.github.melancholic.fintrace.core.facade
 
-import com.github.melancholic.fintrace.core.domain.statistic.AccountBalance
-import com.github.melancholic.fintrace.core.domain.statistic.BalancesSeries
-import com.github.melancholic.fintrace.core.domain.statistic.Cashflow
-import com.github.melancholic.fintrace.core.domain.statistic.CurrencyAmounts
-import com.github.melancholic.fintrace.core.domain.statistic.Granularity
+import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
+import com.github.melancholic.fintrace.core.domain.statistic.*
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
+import com.github.melancholic.fintrace.core.exception.OperationNotSupported
 import com.github.melancholic.fintrace.core.security.IdentityProvider
 import com.github.melancholic.fintrace.core.service.StatisticService
 import com.github.melancholic.fintrace.core.service.WorkspaceService
@@ -16,7 +15,9 @@ import java.util.*
 
 sealed interface StatisticFacade : RestFacade {
     fun getBalancesByAccounts(workspaceId: UUID, asOf: LocalDate, includeArchived: Boolean): List<AccountBalance>
+
     fun getBalancesByCurrencies(workspaceId: UUID, asOf: LocalDate, includeArchived: Boolean): CurrencyAmounts
+
     fun getBalancesSeries(
         workspaceId: UUID,
         granularity: Granularity,
@@ -34,6 +35,16 @@ sealed interface StatisticFacade : RestFacade {
         accountIds: Set<UUID>,
         includeArchived: Boolean
     ): Cashflow
+
+    fun getCategoryTotals(
+        workspaceId: UUID,
+        kind: CategoryKind,
+        mode: CategoryTotalsMode,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): CategoryTotals
 }
 
 @Service
@@ -90,6 +101,27 @@ class StatisticFacadeImpl(
         if (accountIds.isNotEmpty()) {
             accountValidationService.checkExists(workspace.id, accountIds, true, "accountIds")
         }
-        return statisticService.getCashflow(workspace.id, granularity, startDate, endDate, accountIds, includeArchived)    }
+        return statisticService.getCashflow(workspace.id, granularity, startDate, endDate, accountIds, includeArchived)
+    }
+
+    override fun getCategoryTotals(
+        workspaceId: UUID,
+        kind: CategoryKind,
+        mode: CategoryTotalsMode,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): CategoryTotals {
+        val workspace = workspaceService.requireReadable(identityProvider.currentUserId(), workspaceId)
+        if (accountIds.isNotEmpty()) {
+            accountValidationService.checkExists(workspace.id, accountIds, true, "accountIds")
+        }
+
+        return when (mode) {
+            CategoryTotalsMode.EXPANDED -> statisticService.getCategoryTotalsExpanded(workspace.id, kind, startDate, endDate, accountIds, includeArchived)
+            else -> throw OperationNotSupported(CoreErrorCode.CATEGORY_TOTALS_UNSUPPORTED_MODE, "Mode `$mode` is not supported")
+        }
+    }
 
 }
