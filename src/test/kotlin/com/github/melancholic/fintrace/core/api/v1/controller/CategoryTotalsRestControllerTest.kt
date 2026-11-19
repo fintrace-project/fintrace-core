@@ -30,7 +30,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 
-/** `GET /statistics/categories/totals` in expanded mode (3.7): the contract, the defaults and the refusals (§11.4). */
+/** `GET /statistics/categories/totals` (3.7, 3.8): the contract, the rollup, the defaults and the refusals (§11.4). */
 @Import(TestcontainersConfiguration::class)
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -61,36 +61,74 @@ class CategoryTotalsRestControllerTest(
     }
 
     @Test
-    fun `answers the period, the kind, the mode and a row per category with its total per currency`() {
+    fun `answers the period, the kind and a row per category with its own and its total per currency`() {
         expense(food, "2026-01-10T09:00:00", "30.5000")
 
-        mvc.perform(get("$totalsPath?kind=EXPENSE&mode=EXPANDED&from=2026-01-01&to=2026-01-31").with(user(USER)))
+        mvc.perform(get("$totalsPath?kind=EXPENSE&from=2026-01-01&to=2026-01-31").with(user(USER)))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.from").value("2026-01-01"))
             .andExpect(jsonPath("$.to").value("2026-01-31"))
             .andExpect(jsonPath("$.kind").value("EXPENSE"))
-            .andExpect(jsonPath("$.mode").value("EXPANDED"))
+            .andExpect(jsonPath("$.mode").doesNotExist())
             .andExpect(jsonPath("$.rows.length()").value(1))
             .andExpect(jsonPath("$.rows[0].categoryId").value(food.toString()))
             .andExpect(jsonPath("$.rows[0].parentId").value(nullValue()))
+            .andExpect(jsonPath("$.rows[0].selfTotal.byCurrency[0].currency").value("EUR"))
+            .andExpect(jsonPath("$.rows[0].selfTotal.byCurrency[0].total").value(30.5000))
             .andExpect(jsonPath("$.rows[0].total.byCurrency[0].currency").value("EUR"))
             .andExpect(jsonPath("$.rows[0].total.byCurrency[0].total").value(30.5000))
             .andExpect(jsonPath("$.rows[0].total.converted").value(nullValue()))
     }
 
     @Test
-    fun `each category answers its own operations, its subcategories not rolled in`() {
+    fun `a category's selfTotal is its own operations, its total rolls its subcategories in`() {
         val groceries = childCategory(food, "groceries")
         expense(food, "2026-01-10T09:00:00", "10.0000")
         expense(groceries, "2026-01-11T09:00:00", "5.0000")
         expense(groceries, "2026-01-12T09:00:00", "2.5000")
 
-        mvc.perform(get("$totalsPath?kind=EXPENSE&mode=EXPANDED&from=2026-01-01&to=2026-01-31").with(user(USER)))
+        mvc.perform(get("$totalsPath?kind=EXPENSE&from=2026-01-01&to=2026-01-31").with(user(USER)))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.rows.length()").value(2))
-            .andExpect(jsonPath("$.rows[?(@.categoryId == '$food')].total.byCurrency[0].total").value(contains(10.0)))
+            .andExpect(jsonPath("$.rows[?(@.categoryId == '$food')].selfTotal.byCurrency[0].total").value(contains(10.0)))
+            .andExpect(jsonPath("$.rows[?(@.categoryId == '$food')].total.byCurrency[0].total").value(contains(17.5)))
+            .andExpect(jsonPath("$.rows[?(@.categoryId == '$groceries')].selfTotal.byCurrency[0].total").value(contains(7.5)))
             .andExpect(jsonPath("$.rows[?(@.categoryId == '$groceries')].total.byCurrency[0].total").value(contains(7.5)))
             .andExpect(jsonPath("$.rows[?(@.categoryId == '$groceries')].parentId").value(contains(food.toString())))
+    }
+
+    @Test
+    fun `a parent with nothing booked to it is answered with an empty selfTotal, an empty branch is not`() {
+        val groceries = childCategory(food, "groceries")
+        val organic = childCategory(groceries, "organic")
+        childCategory(food, "cafes")
+        expense(organic, "2026-01-11T09:00:00", "5.0000")
+
+        mvc.perform(get("$totalsPath?kind=EXPENSE&from=2026-01-01&to=2026-01-31").with(user(USER)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.rows.length()").value(3))
+            .andExpect(jsonPath("$.rows[?(@.categoryId == '$food')].selfTotal.byCurrency.length()").value(contains(0)))
+            .andExpect(jsonPath("$.rows[?(@.categoryId == '$food')].total.byCurrency[0].total").value(contains(5.0)))
+            .andExpect(jsonPath("$.rows[?(@.categoryId == '$groceries')].total.byCurrency[0].total").value(contains(5.0)))
+            .andExpect(jsonPath("$.rows[?(@.categoryId == '$organic')].selfTotal.byCurrency[0].total").value(contains(5.0)))
+    }
+
+    @Test
+    fun `a currency narrows to its accounts, one no account holds answers no rows`() {
+        val pounds = TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "pounds", currency = "GBP")
+        expense(food, "2026-01-10T09:00:00", "10.0000")
+        expense(food, "2026-01-11T09:00:00", "4.0000", account = pounds)
+
+        mvc.perform(get("$totalsPath?kind=EXPENSE&currency=GBP&from=2026-01-01&to=2026-01-31").with(user(USER)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.rows.length()").value(1))
+            .andExpect(jsonPath("$.rows[0].total.byCurrency.length()").value(1))
+            .andExpect(jsonPath("$.rows[0].total.byCurrency[0].currency").value("GBP"))
+            .andExpect(jsonPath("$.rows[0].total.byCurrency[0].total").value(4.0000))
+
+        mvc.perform(get("$totalsPath?kind=EXPENSE&currency=USD&from=2026-01-01&to=2026-01-31").with(user(USER)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.rows.length()").value(0))
     }
 
     @Test
@@ -102,7 +140,7 @@ class CategoryTotalsRestControllerTest(
             operationDAO, workspaceId, wallet, savings, occurredAt = LocalDateTime.parse("2026-01-12T09:00:00"),
         )
 
-        mvc.perform(get("$totalsPath?kind=INCOME&mode=EXPANDED&from=2026-01-01&to=2026-01-31").with(user(USER)))
+        mvc.perform(get("$totalsPath?kind=INCOME&from=2026-01-01&to=2026-01-31").with(user(USER)))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.kind").value("INCOME"))
             .andExpect(jsonPath("$.rows.length()").value(1))
@@ -116,7 +154,7 @@ class CategoryTotalsRestControllerTest(
         expense(food, "2026-01-11T09:00:00", "4.0000", account = pounds)
         expense(food, "2026-01-10T09:00:00", "10.0000")
 
-        mvc.perform(get("$totalsPath?kind=EXPENSE&mode=EXPANDED&from=2026-01-01&to=2026-01-31").with(user(USER)))
+        mvc.perform(get("$totalsPath?kind=EXPENSE&from=2026-01-01&to=2026-01-31").with(user(USER)))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.rows.length()").value(1))
             .andExpect(jsonPath("$.rows[0].total.byCurrency.length()").value(2))
@@ -133,7 +171,7 @@ class CategoryTotalsRestControllerTest(
         expense(food, "2026-01-20T23:59:59", "4.0000")
         expense(food, "2026-01-21T00:00:00", "8.0000")
 
-        mvc.perform(get("$totalsPath?kind=EXPENSE&mode=EXPANDED&from=2026-01-10&to=2026-01-20").with(user(USER)))
+        mvc.perform(get("$totalsPath?kind=EXPENSE&from=2026-01-10&to=2026-01-20").with(user(USER)))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.rows[0].total.byCurrency[0].total").value(6.0000))
     }
@@ -142,7 +180,7 @@ class CategoryTotalsRestControllerTest(
     fun `without from it starts at the first operation, without to it ends today`() {
         expense(food, "2026-01-10T09:00:00", "10.0000")
 
-        mvc.perform(get("$totalsPath?kind=EXPENSE&mode=EXPANDED").with(user(USER)))
+        mvc.perform(get("$totalsPath?kind=EXPENSE").with(user(USER)))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.from").value("2026-01-10"))
             .andExpect(jsonPath("$.to").value(LocalDate.now().toString()))
@@ -153,7 +191,7 @@ class CategoryTotalsRestControllerTest(
     fun `a workspace with no operation answers no rows, from and to today`() {
         val today = LocalDate.now().toString()
 
-        mvc.perform(get("$totalsPath?kind=EXPENSE&mode=EXPANDED").with(user(USER)))
+        mvc.perform(get("$totalsPath?kind=EXPENSE").with(user(USER)))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.from").value(today))
             .andExpect(jsonPath("$.to").value(today))
@@ -167,7 +205,7 @@ class CategoryTotalsRestControllerTest(
         expense(food, "2026-01-11T09:00:00", "2.5000", account = card)
 
         mvc.perform(
-            get("$totalsPath?kind=EXPENSE&mode=EXPANDED&from=2026-01-01&to=2026-01-31&accountIds=$card")
+            get("$totalsPath?kind=EXPENSE&from=2026-01-01&to=2026-01-31&accountIds=$card")
                 .with(user(USER))
         )
             .andExpect(status().isOk)
@@ -177,7 +215,7 @@ class CategoryTotalsRestControllerTest(
     @Test
     fun `refuses an account that is not this workspace's`() {
         mvc.perform(
-            get("$totalsPath?kind=EXPENSE&mode=EXPANDED&accountIds=${UUID.randomUUID()}").with(user(USER))
+            get("$totalsPath?kind=EXPENSE&accountIds=${UUID.randomUUID()}").with(user(USER))
         )
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.errors[0].field").value("accountIds"))
@@ -185,44 +223,31 @@ class CategoryTotalsRestControllerTest(
 
     @Test
     fun `refuses from after to`() {
-        mvc.perform(get("$totalsPath?kind=EXPENSE&mode=EXPANDED&from=2026-03-01&to=2026-01-01").with(user(USER)))
+        mvc.perform(get("$totalsPath?kind=EXPENSE&from=2026-03-01&to=2026-01-01").with(user(USER)))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.errors[0].field").value("from"))
     }
 
     @Test
     fun `requires an income or expense kind`() {
-        mvc.perform(get("$totalsPath?mode=EXPANDED").with(user(USER))).andExpect(status().isBadRequest)
-        mvc.perform(get("$totalsPath?kind=TRANSFER&mode=EXPANDED").with(user(USER))).andExpect(status().isBadRequest)
-        mvc.perform(get("$totalsPath?kind=REFUND&mode=EXPANDED").with(user(USER))).andExpect(status().isBadRequest)
+        mvc.perform(get(totalsPath).with(user(USER))).andExpect(status().isBadRequest)
+        mvc.perform(get("$totalsPath?kind=TRANSFER").with(user(USER))).andExpect(status().isBadRequest)
+        mvc.perform(get("$totalsPath?kind=REFUND").with(user(USER))).andExpect(status().isBadRequest)
     }
 
     @Test
-    fun `requires a known mode`() {
-        mvc.perform(get("$totalsPath?kind=EXPENSE").with(user(USER))).andExpect(status().isBadRequest)
-        mvc.perform(get("$totalsPath?kind=EXPENSE&mode=FLAT").with(user(USER))).andExpect(status().isBadRequest)
-    }
-
-    @Test
-    fun `collapsed is not supported until 3_8`() {
-        expense(food, "2026-01-10T09:00:00", "10.0000")
-
-        mvc.perform(get("$totalsPath?kind=EXPENSE&mode=COLLAPSED").with(user(USER)))
-            .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.code").value("CATEGORY_TOTALS_UNSUPPORTED_MODE"))
-    }
-
-    @Test
-    fun `collapsed is refused even with nothing to answer`() {
-        mvc.perform(get("$totalsPath?kind=EXPENSE&mode=COLLAPSED").with(user(USER)))
-            .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.code").value("CATEGORY_TOTALS_UNSUPPORTED_MODE"))
+    fun `refuses a malformed or unknown currency`() {
+        listOf("eur", "EU", "EURO", "XYZ").forEach {
+            mvc.perform(get("$totalsPath?kind=EXPENSE&currency=$it").with(user(USER)))
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.errors[0].field").value("currency"))
+        }
     }
 
     @Test
     fun `answers not found for a workspace the caller cannot reach`() {
         mvc.perform(
-            get("/api/v1/workspaces/${UUID.randomUUID()}/statistics/categories/totals?kind=EXPENSE&mode=EXPANDED")
+            get("/api/v1/workspaces/${UUID.randomUUID()}/statistics/categories/totals?kind=EXPENSE")
                 .with(user(USER))
         )
             .andExpect(status().isNotFound)
@@ -230,7 +255,7 @@ class CategoryTotalsRestControllerTest(
 
     @Test
     fun `rejects an unauthenticated read`() {
-        mvc.perform(get("$totalsPath?kind=EXPENSE&mode=EXPANDED")).andExpect(status().isUnauthorized)
+        mvc.perform(get("$totalsPath?kind=EXPENSE")).andExpect(status().isUnauthorized)
     }
 
     private fun childCategory(parent: UUID, name: String): UUID = categoryDAO.create(

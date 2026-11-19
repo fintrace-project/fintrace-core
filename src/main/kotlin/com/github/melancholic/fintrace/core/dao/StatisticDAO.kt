@@ -40,8 +40,9 @@ interface StatisticDAO {
         includeArchived: Boolean
     ): List<CashflowRow>
 
-    fun getCategoryTotalsExpanded(
+    fun getCategoryTotals(
         workspaceId: UUID,
+        currency: String?,
         kind: CategoryKind,
         from: LocalDateTime,
         until: LocalDateTime,
@@ -137,8 +138,9 @@ class StatisticDAOImpl(
             }.list()
     }
 
-    override fun getCategoryTotalsExpanded(
+    override fun getCategoryTotals(
         workspaceId: UUID,
+        currency: String?,
         kind: CategoryKind,
         from: LocalDateTime,
         until: LocalDateTime,
@@ -147,6 +149,7 @@ class StatisticDAOImpl(
     ): List<CategoryTotalRow> {
         val builder = jdbc.sql(SELECT_CATEGORY_TOTALS)
             .param("workspaceId", workspaceId)
+            .param("currency", currency)
             .param("kind", kind.name)
             .param("from", from)
             .param("until", until)
@@ -159,7 +162,7 @@ class StatisticDAOImpl(
                     categoryId = rs.getObject("category_id", UUID::class.java),
                     parentId = rs.getObject("parent_id", UUID::class.java),
                     currency = rs.getString("currency"),
-                    total = rs.getBigDecimal("total")
+                    selfTotal = rs.getBigDecimal("self_total")
                 )
             }.list()
     }
@@ -219,13 +222,14 @@ class StatisticDAOImpl(
         """
 
         const val SELECT_CATEGORY_TOTALS = """
-            SELECT category_id, parent_id, currency, total
+            SELECT category_id, parent_id, currency, self_total
             FROM fn_category_totals(
                 :workspaceId,
                 :kind,
                 :from,
                 :until,
                 CAST(:accountIds AS uuid[]),
+                CAST(:currency as char(3)),
                 :includeArchived
             )
         """

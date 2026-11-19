@@ -1,19 +1,24 @@
 package com.github.melancholic.fintrace.core.util
 
 import com.github.melancholic.fintrace.core.domain.entity.CashflowRow
+import com.github.melancholic.fintrace.core.domain.entity.CategoryTotalRow
+import com.github.melancholic.fintrace.core.domain.statistic.CategoryTotal
 import com.github.melancholic.fintrace.core.domain.statistic.CurrencyAmount
+import com.github.melancholic.fintrace.core.domain.statistic.CurrencyAmounts
 import com.github.melancholic.fintrace.core.domain.statistic.CurrencyCount
 import com.github.melancholic.fintrace.core.domain.statistic.CurrencyRatio
 import com.github.melancholic.fintrace.core.domain.statistic.Granularity
 import com.github.melancholic.fintrace.core.domain.statistic.StatisticBuckets
 import com.github.melancholic.fintrace.core.util.StatisticHelper.toCashflowBuckets
 import com.github.melancholic.fintrace.core.util.StatisticHelper.toCashflowTotals
+import com.github.melancholic.fintrace.core.util.StatisticHelper.toCategoryTotals
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.LocalDate
+import java.util.*
 import kotlin.test.assertEquals
 
-/** Cashflow's rows into buckets and the period's totals (3.6): no Spring, no database. */
+/** Cashflow's rows into buckets and the period's totals (3.6), category totals up the tree (3.8): no Spring, no database. */
 class StatisticHelperTest {
 
     @Test
@@ -152,6 +157,102 @@ class StatisticHelperTest {
         assertEquals(emptyList(), totals.netRatio)
     }
 
+    @Test
+    fun `a parent with nothing booked to it rolls up its subcategories, up to the root`() {
+        val totals = listOf(
+            category(ROOT, null),
+            category(FOOD, ROOT),
+            category(GROCERIES, FOOD, "EUR", "200"),
+            category(CAFES, FOOD, "EUR", "100"),
+        ).toCategoryTotals()
+
+        assertEquals(
+            listOf(
+                CategoryTotal(ROOT, null, amounts("EUR" to "300"), amounts()),
+                CategoryTotal(FOOD, ROOT, amounts("EUR" to "300"), amounts()),
+                CategoryTotal(GROCERIES, FOOD, amounts("EUR" to "200"), amounts("EUR" to "200")),
+                CategoryTotal(CAFES, FOOD, amounts("EUR" to "100"), amounts("EUR" to "100")),
+            ),
+            totals,
+        )
+    }
+
+    @Test
+    fun `a parent's own operations are its selfTotal and part of its total`() {
+        val totals = listOf(
+            category(FOOD, null, "EUR", "50"),
+            category(GROCERIES, FOOD, "EUR", "200"),
+        ).toCategoryTotals()
+
+        assertEquals(
+            listOf(
+                CategoryTotal(FOOD, null, amounts("EUR" to "250"), amounts("EUR" to "50")),
+                CategoryTotal(GROCERIES, FOOD, amounts("EUR" to "200"), amounts("EUR" to "200")),
+            ),
+            totals,
+        )
+    }
+
+    @Test
+    fun `every level of a deep branch carries its descendants' total`() {
+        val totals = listOf(
+            category(ROOT, null),
+            category(FOOD, ROOT),
+            category(GROCERIES, FOOD),
+            category(ORGANIC, GROCERIES, "EUR", "7"),
+        ).toCategoryTotals()
+
+        assertEquals(List(4) { amounts("EUR" to "7") }, totals.map { it.total })
+        assertEquals(listOf(amounts(), amounts(), amounts(), amounts("EUR" to "7")), totals.map { it.selfTotal })
+    }
+
+    @Test
+    fun `each currency is rolled up apart, ordered by code`() {
+        val totals = listOf(
+            category(FOOD, null),
+            category(GROCERIES, FOOD, "EUR", "10"),
+            category(GROCERIES, FOOD, "GBP", "4"),
+            category(CAFES, FOOD, "USD", "3"),
+            category(CAFES, FOOD, "EUR", "5"),
+        ).toCategoryTotals()
+
+        assertEquals(
+            listOf(
+                CategoryTotal(FOOD, null, amounts("EUR" to "15", "GBP" to "4", "USD" to "3"), amounts()),
+                CategoryTotal(
+                    GROCERIES, FOOD, amounts("EUR" to "10", "GBP" to "4"), amounts("EUR" to "10", "GBP" to "4"),
+                ),
+                CategoryTotal(CAFES, FOOD, amounts("EUR" to "5", "USD" to "3"), amounts("USD" to "3", "EUR" to "5")),
+            ),
+            totals,
+        )
+    }
+
+    @Test
+    fun `a branch with no money in it is left out`() {
+        val totals = listOf(
+            category(ROOT, null),
+            category(FOOD, ROOT),
+            category(GROCERIES, FOOD, "EUR", "5"),
+            category(TRANSPORT, ROOT),
+            category(TAXI, TRANSPORT),
+        ).toCategoryTotals()
+
+        assertEquals(listOf(ROOT, FOOD, GROCERIES), totals.map { it.categoryId })
+    }
+
+    @Test
+    fun `a tree with no amount anywhere answers nothing`() {
+        assertEquals(emptyList(), listOf(category(ROOT, null), category(FOOD, ROOT)).toCategoryTotals())
+        assertEquals(emptyList(), emptyList<CategoryTotalRow>().toCategoryTotals())
+    }
+
+    private fun category(id: UUID, parentId: UUID?, currency: String? = null, selfTotal: String? = null) =
+        CategoryTotalRow(id, parentId, currency, selfTotal?.let { BigDecimal(it).setScale(4) })
+
+    private fun amounts(vararg byCurrency: Pair<String, String>) =
+        CurrencyAmounts(byCurrency.map { (currency, total) -> amount(currency, total) })
+
     private fun row(
         start: String,
         currency: String,
@@ -179,4 +280,14 @@ class StatisticHelperTest {
         StatisticBuckets.splitByBuckets(Granularity.MONTH, LocalDate.parse("2026-01-01"), LocalDate.parse("2026-02-28"))
 
     private fun until(date: String) = LocalDate.parse(date).atStartOfDay()
+
+    private companion object {
+        val ROOT: UUID = UUID.randomUUID()
+        val FOOD: UUID = UUID.randomUUID()
+        val GROCERIES: UUID = UUID.randomUUID()
+        val ORGANIC: UUID = UUID.randomUUID()
+        val CAFES: UUID = UUID.randomUUID()
+        val TRANSPORT: UUID = UUID.randomUUID()
+        val TAXI: UUID = UUID.randomUUID()
+    }
 }

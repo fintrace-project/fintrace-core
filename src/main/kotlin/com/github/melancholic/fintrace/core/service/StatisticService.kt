@@ -38,8 +38,9 @@ sealed interface StatisticService {
         includeArchived: Boolean
     ): Cashflow
 
-    fun getCategoryTotalsExpanded(
+    fun getCategoryTotals(
         workspaceId: UUID,
+        currency: String?,
         kind: CategoryKind,
         startDate: LocalDate?,
         endDate: LocalDate?,
@@ -155,8 +156,9 @@ class StatisticServiceImpl(
         )
     }
 
-    override fun getCategoryTotalsExpanded(
+    override fun getCategoryTotals(
         workspaceId: UUID,
+        currency: String?,
         kind: CategoryKind,
         startDate: LocalDate?,
         endDate: LocalDate?,
@@ -166,16 +168,17 @@ class StatisticServiceImpl(
         val to = endDate ?: timestampProvider.now().toLocalDate()
         val from = startDate
             ?: statisticDAO.firstOperationDate(workspaceId, accountIds, includeArchived)
-            ?: return emptyCategoryTotals(kind, CategoryTotalsMode.EXPANDED, to)
+            ?: return emptyCategoryTotals(kind, to)
         if (from.isAfter(to)) {
             if (startDate != null) {
                 throw ValidationError("'from' $from is after 'to' $to", "from")
             }
-            return emptyCategoryTotals(kind, CategoryTotalsMode.EXPANDED, to)
+            return emptyCategoryTotals(kind, to)
         }
 
-        val rows = statisticDAO.getCategoryTotalsExpanded(
+        val rows = statisticDAO.getCategoryTotals(
             workspaceId,
+            currency,
             kind,
             from.atStartOfDay(),
             to.plusDays(1).atStartOfDay(),
@@ -187,7 +190,6 @@ class StatisticServiceImpl(
             from,
             to,
             kind,
-            CategoryTotalsMode.EXPANDED,
             rows.toCategoryTotals()
         )
     }
@@ -248,9 +250,8 @@ class StatisticServiceImpl(
 
     private fun emptyCategoryTotals(
         kind: CategoryKind,
-        mode: CategoryTotalsMode,
         to: LocalDate,
-    ): CategoryTotals = CategoryTotals(to, to, kind, mode, emptyList())
+    ): CategoryTotals = CategoryTotals(to, to, kind, emptyList())
 
     private companion object {
         const val MAX_BUCKETS_LIMIT: Int = 2000;

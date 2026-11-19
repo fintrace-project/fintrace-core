@@ -8,7 +8,6 @@ data class CategoryTotals(
     val from: LocalDate,
     val to: LocalDate,
     val kind: CategoryKind,
-    val mode: CategoryTotalsMode,
     val rows: List<CategoryTotal>,
 )
 
@@ -16,9 +15,5 @@ data class CategoryTotal(
     val categoryId: UUID,
     val parentId: UUID?,
     val total: CurrencyAmounts,
+    val selfTotal: CurrencyAmounts,
 )
-
-enum class CategoryTotalsMode {
-    COLLAPSED,
-    EXPANDED,
-}

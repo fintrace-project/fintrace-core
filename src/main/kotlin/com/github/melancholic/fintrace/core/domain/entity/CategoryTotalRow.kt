@@ -6,6 +6,6 @@ import java.util.*
 data class CategoryTotalRow(
     val categoryId: UUID,
     val parentId: UUID?,
-    val currency: String,
-    val total: BigDecimal,
+    val currency: String?,
+    val selfTotal: BigDecimal?
 )

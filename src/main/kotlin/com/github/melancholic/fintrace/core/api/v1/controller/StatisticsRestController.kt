@@ -5,7 +5,6 @@ import com.github.melancholic.fintrace.core.api.v1.mapper.*
 import com.github.melancholic.fintrace.core.config.STATISTICS_AREA_API_PATH
 import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.statistic.AccountBalance
-import com.github.melancholic.fintrace.core.domain.statistic.CategoryTotalsMode
 import com.github.melancholic.fintrace.core.domain.statistic.Granularity
 import com.github.melancholic.fintrace.core.facade.StatisticFacade
 import io.swagger.v3.oas.annotations.Operation
@@ -156,8 +155,8 @@ class StatisticsRestController(
     @GetMapping("/categories/totals")
     fun getCategoryTotals(
         @PathVariable("workspaceId") workspaceId: UUID,
+        @RequestParam("currency", required = false) currency: String?,
         @RequestParam("kind", required = true) kind: CategoryKind,
-        @RequestParam("mode", required = true) mode: CategoryTotalsMode,
         @RequestParam("from", required = false) startDate: LocalDate?,
         @RequestParam("to", required = false) endDate: LocalDate?,
         @RequestParam("accountIds", required = false) accountIds: Set<UUID> = setOf(),
@@ -165,8 +164,8 @@ class StatisticsRestController(
     ): ResponseEntity<CategoryTotalsResponse> {
         val result = statisticFacade.getCategoryTotals(
             workspaceId,
+            currency,
             kind,
-            mode,
             startDate,
             endDate,
             accountIds,

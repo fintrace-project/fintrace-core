@@ -8,6 +8,7 @@ import com.github.melancholic.fintrace.core.util.MathUtils.divideWithDefaultPrec
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
+import java.util.*
 
 object StatisticHelper {
 
@@ -92,12 +93,31 @@ object StatisticHelper {
         )
     }
 
-    fun List<CategoryTotalRow>.toCategoryTotals(): List<CategoryTotal> = groupBy { it.categoryId }
-        .map { (catId, rows) ->
+    fun List<CategoryTotalRow>.toCategoryTotals(): List<CategoryTotal> {
+        val parents = associate { it.categoryId to it.parentId }
+        val amounts = mapNotNull { row ->
+            row.currency?.let { currency -> row.selfTotal?.let { Triple(row.categoryId, currency, it) } }
+        }
+
+        val totals = mutableMapOf<UUID, MutableMap<String, BigDecimal>>()
+        amounts.forEach { (categoryId, currency, amount) ->
+            var id: UUID? = categoryId
+            while (id != null) {
+                totals.getOrPut(id) { sortedMapOf() }
+                    .merge(currency, amount) { a, b -> a + b }
+                id = parents[id]
+            }
+        }
+        val selfTotals = amounts.groupBy({ it.first }, { CurrencyAmount(it.second, it.third) })
+
+        return parents.keys.mapNotNull { id ->
+            val total = totals[id] ?: return@mapNotNull null
             CategoryTotal(
-                catId,
-                rows.map { it.parentId }.distinct().single(),
-                CurrencyAmounts(rows.map { CurrencyAmount(it.currency, it.total) })
+                categoryId = id,
+                parentId = parents[id],
+                total = CurrencyAmounts(total.map { (currency, sum) -> CurrencyAmount(currency, sum) }),
+                selfTotal = CurrencyAmounts(selfTotals[id].orEmpty()),
             )
         }
+    }
 }

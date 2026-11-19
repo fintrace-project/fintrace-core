@@ -1878,18 +1878,18 @@
             "format" : "uuid"
           }
         }, {
+          "name" : "currency",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
           "name" : "kind",
           "in" : "query",
           "required" : true,
           "schema" : {
             "$ref" : "#/components/schemas/CategoryKind"
-          }
-        }, {
-          "name" : "mode",
-          "in" : "query",
-          "required" : true,
-          "schema" : {
-            "$ref" : "#/components/schemas/CategoryTotalsMode"
           }
         }, {
           "name" : "from",
@@ -2729,7 +2729,7 @@
     "schemas" : {
       "CoreErrorCode" : {
         "type" : "string",
-        "enum" : [ "VALIDATION_FAILED", "MALFORMED_REQUEST", "NOT_AUTHENTICATED", "NOT_FOUND", "VERSION_CONFLICT", "WORKSPACE_STATUS_CONFLICT", "WORKSPACE_READ_ONLY", "WORKSPACE_NOT_IMPORTABLE", "IMPORT_LEASE_LOST", "ID_TAKEN", "ACCOUNT_ARCHIVED", "CATEGORY_ARCHIVED", "SYSTEM_CATEGORY", "CATEGORY_KIND_MISMATCH", "CATEGORY_PARENT_REFUSED", "TRANSFER_VIA_OPERATIONS", "ANCHOR_ORDER", "INTERNAL", "CATEGORY_TOTALS_UNSUPPORTED_MODE" ]
+        "enum" : [ "VALIDATION_FAILED", "MALFORMED_REQUEST", "NOT_AUTHENTICATED", "NOT_FOUND", "VERSION_CONFLICT", "WORKSPACE_STATUS_CONFLICT", "WORKSPACE_READ_ONLY", "WORKSPACE_NOT_IMPORTABLE", "IMPORT_LEASE_LOST", "ID_TAKEN", "ACCOUNT_ARCHIVED", "CATEGORY_ARCHIVED", "SYSTEM_CATEGORY", "CATEGORY_KIND_MISMATCH", "CATEGORY_PARENT_REFUSED", "TRANSFER_VIA_OPERATIONS", "ANCHOR_ORDER", "INTERNAL" ]
       },
       "FieldError" : {
         "type" : "object",
@@ -3651,10 +3651,6 @@
         },
         "required" : [ "items" ]
       },
-      "CategoryTotalsMode" : {
-        "type" : "string",
-        "enum" : [ "COLLAPSED", "EXPANDED" ]
-      },
       "CategoryTotalResponse" : {
         "type" : "object",
         "properties" : {
@@ -3668,9 +3664,12 @@
           },
           "total" : {
             "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          },
+          "selfTotal" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
           }
         },
-        "required" : [ "categoryId", "total" ]
+        "required" : [ "categoryId", "selfTotal", "total" ]
       },
       "CategoryTotalsResponse" : {
         "type" : "object",
@@ -3686,9 +3685,6 @@
           "kind" : {
             "$ref" : "#/components/schemas/CategoryKind"
           },
-          "mode" : {
-            "$ref" : "#/components/schemas/CategoryTotalsMode"
-          },
           "rows" : {
             "type" : "array",
             "items" : {
@@ -3696,7 +3692,7 @@
             }
           }
         },
-        "required" : [ "from", "kind", "mode", "rows", "to" ]
+        "required" : [ "from", "kind", "rows", "to" ]
       },
       "ConvertedAmountResponse" : {
         "type" : "object",

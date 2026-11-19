@@ -24,8 +24,8 @@ import java.util.*
 import kotlin.test.assertEquals
 
 /**
- * `fn_category_totals`, the expanded breakdown's SQL (3.7), called directly: each category's own operations of one
- * kind, as magnitudes per currency. Rows go straight to the projections.
+ * `fn_category_totals` (3.7, the whole branch since 3.8), called directly: every category of one kind, each with its own
+ * operations as magnitudes per currency, NULL where it has none. Rows go straight to the projections.
  */
 @Import(TestcontainersConfiguration::class)
 @SpringBootTest
@@ -88,7 +88,46 @@ class CategoryTotalsSqlIntegrationTest(
         anchor(wallet, "2026-01-05T09:00:00", "1500.0000")
 
         assertEquals(listOf(row(food, null, "EUR", "10.0000")), totals("EXPENSE", "2026-01-01", "2026-01-31"))
-        assertEquals(emptyList(), totals("INCOME", "2026-01-01", "2026-01-31"))
+        assertEquals(listOf(empty(salary, null)), totals("INCOME", "2026-01-01", "2026-01-31"))
+    }
+
+    @Test
+    fun `a category with nothing booked to it answers one row with no amount, carrying its parent`() {
+        val groceries = childCategory(food, "groceries")
+        expense(groceries, "2026-01-11T09:00:00", "5.0000")
+
+        assertEquals(
+            setOf(empty(food, null), row(groceries, food, "EUR", "5.0000")),
+            totals("EXPENSE", "2026-01-01", "2026-01-31").toSet(),
+        )
+    }
+
+    @Test
+    fun `the whole branch is answered with no operation at all, the other kind's categories not`() {
+        val groceries = childCategory(food, "groceries")
+
+        assertEquals(
+            setOf(empty(food, null), empty(groceries, food)),
+            totals("EXPENSE", "2026-01-01", "2026-01-31").toSet(),
+        )
+        assertEquals(listOf(empty(salary, null)), totals("INCOME", "2026-01-01", "2026-01-31"))
+    }
+
+    @Test
+    fun `a currency keeps only its own accounts' sums, every category still answered`() {
+        val pounds = TestWorkspaces.seedAccount(accountDAO, workspaceId, name = "pounds", currency = "GBP")
+        val groceries = childCategory(food, "groceries")
+        expense(food, "2026-01-10T09:00:00", "10.0000")
+        expense(groceries, "2026-01-11T09:00:00", "4.0000", account = pounds)
+
+        assertEquals(
+            setOf(empty(food, null), row(groceries, food, "GBP", "4.0000")),
+            totals("EXPENSE", "2026-01-01", "2026-01-31", currency = "GBP").toSet(),
+        )
+        assertEquals(
+            setOf(empty(food, null), empty(groceries, food)),
+            totals("EXPENSE", "2026-01-01", "2026-01-31", currency = "USD").toSet(),
+        )
     }
 
     @Test
@@ -113,10 +152,10 @@ class CategoryTotalsSqlIntegrationTest(
     }
 
     @Test
-    fun `a category whose operations total zero answers no row`() {
+    fun `a category whose operations total zero answers a row with no amount`() {
         expense(food, "2026-01-10T09:00:00", "0.0000")
 
-        assertEquals(emptyList(), totals("EXPENSE", "2026-01-01", "2026-01-31"))
+        assertEquals(listOf(empty(food, null)), totals("EXPENSE", "2026-01-01", "2026-01-31"))
     }
 
     @Test
@@ -170,24 +209,29 @@ class CategoryTotalsSqlIntegrationTest(
         val theirFood = TestWorkspaces.seedCategory(categoryDAO, other, CategoryKind.EXPENSE, name = "food")
         expense(theirFood, "2026-01-10T09:00:00", "999.0000", account = theirs, workspace = other)
 
-        assertEquals(emptyList(), totals("EXPENSE", "2026-01-01", "2026-01-31"))
+        assertEquals(listOf(empty(food, null)), totals("EXPENSE", "2026-01-01", "2026-01-31"))
     }
 
-    private data class Row(val categoryId: UUID, val parentId: UUID?, val currency: String, val total: BigDecimal)
+    private data class Row(val categoryId: UUID, val parentId: UUID?, val currency: String?, val selfTotal: BigDecimal?)
 
-    private fun row(categoryId: UUID, parentId: UUID?, currency: String, total: String) =
-        Row(categoryId, parentId, currency, BigDecimal(total))
+    private fun row(categoryId: UUID, parentId: UUID?, currency: String, selfTotal: String) =
+        Row(categoryId, parentId, currency, BigDecimal(selfTotal))
+
+    private fun empty(categoryId: UUID, parentId: UUID?) = Row(categoryId, parentId, null, null)
 
     private fun totals(
         kind: String,
         from: String,
         to: String,
         accountIds: Set<UUID> = emptySet(),
+        currency: String? = null,
         includeArchived: Boolean = true,
     ): List<Row> = jdbc.sql(
         """
-        SELECT category_id, parent_id, currency, total
-        FROM fn_category_totals(:workspaceId, :kind, :from, :until, CAST(:accountIds AS uuid[]), :includeArchived)
+        SELECT category_id, parent_id, currency, self_total
+        FROM fn_category_totals(
+            :workspaceId, :kind, :from, :until, CAST(:accountIds AS uuid[]), CAST(:currency AS char(3)), :includeArchived
+        )
         """
     )
         .param("workspaceId", workspaceId)
@@ -195,13 +239,14 @@ class CategoryTotalsSqlIntegrationTest(
         .param("from", LocalDate.parse(from).atStartOfDay())
         .param("until", LocalDate.parse(to).plusDays(1).atStartOfDay())
         .param("accountIds", accountIds.takeIf { it.isNotEmpty() }?.toTypedArray())
+        .param("currency", currency)
         .param("includeArchived", includeArchived)
         .query { rs, _ ->
             Row(
                 rs.getObject("category_id", UUID::class.java),
                 rs.getObject("parent_id", UUID::class.java),
                 rs.getString("currency"),
-                rs.getBigDecimal("total"),
+                rs.getBigDecimal("self_total"),
             )
         }
         .list()

@@ -2,12 +2,11 @@ package com.github.melancholic.fintrace.core.facade
 
 import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.statistic.*
-import com.github.melancholic.fintrace.core.exception.CoreErrorCode
-import com.github.melancholic.fintrace.core.exception.OperationNotSupported
 import com.github.melancholic.fintrace.core.security.IdentityProvider
 import com.github.melancholic.fintrace.core.service.StatisticService
 import com.github.melancholic.fintrace.core.service.WorkspaceService
 import com.github.melancholic.fintrace.core.validation.AccountValidationService
+import com.github.melancholic.fintrace.core.validation.CurrencyValidator
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -38,8 +37,8 @@ sealed interface StatisticFacade : RestFacade {
 
     fun getCategoryTotals(
         workspaceId: UUID,
+        currency: String?,
         kind: CategoryKind,
-        mode: CategoryTotalsMode,
         startDate: LocalDate?,
         endDate: LocalDate?,
         accountIds: Set<UUID>,
@@ -86,7 +85,14 @@ class StatisticFacadeImpl(
         if (accountIds.isNotEmpty()) {
             accountValidationService.checkExists(workspace.id, accountIds, true, "accountIds")
         }
-        return statisticService.getBalancesSeries(workspace.id, granularity, startDate, endDate, accountIds, includeArchived)
+        return statisticService.getBalancesSeries(
+            workspace.id,
+            granularity,
+            startDate,
+            endDate,
+            accountIds,
+            includeArchived
+        )
     }
 
     override fun getCashflow(
@@ -106,8 +112,8 @@ class StatisticFacadeImpl(
 
     override fun getCategoryTotals(
         workspaceId: UUID,
+        currency: String?,
         kind: CategoryKind,
-        mode: CategoryTotalsMode,
         startDate: LocalDate?,
         endDate: LocalDate?,
         accountIds: Set<UUID>,
@@ -117,11 +123,19 @@ class StatisticFacadeImpl(
         if (accountIds.isNotEmpty()) {
             accountValidationService.checkExists(workspace.id, accountIds, true, "accountIds")
         }
-
-        return when (mode) {
-            CategoryTotalsMode.EXPANDED -> statisticService.getCategoryTotalsExpanded(workspace.id, kind, startDate, endDate, accountIds, includeArchived)
-            else -> throw OperationNotSupported(CoreErrorCode.CATEGORY_TOTALS_UNSUPPORTED_MODE, "Mode `$mode` is not supported")
+        if (currency != null) {
+            CurrencyValidator.requireKnown(currency, "currency")
         }
+
+        return statisticService.getCategoryTotals(
+            workspace.id,
+            currency,
+            kind,
+            startDate,
+            endDate,
+            accountIds,
+            includeArchived
+        )
     }
 
 }
