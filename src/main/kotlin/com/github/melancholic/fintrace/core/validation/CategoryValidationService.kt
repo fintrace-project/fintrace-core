@@ -122,7 +122,7 @@ class CategoryValidationServiceImpl(
             throw CategoryKindConflictException()
         }
 
-        if (parent.systemCode in CategorySystemCode.OTHERS) {
+        if (parent.isOthersCategory()) {
             throw CantNestCategoryUnderOthersException()
         }
     }
@@ -148,7 +148,7 @@ class CategoryValidationServiceImpl(
             throw CategoryKindConflictException()
         }
 
-        if (parent.systemCode in CategorySystemCode.OTHERS) {
+        if (parent.isOthersCategory()) {
             throw CantNestCategoryUnderOthersException()
         }
     }

@@ -6,11 +6,7 @@ import com.github.melancholic.fintrace.core.dao.projection.OperationProjectionDA
 import com.github.melancholic.fintrace.core.domain.command.*
 import com.github.melancholic.fintrace.core.domain.entity.OperationKind
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
-import com.github.melancholic.fintrace.core.exception.ActionConflictException
-import com.github.melancholic.fintrace.core.exception.CoreErrorCode
-import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
-import com.github.melancholic.fintrace.core.exception.OperationNotSupported
-import com.github.melancholic.fintrace.core.exception.ValidationError
+import com.github.melancholic.fintrace.core.exception.*
 import com.github.melancholic.fintrace.core.util.TimestampProvider
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
@@ -35,7 +31,6 @@ class OperationValidationServiceImpl(
         checkAmount(command)
         checkAccountOnCreate(command)
         checkCategoryOnCreate(command)
-
     }
 
     override fun validate(command: ReviseOperationCommand) {
@@ -76,14 +71,20 @@ class OperationValidationServiceImpl(
     private fun checkAccountOnCreate(command: CreateOperationCommand) {
         val account = accountDAO.getById(command.workspaceId, command.accountId)
         if (account.archived) {
-            throw ActionConflictException(CoreErrorCode.ACCOUNT_ARCHIVED, "Couldn't create new operation under archived account")
+            throw ActionConflictException(
+                CoreErrorCode.ACCOUNT_ARCHIVED,
+                "Couldn't create new operation under archived account"
+            )
         }
     }
 
     private fun checkAccountOnRevise(command: ReviseOperationCommand, currentAccountId: UUID) {
         val account = accountDAO.getById(command.workspaceId, command.accountId)
         if (account.archived && command.accountId != currentAccountId) {
-            throw ActionConflictException(CoreErrorCode.ACCOUNT_ARCHIVED, "Couldn't move an operation onto an archived account")
+            throw ActionConflictException(
+                CoreErrorCode.ACCOUNT_ARCHIVED,
+                "Couldn't move an operation onto an archived account"
+            )
         }
     }
 
@@ -94,7 +95,14 @@ class OperationValidationServiceImpl(
         val category = categoryDAO.getById(command.workspaceId, command.categoryId)
 
         if (category.archived) {
-            throw ActionConflictException(CoreErrorCode.CATEGORY_ARCHIVED, "Couldn't create new operation under archived category")
+            throw ActionConflictException(
+                CoreErrorCode.CATEGORY_ARCHIVED,
+                "Couldn't create new operation under archived category"
+            )
+        }
+
+        if (category.isRootCategory()) {
+            throw CantNestUnderRootCategoryException()
         }
 
         if (category.kind != command.kind.asCategoryKind()) {
@@ -108,6 +116,10 @@ class OperationValidationServiceImpl(
     private fun checkCategoryOnRevise(command: ReviseOperationCommand, current: OperationProjection) {
         val category = categoryDAO.getById(command.workspaceId, command.categoryId)
 
+        if (category.isRootCategory()) {
+            throw CantNestUnderRootCategoryException()
+        }
+
         if (category.kind != command.kind.asCategoryKind()) {
             throw ActionConflictException(
                 CoreErrorCode.CATEGORY_KIND_MISMATCH,
@@ -116,7 +128,10 @@ class OperationValidationServiceImpl(
         }
 
         if (category.id != current.categoryId && category.archived) {
-            throw ActionConflictException(CoreErrorCode.CATEGORY_ARCHIVED, "Couldn't move the operation into archived category")
+            throw ActionConflictException(
+                CoreErrorCode.CATEGORY_ARCHIVED,
+                "Couldn't move the operation into archived category"
+            )
         }
     }
 
@@ -135,4 +150,7 @@ class OperationValidationServiceImpl(
 
     class NotFoundOperationException(operationId: UUID) :
         NotFoundEntityException("Operation with id='${operationId}' not found")
+
+    private class CantNestUnderRootCategoryException :
+        ActionConflictException(CoreErrorCode.OPERATION_CATEGORY_REFUSED, "Can't place an operation under root category")
 }

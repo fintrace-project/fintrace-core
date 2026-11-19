@@ -8,6 +8,9 @@ import com.github.melancholic.fintrace.core.dao.projection.AccountProjectionDAO
 import com.github.melancholic.fintrace.core.dao.projection.CategoryProjectionDAO
 import com.github.melancholic.fintrace.core.dao.projection.OperationProjectionDAO
 import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
+import com.github.melancholic.fintrace.core.domain.entity.CategorySystemCode
+import com.github.melancholic.fintrace.core.domain.projection.CategoryProjection
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -351,6 +354,35 @@ class OperationsRestControllerTest(
         assertEquals(1, eventCount(), "a rejected command writes nothing")
     }
 
+    @Test
+    fun `refuses an operation filed under a root category`() {
+        val root = seedExpenseRoot()
+
+        mvc.perform(
+            post(operationsPath).with(user(USER)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body().replace(categoryId.toString(), root.toString()))
+        ).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value(CoreErrorCode.OPERATION_CATEGORY_REFUSED.name))
+
+        assertEquals(0, count(), "a rejected command writes nothing")
+    }
+
+    @Test
+    fun `refuses to move an operation onto a root category`() {
+        val id = createdId()
+        val root = seedExpenseRoot()
+
+        mvc.perform(
+            put("${operationsPath}/$id").with(user(USER)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body().replace(categoryId.toString(), root.toString()))
+        ).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value(CoreErrorCode.OPERATION_CATEGORY_REFUSED.name))
+
+        assertEquals(1, eventCount(), "a rejected command writes nothing")
+    }
+
 	@Test
 	fun `rejects a malformed revision body`() {
 		val id = createdId()
@@ -533,6 +565,21 @@ class OperationsRestControllerTest(
         .sql("UPDATE t_categories SET archived = true WHERE id = :id")
         .param("id", id)
         .update()
+
+    private fun seedExpenseRoot(): UUID = categoryDAO.create(
+        CategoryProjection(
+            id = UUID.randomUUID(),
+            workspaceId = workspaceId,
+            parentId = null,
+            name = "Expenses",
+            kind = CategoryKind.EXPENSE,
+            archived = false,
+            systemCode = CategorySystemCode.EXPENSE_ROOT,
+            icon = null,
+            externalRef = null,
+            recordedAt = LocalDateTime.now(),
+        )
+    )
 
 	private fun eventCount() = jdbc.sql("SELECT count(*) FROM t_events")
 		.query(Int::class.java).single()

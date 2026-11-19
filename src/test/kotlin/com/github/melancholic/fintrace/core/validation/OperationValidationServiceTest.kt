@@ -13,6 +13,7 @@ import com.github.melancholic.fintrace.core.domain.projection.AccountProjection
 import com.github.melancholic.fintrace.core.domain.projection.CategoryProjection
 import com.github.melancholic.fintrace.core.domain.projection.OperationProjection
 import com.github.melancholic.fintrace.core.exception.ActionConflictException
+import com.github.melancholic.fintrace.core.exception.CoreErrorCode
 import com.github.melancholic.fintrace.core.exception.NotFoundEntityException
 import com.github.melancholic.fintrace.core.exception.OperationNotSupported
 import com.github.melancholic.fintrace.core.exception.ValidationError
@@ -118,8 +119,12 @@ class OperationValidationServiceTest {
         private fun unsupported(): Nothing = throw UnsupportedOperationException("validation reads existence only")
     }
 
-    private class FakeCategoryDAO(private val known: Set<Pair<UUID, UUID>>, private val archived: Boolean = false) :
-        CategoryProjectionDAO {
+    private class FakeCategoryDAO(
+        private val known: Set<Pair<UUID, UUID>>,
+        private val archived: Boolean = false,
+        private val kind: CategoryKind = CategoryKind.EXPENSE,
+        private val systemCode: CategorySystemCode? = null,
+    ) : CategoryProjectionDAO {
         override fun getById(workspaceId: UUID, categoryId: UUID): CategoryProjection {
             if (workspaceId to categoryId !in known) {
                 throw NotFoundEntityException("no such category")
@@ -129,9 +134,9 @@ class OperationValidationServiceTest {
                 workspaceId = workspaceId,
                 parentId = null,
                 name = "category",
-                kind = CategoryKind.EXPENSE,
+                kind = kind,
                 archived = archived,
-                systemCode = null,
+                systemCode = systemCode,
                 icon = null,
                 externalRef = null,
                 recordedAt = NOW,
@@ -171,13 +176,15 @@ class OperationValidationServiceTest {
         knownCategories: Set<Pair<UUID, UUID>> = setOf(WORKSPACE to CATEGORY, OTHER_WORKSPACE to CATEGORY),
         accountArchived: Boolean = false,
         categoryArchived: Boolean = false,
+        categoryKind: CategoryKind = CategoryKind.EXPENSE,
+        categorySystemCode: CategorySystemCode? = null,
     ) = dao to OperationValidationServiceImpl(
         dao,
         object : TimestampProvider {
 			override fun now(): LocalDateTime = NOW
         },
         FakeAccountDAO(knownAccounts, accountArchived),
-        FakeCategoryDAO(knownCategories, categoryArchived),
+        FakeCategoryDAO(knownCategories, categoryArchived, categoryKind, categorySystemCode),
     )
 
 	@Test
@@ -416,6 +423,57 @@ class OperationValidationServiceTest {
         // (§5.1), so validation must not reject it — and must not go looking for it either, which
         // is what the empty known-set here proves.
         validation.validate(create(categoryId = null))
+    }
+
+    // ------------------------------------------------------------------ root categories (3.8b)
+
+    @Test
+    fun `rejects an expense filed under the expense root`() {
+        val (_, validation) = service(categorySystemCode = CategorySystemCode.EXPENSE_ROOT)
+
+        val refused = assertFailsWith<ActionConflictException> { validation.validate(create()) }
+        assertEquals(CoreErrorCode.OPERATION_CATEGORY_REFUSED, refused.code)
+    }
+
+    @Test
+    fun `rejects an income filed under the income root`() {
+        val (_, validation) = service(
+            categoryKind = CategoryKind.INCOME,
+            categorySystemCode = CategorySystemCode.INCOME_ROOT,
+        )
+
+        val refused = assertFailsWith<ActionConflictException> {
+            validation.validate(create(kind = OperationKind.INCOME))
+        }
+        assertEquals(CoreErrorCode.OPERATION_CATEGORY_REFUSED, refused.code)
+    }
+
+    @Test
+    fun `rejects a revision onto a root`() {
+        val (_, validation) = service(
+            known = setOf(WORKSPACE to OPERATION),
+            categorySystemCode = CategorySystemCode.EXPENSE_ROOT,
+        )
+
+        val refused = assertFailsWith<ActionConflictException> { validation.validate(revise()) }
+        assertEquals(CoreErrorCode.OPERATION_CATEGORY_REFUSED, refused.code)
+    }
+
+    @Test
+    fun `refuses a root before it compares kinds`() {
+        val (_, validation) = service(categorySystemCode = CategorySystemCode.EXPENSE_ROOT)
+
+        val refused = assertFailsWith<ActionConflictException> {
+            validation.validate(create(kind = OperationKind.INCOME))
+        }
+        assertEquals(CoreErrorCode.OPERATION_CATEGORY_REFUSED, refused.code)
+    }
+
+    @Test
+    fun `accepts an operation filed under Others`() {
+        val (_, validation) = service(categorySystemCode = CategorySystemCode.EXPENSE_OTHERS)
+
+        validation.validate(create())
     }
 
     private fun create(

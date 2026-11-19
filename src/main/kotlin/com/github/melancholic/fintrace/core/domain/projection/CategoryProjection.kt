@@ -16,4 +16,9 @@ data class CategoryProjection(
     val icon: String?,
     val externalRef: String?,
     override val recordedAt: LocalDateTime
-) : Projection
+) : Projection {
+
+    fun isRootCategory(): Boolean = systemCode?.isRootCategory() ?: false
+
+    fun isOthersCategory(): Boolean = systemCode?.isOthersCategory() ?: false
+}
