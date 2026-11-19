@@ -27,13 +27,29 @@ data class CashflowTotals(
     val count: List<CurrencyCount>,
     val netRatio: List<CurrencyRatio>,
     val perDay: CashflowPerDay,
-)
+) {
+    companion object {
+        val EMPTY = CashflowTotals(
+            income = CurrencyAmounts.EMPTY,
+            expense = CurrencyAmounts.EMPTY,
+            expenseRatio = emptyList(),
+            net = CurrencyAmounts.EMPTY,
+            count = emptyList(),
+            netRatio = emptyList(),
+            perDay = CashflowPerDay.EMPTY,
+        )
+    }
+}
 
 data class CashflowPerDay(
     val income: CurrencyAmounts,
     val expense: CurrencyAmounts,
     val net: CurrencyAmounts,
-)
+) {
+    companion object {
+        val EMPTY = CashflowPerDay(CurrencyAmounts.EMPTY, CurrencyAmounts.EMPTY, CurrencyAmounts.EMPTY)
+    }
+}
 
 data class CurrencyCount(
     val currency: String,
