@@ -1978,6 +1978,118 @@
         }
       }
     },
+    "/api/v1/workspaces/{workspaceId}/statistics/categories/top" : {
+      "get" : {
+        "tags" : [ "Statistics" ],
+        "summary" : "Largest top-level categories",
+        "operationId" : "getTopCategories",
+        "parameters" : [ {
+          "name" : "workspaceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "currency",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "kind",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "$ref" : "#/components/schemas/CategoryKind"
+          }
+        }, {
+          "name" : "from",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "to",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "accountIds",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            },
+            "uniqueItems" : true
+          }
+        }, {
+          "name" : "includeArchived",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : true
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The branch's total, its `limit` largest top-level categories and the rest as `other`; transfers excluded",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TopCategoriesResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Missing or unknown `kind`, missing or unknown `currency`, `limit` outside 1 to 100, `from` after `to`, or an `accountIds` not in this workspace",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No such workspace for this caller",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoreProblem"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          },
+          "403" : {
+            "description" : "Not authorized"
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspaceId}/statistics/cashflow" : {
       "get" : {
         "tags" : [ "Statistics" ],
@@ -3742,6 +3854,48 @@
           }
         },
         "required" : [ "byCurrency" ]
+      },
+      "TopCategoriesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "to" : {
+            "type" : "string",
+            "format" : "date"
+          },
+          "kind" : {
+            "$ref" : "#/components/schemas/CategoryKind"
+          },
+          "total" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          },
+          "rows" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TopCategoryResponse"
+            }
+          },
+          "other" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          }
+        },
+        "required" : [ "from", "kind", "other", "rows", "to", "total" ]
+      },
+      "TopCategoryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "categoryId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "total" : {
+            "$ref" : "#/components/schemas/CurrencyAmountsResponse"
+          }
+        },
+        "required" : [ "categoryId", "total" ]
       },
       "Granularity" : {
         "type" : "string",

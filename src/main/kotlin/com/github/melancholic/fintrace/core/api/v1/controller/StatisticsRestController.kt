@@ -25,7 +25,8 @@ class StatisticsRestController(
     private val currencyAmountsMapper: CurrencyAmountsMapper,
     private val balanceSeriesMapper: BalanceSeriesMapper,
     private val cashflowMapper: CashflowMapper,
-    private val categoryTotalsMapper: CategoryTotalsMapper
+    private val categoryTotalsMapper: CategoryTotalsMapper,
+    private val topCategoriesMapper: TopCategoriesMapper
 ) {
 
     @Operation(summary = "List account balances")
@@ -172,5 +173,41 @@ class StatisticsRestController(
             includeArchived
         )
         return ResponseEntity.ok(categoryTotalsMapper.toResponse(result))
+    }
+
+    @Operation(summary = "Largest top-level categories")
+    @ApiResponses(
+        ApiResponse(
+            responseCode = "200",
+            description = "The branch's total, its `limit` largest top-level categories and the rest as `other`; transfers excluded"
+        ),
+        ApiResponse(
+            responseCode = "400",
+            description = "Missing or unknown `kind`, missing or unknown `currency`, `limit` outside 1 to 100, `from` after `to`, or an `accountIds` not in this workspace"
+        ),
+        ApiResponse(responseCode = "404", description = "No such workspace for this caller"),
+    )
+    @GetMapping("/categories/top")
+    fun getTopCategories(
+        @PathVariable("workspaceId") workspaceId: UUID,
+        @RequestParam("limit", required = true) limit: Int,
+        @RequestParam("currency", required = true) currency: String,
+        @RequestParam("kind", required = true) kind: CategoryKind,
+        @RequestParam("from", required = false) startDate: LocalDate?,
+        @RequestParam("to", required = false) endDate: LocalDate?,
+        @RequestParam("accountIds", required = false) accountIds: Set<UUID> = setOf(),
+        @RequestParam("includeArchived", required = false, defaultValue = "true") includeArchived: Boolean
+    ): ResponseEntity<TopCategoriesResponse> {
+        val result = statisticFacade.getTopCategories(
+            workspaceId,
+            limit,
+            currency,
+            kind,
+            startDate,
+            endDate,
+            accountIds,
+            includeArchived
+        )
+        return ResponseEntity.ok(topCategoriesMapper.toResponse(result))
     }
 }

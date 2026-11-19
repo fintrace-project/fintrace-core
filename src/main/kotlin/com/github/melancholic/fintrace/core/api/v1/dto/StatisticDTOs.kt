@@ -94,3 +94,17 @@ data class CategoryTotalResponse(
     val total: CurrencyAmountsResponse,
     val selfTotal: CurrencyAmountsResponse,
 )
+
+data class TopCategoriesResponse(
+    val from: LocalDate,
+    val to: LocalDate,
+    val kind: CategoryKind,
+    val total: CurrencyAmountsResponse,
+    val rows: List<TopCategoryResponse>,
+    val other: CurrencyAmountsResponse,
+)
+
+data class TopCategoryResponse(
+    val categoryId: UUID,
+    val total: CurrencyAmountsResponse,
+)

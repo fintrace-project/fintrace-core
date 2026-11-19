@@ -5,9 +5,11 @@ import com.github.melancholic.fintrace.core.dao.StatisticDAO
 import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.statistic.*
 import com.github.melancholic.fintrace.core.exception.ValidationError
+import com.github.melancholic.fintrace.core.util.StatisticHelper.sumByCurrency
 import com.github.melancholic.fintrace.core.util.StatisticHelper.toCashflowBuckets
 import com.github.melancholic.fintrace.core.util.StatisticHelper.toCashflowTotals
 import com.github.melancholic.fintrace.core.util.StatisticHelper.toCategoryTotals
+import com.github.melancholic.fintrace.core.util.StatisticHelper.toRanked
 import com.github.melancholic.fintrace.core.util.StatisticHelper.toSeriesBuckets
 import com.github.melancholic.fintrace.core.util.TimestampProvider
 import org.springframework.stereotype.Service
@@ -47,6 +49,17 @@ sealed interface StatisticService {
         accountIds: Set<UUID>,
         includeArchived: Boolean
     ): CategoryTotals
+
+    fun getTopCategories(
+        workspaceId: UUID,
+        limit: Int,
+        currency: String,
+        kind: CategoryKind,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): TopCategories
 }
 
 @Service
@@ -194,6 +207,34 @@ class StatisticServiceImpl(
         )
     }
 
+    override fun getTopCategories(
+        workspaceId: UUID,
+        limit: Int,
+        currency: String,
+        kind: CategoryKind,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): TopCategories {
+        val totals = getCategoryTotals(workspaceId, currency, kind, startDate, endDate, accountIds, includeArchived)
+        val root = totals.rows.singleOrNull { it.parentId == null }
+            ?: return emptyTopCategories(kind, totals.from, totals.to)
+
+        val ranked = totals.rows.toRanked(root)
+
+        val tops = ranked.take(limit).map { TopCategory(it.categoryId, it.total) }
+        val other = ranked.drop(limit).map { it.total }.sumByCurrency()
+        return TopCategories(
+            totals.from,
+            totals.to,
+            kind,
+            tops,
+            root.total,
+            other
+        )
+    }
+
     private fun splitByBuckets(
         granularity: Granularity,
         from: LocalDate,
@@ -252,6 +293,19 @@ class StatisticServiceImpl(
         kind: CategoryKind,
         to: LocalDate,
     ): CategoryTotals = CategoryTotals(to, to, kind, emptyList())
+
+    private fun emptyTopCategories(
+        kind: CategoryKind,
+        from: LocalDate,
+        to: LocalDate
+    ): TopCategories = TopCategories(
+        from,
+        to,
+        kind,
+        emptyList(),
+        CurrencyAmounts(emptyList()),
+        CurrencyAmounts(emptyList())
+    )
 
     private companion object {
         const val MAX_BUCKETS_LIMIT: Int = 2000;

@@ -120,4 +120,18 @@ object StatisticHelper {
             )
         }
     }
+
+    fun List<CurrencyAmounts>.sumByCurrency(): CurrencyAmounts {
+        val sums = sortedMapOf<String, BigDecimal>()
+        forEach { amounts ->
+            amounts.byCurrency.forEach { sums.merge(it.currency, it.total) { a, b -> a + b } }
+        }
+        return CurrencyAmounts(sums.map { (currency, total) -> CurrencyAmount(currency, total) })
+    }
+
+    fun List<CategoryTotal>.toRanked(root: CategoryTotal) = filter { it.parentId == root.categoryId }
+        .sortedWith(compareByDescending<CategoryTotal> {
+            it.total.byCurrency.firstOrNull()?.total ?: BigDecimal.ZERO
+        }.thenBy { it.categoryId.toString() })
+
 }

@@ -2,6 +2,7 @@ package com.github.melancholic.fintrace.core.facade
 
 import com.github.melancholic.fintrace.core.domain.entity.CategoryKind
 import com.github.melancholic.fintrace.core.domain.statistic.*
+import com.github.melancholic.fintrace.core.exception.ValidationError
 import com.github.melancholic.fintrace.core.security.IdentityProvider
 import com.github.melancholic.fintrace.core.service.StatisticService
 import com.github.melancholic.fintrace.core.service.WorkspaceService
@@ -44,6 +45,17 @@ sealed interface StatisticFacade : RestFacade {
         accountIds: Set<UUID>,
         includeArchived: Boolean
     ): CategoryTotals
+
+    fun getTopCategories(
+        workspaceId: UUID,
+        limit: Int,
+        currency: String,
+        kind: CategoryKind,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): TopCategories
 }
 
 @Service
@@ -136,6 +148,42 @@ class StatisticFacadeImpl(
             accountIds,
             includeArchived
         )
+    }
+
+    override fun getTopCategories(
+        workspaceId: UUID,
+        limit: Int,
+        currency: String,
+        kind: CategoryKind,
+        startDate: LocalDate?,
+        endDate: LocalDate?,
+        accountIds: Set<UUID>,
+        includeArchived: Boolean
+    ): TopCategories {
+        validateLimit(limit)
+        val workspace = workspaceService.requireReadable(identityProvider.currentUserId(), workspaceId)
+
+        if (accountIds.isNotEmpty()) {
+            accountValidationService.checkExists(workspace.id, accountIds, true, "accountIds")
+        }
+        CurrencyValidator.requireKnown(currency, "currency")
+
+        return statisticService.getTopCategories(
+            workspace.id,
+            limit,
+            currency,
+            kind,
+            startDate,
+            endDate,
+            accountIds,
+            includeArchived
+        )
+    }
+
+    private fun validateLimit(limit: Int) {
+        if (limit !in 1..100) {
+            throw ValidationError("Limit must be between 1 and 100", "limit")
+        }
     }
 
 }

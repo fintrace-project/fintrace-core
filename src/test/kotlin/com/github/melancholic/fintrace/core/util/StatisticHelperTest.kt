@@ -11,7 +11,9 @@ import com.github.melancholic.fintrace.core.domain.statistic.Granularity
 import com.github.melancholic.fintrace.core.domain.statistic.StatisticBuckets
 import com.github.melancholic.fintrace.core.util.StatisticHelper.toCashflowBuckets
 import com.github.melancholic.fintrace.core.util.StatisticHelper.toCashflowTotals
+import com.github.melancholic.fintrace.core.util.StatisticHelper.sumByCurrency
 import com.github.melancholic.fintrace.core.util.StatisticHelper.toCategoryTotals
+import com.github.melancholic.fintrace.core.util.StatisticHelper.toRanked
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -245,6 +247,75 @@ class StatisticHelperTest {
     fun `a tree with no amount anywhere answers nothing`() {
         assertEquals(emptyList(), listOf(category(ROOT, null), category(FOOD, ROOT)).toCategoryTotals())
         assertEquals(emptyList(), emptyList<CategoryTotalRow>().toCategoryTotals())
+    }
+
+    @Test
+    fun `amounts are summed per currency, ordered by code`() {
+        val sum = listOf(
+            amounts("USD" to "3", "EUR" to "10"),
+            amounts("EUR" to "2.5"),
+            amounts("GBP" to "1"),
+        ).sumByCurrency()
+
+        assertEquals(amounts("EUR" to "12.5", "GBP" to "1", "USD" to "3"), sum)
+    }
+
+    @Test
+    fun `nothing to sum is an empty amount`() {
+        assertEquals(CurrencyAmounts(emptyList()), emptyList<CurrencyAmounts>().sumByCurrency())
+    }
+
+    @Test
+    fun `only the root's children are ranked, largest first, a subcategory counted in its parent`() {
+        val totals = listOf(
+            category(ROOT, null),
+            category(FOOD, ROOT, "EUR", "3"),
+            category(GROCERIES, FOOD, "EUR", "5"),
+            category(TRANSPORT, ROOT, "EUR", "6"),
+            category(TAXI, TRANSPORT, "EUR", "1"),
+            category(CAFES, ROOT, "EUR", "2"),
+        ).toCategoryTotals()
+
+        val ranked = totals.toRanked(totals.single { it.parentId == null })
+
+        assertEquals(listOf(FOOD, TRANSPORT, CAFES), ranked.map { it.categoryId })
+        assertEquals(listOf(amounts("EUR" to "8"), amounts("EUR" to "7"), amounts("EUR" to "2")), ranked.map { it.total })
+    }
+
+    @Test
+    fun `equal totals rank by categoryId as text`() {
+        // Signed comparison would put the 8… id first; text order puts the 1… id first
+        val low = UUID.fromString("10000000-0000-7000-8000-000000000000")
+        val high = UUID.fromString("80000000-0000-7000-8000-000000000000")
+        val totals = listOf(
+            category(ROOT, null),
+            category(high, ROOT, "EUR", "4"),
+            category(low, ROOT, "EUR", "4"),
+        ).toCategoryTotals()
+
+        val ranked = totals.toRanked(totals.single { it.parentId == null })
+
+        assertEquals(listOf(low, high), ranked.map { it.categoryId })
+    }
+
+    @Test
+    fun `the kept rows and the summed rest add up to the root's total`() {
+        val totals = listOf(
+            category(ROOT, null),
+            category(FOOD, ROOT, "EUR", "8"),
+            category(GROCERIES, FOOD, "EUR", "1.25"),
+            category(TRANSPORT, ROOT, "EUR", "6"),
+            category(CAFES, ROOT, "EUR", "2"),
+            category(TAXI, ROOT, "EUR", "0.5"),
+        ).toCategoryTotals()
+        val root = totals.single { it.parentId == null }
+
+        val ranked = totals.toRanked(root)
+        val kept = ranked.take(2).map { it.total }
+        val other = ranked.drop(2).map { it.total }.sumByCurrency()
+
+        assertEquals(amounts("EUR" to "2.5"), other)
+        assertEquals(root.total, (kept + other).sumByCurrency())
     }
 
     private fun category(id: UUID, parentId: UUID?, currency: String? = null, selfTotal: String? = null) =
