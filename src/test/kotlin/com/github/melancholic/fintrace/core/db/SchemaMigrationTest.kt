@@ -170,6 +170,20 @@ class SchemaMigrationTest(@Autowired private val jdbc: JdbcClient) {
 		)
 	}
 
+	@Test
+	fun `accounts carry the index every statistics function filters by`() {
+		// §4.14: each statistics function selects the workspace's accounts first.
+		val definition = jdbc.sql(
+			"SELECT indexdef FROM pg_indexes WHERE tablename = 't_accounts' AND indexname = :name"
+		).param("name", "idx_t_accounts_workspace_id").query(String::class.java).optional()
+
+		assertTrue(definition.isPresent, "idx_t_accounts_workspace_id is missing")
+		assertTrue(
+			definition.get().contains("(workspace_id)"),
+			"unexpected index definition: ${definition.get()}",
+		)
+	}
+
 	private fun dataType(table: String, column: String): String =
 		requireNotNull(
 			jdbc.sql(
